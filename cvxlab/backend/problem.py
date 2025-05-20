@@ -23,7 +23,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from scipy.sparse import csr_matrix
 
-import re
 import warnings
 
 import pandas as pd
@@ -672,10 +671,126 @@ class Problem:
             self.logger.error(msg)
             raise exc.SettingsError(msg)
 
-    def check_symbolic_problem_coherence(self) -> None:
+    def validate_symbolic_expressions(self) -> None:
+        """ 
+        Checks the coherence between the variables' properties and the related
+        symbolic expressions defined in the model. The method parses each symbolic
+        expression, and extracts variables names, operators, constants, numbers, 
+        and other symbols.
+        For each expression, the method performs the following checks:
+            - parentheses are balanced;
+            - all variables/custom operators must be allowed;
+            - variables names not overlapped with custom operators;
+            - intra-problem sets in a variable must not be a dimension in other variables;
+            - further checks can be added ...
+        """
         self.logger.debug(
-            f"Validating symbolic problem expressions coherence with variables [TO BE DEVELOPED].")
-        pass
+            f"Validating symbolic problem expressions coherence.")
+
+        source_format = self.settings['model_settings_from']
+        allowed_operators = Constants.SymbolicDefinitions.USER_DEFINED_OPERATORS
+        token_patterns = Constants.SymbolicDefinitions.TOKEN_PATTERNS
+        problem_structure_labels = [
+            Constants.Labels.OBJECTIVE,
+            Constants.Labels.EXPRESSIONS,
+        ]
+
+        problems = []
+
+        if util.find_dict_depth(self.symbolic_problem) == 1:
+            symbolic_problem = {None: self.symbolic_problem}
+        else:
+            symbolic_problem = self.symbolic_problem
+
+        problems_expressions = {
+            problem_key: [
+                expr
+                for label, expr_list in problem.items()
+                if label in problem_structure_labels
+                for expr in expr_list
+            ]
+            for problem_key, problem in symbolic_problem.items()
+        }
+
+        for problem_key, expr_list in problems_expressions.items():
+
+            for expression in expr_list:
+
+                msg_str = f"Problem '{problem_key}' | " if problem_key is not None else ""
+                msg_str += f"Expression '{expression}' | "
+
+                # get all tokens from expression
+                tokens = {
+                    key: util_text.extract_tokens_from_expression(
+                        expression=expression,
+                        pattern=token_patterns[key],
+                    )
+                    for key in token_patterns.keys()
+                }
+
+                # check if parentheses are balanced
+                if not util_text.balanced_parentheses(tokens['parentheses']):
+                    problems.append(msg_str + "Parentheses are not balanced.")
+
+                # spot non-allowed variables/custom operators
+                non_allowed_tokens = [
+                    token for token in tokens['text']
+                    if token not in self.index.list_variables
+                    if token not in allowed_operators
+                ]
+                if non_allowed_tokens:
+                    problems.append(
+                        msg_str + f"Non-allowed tokens: {non_allowed_tokens}.")
+
+                # variables names not overlapped with custom operators
+                non_allowed_vars_keys = [
+                    token for token in tokens['text']
+                    if token in self.index.list_variables and token in allowed_operators
+                ]
+                if non_allowed_vars_keys:
+                    problems.append(
+                        msg_str + f"Variable names overlapped with custom operators: "
+                        f"{non_allowed_vars_keys}.")
+
+                # intra-problem sets in a variable must not be a dimension in other variables
+                vars_in_expression = {
+                    var_key: variable
+                    for var_key, variable in self.index.variables.items()
+                    if var_key in tokens['text']
+                }
+
+                intra_problem_sets = set()
+                shape_set_map = {}
+
+                for var_key, variable in vars_in_expression.items():
+                    variable: Variable
+                    intra_problem_sets.update(variable.intra_sets or [])
+                    shape_set_map[var_key] = set(variable.shape_sets or [])
+
+                for var_key, dim_sets in shape_set_map.items():
+                    overlapping_sets = intra_problem_sets & dim_sets
+                    if overlapping_sets:
+                        overlapping_intra_vars = [
+                            k for k, v in vars_in_expression.items()
+                            if set(v.shape_sets or []) & overlapping_sets
+                        ]
+                        problems.append(
+                            msg_str +
+                            f"Variable '{var_key}' has shape_set(s) overlapped "
+                            f"with intra-problem set(s) of variable(s): "
+                            f"{overlapping_intra_vars}."
+                        )
+
+        if problems:
+            self.logger.error(
+                f"Expressions validation report {'=' * 35}")
+            for error_msg in problems:
+                self.logger.error(f"Validation error | {error_msg}")
+
+            msg = f"Symbolic expressions validation not successful. " \
+                f"Check setup '{source_format}' file. "
+            self.logger.error(msg)
+            raise exc.SettingsError(msg)
 
     def check_variables_attribute_equality(
             self,
@@ -894,13 +1009,17 @@ class Problem:
                 the problem. Defaults to None.
 
         Returns:
-            pd.DataFrame: A DataFrame where each row represents a problem. The columns include 'info' (a list of set values 
-            defining the problem), 'constraints' (a list of constraint expressions), 'objective' (the objective expression), 
-            'problem' (the cvxpy Problem object), and 'status' (the solution status, initially set to None).
+            pd.DataFrame: A DataFrame where each row represents a problem. The 
+                columns include:
+                    - 'info' (a list of set values defining the problem), 
+                    - 'constraints' (a list of constraint expressions), 
+                    - 'objective' (the objective expression), 
+                    - 'problem' (the cvxpy Problem object),
+                    - 'status' (the solution status, initially set to None).
         """
         headers = {
             'objective': Constants.Labels.OBJECTIVE,
-            'constraints': Constants.Labels.CONSTRAINTS,
+            'constraints': Constants.Labels.EXPRESSIONS,
             'problem': Constants.Labels.PROBLEM,
             'status': Constants.Labels.PROBLEM_STATUS,
         }
@@ -1160,7 +1279,7 @@ class Problem:
 
         local_vars = {}
         if allowed_operators is None:
-            allowed_operators = Constants.SymbolicDefinitions.ALLOWED_OPERATORS
+            allowed_operators = Constants.SymbolicDefinitions.USER_DEFINED_OPERATORS
 
         try:
             # pylint: disable-next=exec-used
@@ -1220,9 +1339,9 @@ class Problem:
                 specified in the 'problem_filter' and the intra-problem sets.
         """
         numerical_expressions = []
+        text_pattern = Constants.SymbolicDefinitions.TOKEN_PATTERNS['text']
         allowed_operators = list(
-            Constants.SymbolicDefinitions.ALLOWED_OPERATORS.keys())
-        token_pattern = Constants.SymbolicDefinitions.TOKEN_PATTERN
+            Constants.SymbolicDefinitions.USER_DEFINED_OPERATORS.keys())
 
         if symbolic_expressions is []:
             msg = "No symbolic expressions have passed. Check symbolic problem."
@@ -1239,9 +1358,8 @@ class Problem:
 
             vars_symbols_list = util_text.extract_tokens_from_expression(
                 expression=expression,
+                pattern=text_pattern,
                 tokens_to_skip=allowed_operators,
-                first_char_pattern=token_pattern['first_char'],
-                other_chars_pattern=token_pattern['other_chars'],
             )
 
             vars_subset = DotDict({

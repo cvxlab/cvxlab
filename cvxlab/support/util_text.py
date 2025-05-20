@@ -150,10 +150,26 @@ def process_str(value: Any) -> Any:
     return value
 
 
+def balanced_parentheses(parentheses_list: List[str]) -> bool:
+    """
+    Check if the parentheses in a list are balanced.
+    """
+    stack = []
+    matching = {')': '('}
+
+    for char in parentheses_list:
+        if char in matching.values():
+            stack.append(char)
+        elif char in matching.keys():
+            if not stack or matching[char] != stack.pop():
+                return False
+
+    return not stack
+
+
 def extract_tokens_from_expression(
     expression: str,
-    first_char_pattern: str = r"[a-zA-Z_]",
-    other_chars_pattern: str = r"[a-zA-Z0-9_]*",
+    pattern: str = None,
     tokens_to_skip: Optional[List[str]] = [],
 ) -> List[str]:
     """
@@ -167,11 +183,13 @@ def extract_tokens_from_expression(
         expression (str): The symbolic expression from which to extract
             variable names.
         non_allowed_tokens (Optional[List[str]]): A list of tokens that should
-            not be considered as variables. Defaults to the keys from
-            allowed_operators.
-        standard_pattern (str): The regex pattern used to identify possible
-            variables in the expression.
-
+            not be considered as variables. Default is an empty list.
+        first_char_pattern (str): A regex pattern that defines the first
+            character of a valid variable name.
+        other_chars_pattern (str): A regex pattern that defines the subsequent
+            characters of a valid variable name.
+        tokens_to_skip (Optional[List[str]]): A list of tokens to skip when
+            extracting variable names. Default is an empty list.
     Returns:
         List[str]: A list of valid variable names extracted from the expression.
     """
@@ -182,11 +200,17 @@ def extract_tokens_from_expression(
         raise TypeError(
             f'Passed tokens_to_skip {tokens_to_skip} must be a list.')
 
-    # wrapping into \b ensures that only whole tokens are matched, and not
-    # substrings inside longer words
-    full_pattern = rf"\b{first_char_pattern}{other_chars_pattern}\b"
+    tokens = []
 
-    tokens = re.findall(pattern=full_pattern, string=expression)
+    if isinstance(pattern, list):
+        for pat in pattern:
+            tokens += re.findall(pat, expression)
+    elif isinstance(pattern, str):
+        tokens = re.findall(pattern, expression)
+    else:
+        raise TypeError(
+            f'Passed pattern {pattern} must be a string or a list of strings.')
+
     allowed_tokens = [token for token in tokens if token not in tokens_to_skip]
 
     return allowed_tokens

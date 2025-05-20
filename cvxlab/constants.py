@@ -79,7 +79,7 @@ class Constants:
         SCENARIO_COORDINATES = 'info'
         PROBLEM_STATUS = 'status'
         OBJECTIVE = 'objective'
-        CONSTRAINTS = 'expressions'
+        EXPRESSIONS = 'expressions'
 
         COORDINATES_KEY = 'coordinates'
         VARIABLES_INFO_KEY = 'variables_info'
@@ -201,12 +201,15 @@ class Constants:
         ALLOWED_DIMENSIONS = ['rows', 'cols', 'intra', 'inter']
         ALLOWED_VARIABLES_TYPES = ['constant', 'exogenous', 'endogenous']
         NONE_SYMBOLS = [None, 'nan', 'None', 'null', '', [], {}]
-        TOKEN_PATTERN = {
-            "first_char": r"[a-zA-Z_]",
-            "other_chars": r"[a-zA-Z0-9_]*",
+
+        TOKEN_PATTERNS = {
+            'text': r"\b[a-zA-Z_][a-zA-Z0-9_]*\b",
+            'numbers': r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?",
+            'operators': [r"\+", r"-", r"\*", r"/", r"@", r"==", r">=", r"<="],
+            'parentheses': [r"\(", r"\)"]
         }
 
-        ALLOWED_CONSTANTS = {
+        USER_DEFINED_CONSTANTS = {
             'sum_vector': (np.ones, {}),
             'identity': (np.eye, {}),
             'set_length': (np.max, {}),
@@ -215,17 +218,7 @@ class Constants:
             'lower_triangular': (util_constants.tril, {}),
         }
 
-        ALLOWED_OPERATORS = {
-            '+': '+',
-            '-': '-',
-            '*': '*',
-            '@': '@',
-            '==': '==',
-            '>=': '>=',
-            '<=': '<=',
-            '(': '(',
-            ')': ')',
-            ',': ',',
+        USER_DEFINED_OPERATORS = {
             'tran': cp.transpose,
             'diag': cp.diag,
             'sum': cp.sum,

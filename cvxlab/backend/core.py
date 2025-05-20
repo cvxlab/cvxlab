@@ -637,7 +637,7 @@ class Core:
             level='info',
         ):
             self.problem.load_symbolic_problem_from_file(force_overwrite)
-            self.problem.check_symbolic_problem_coherence()
+            self.problem.validate_symbolic_expressions()
 
     def generate_numerical_problem(
             self,

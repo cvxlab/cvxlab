@@ -151,7 +151,7 @@ class Variable:
         """
         value_key = Constants.Labels.VALUE_KEY
         blank_fill_key = Constants.Labels.BLANK_FILL_KEY
-        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS
+        allowed_constants = Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
 
         if self.var_info is None:
             return
@@ -200,6 +200,19 @@ class Variable:
         rows_shape = self.rows['set'] if 'set' in self.rows else 1
         cols_shape = self.cols['set'] if 'set' in self.cols else 1
         return [rows_shape, cols_shape]
+
+    @property
+    def intra_sets(self) -> List[str]:
+        """
+        Retrieves the intra-problem sets of the variable.
+
+        Returns:
+            List[Union[str, int]]: A list containing the intra-problem sets.
+        """
+        if self.coordinates_info['intra'] is None:
+            return []
+
+        return list(self.coordinates_info['intra'].keys())
 
     @property
     def shape_size(self) -> Tuple[int]:
@@ -549,7 +562,7 @@ class Variable:
             exc.ConceptualModelError: If the shape of the variable is not 
                 suitable for creating the constant.
         """
-        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS
+        allowed_constants = Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
 
         util.validate_selection(
             valid_selections=allowed_constants,

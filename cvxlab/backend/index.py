@@ -246,7 +246,7 @@ class Index:
 
     def check_data_coherence(self) -> None:
         allowed_var_types = Constants.SymbolicDefinitions.ALLOWED_VARIABLES_TYPES
-        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS.keys()
+        allowed_constants = Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS.keys()
         allowed_dims = Constants.SymbolicDefinitions.ALLOWED_DIMENSIONS
 
         coordinates_key = Constants.Labels.COORDINATES_KEY
