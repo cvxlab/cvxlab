@@ -770,16 +770,14 @@ class Problem:
                 for var_key, dim_sets in shape_set_map.items():
                     overlapping_sets = intra_problem_sets & dim_sets
                     if overlapping_sets:
-                        overlapping_intra_vars = [
-                            k for k, v in vars_in_expression.items()
-                            if set(v.shape_sets or []) & overlapping_sets
-                        ]
                         problems.append(
                             msg_str +
                             f"Variable '{var_key}' has shape_set(s) overlapped "
-                            f"with intra-problem set(s) of variable(s): "
-                            f"{overlapping_intra_vars}."
+                            f"with intra-problem set(s) of the expression: "
+                            f"{intra_problem_sets}."
                         )
+
+                # other checks can be added here ...
 
         if problems:
             self.logger.error(
