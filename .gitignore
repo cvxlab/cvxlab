@@ -135,6 +135,7 @@ dmypy.json
 
 # File extensions
 *.log
+*.pyc
 
 # Specific files
 launch.json
