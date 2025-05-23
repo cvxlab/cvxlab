@@ -169,8 +169,9 @@ def balanced_parentheses(parentheses_list: List[str]) -> bool:
 
 def extract_tokens_from_expression(
     expression: str,
-    pattern: str = None,
+    pattern: str | List[str],
     tokens_to_skip: Optional[List[str]] = [],
+    avoid_duplicates: Optional[bool] = False,
 ) -> List[str]:
     """
     Parses and extracts variable names from a symbolic expression, excluding
@@ -182,23 +183,31 @@ def extract_tokens_from_expression(
     Parameters:
         expression (str): The symbolic expression from which to extract
             variable names.
-        non_allowed_tokens (Optional[List[str]]): A list of tokens that should
-            not be considered as variables. Default is an empty list.
-        first_char_pattern (str): A regex pattern that defines the first
-            character of a valid variable name.
-        other_chars_pattern (str): A regex pattern that defines the subsequent
-            characters of a valid variable name.
+        pattern (str | List[str]): The regular expression pattern(s) to use for
+            matching tokens' names. This can be a single pattern or a list of
+            patterns.
         tokens_to_skip (Optional[List[str]]): A list of tokens to skip when
             extracting variable names. Default is an empty list.
+        avoid_duplicates (Optional[bool]): if True, it eliminates duplicates from
+            the resulting list by preserving items order.
     Returns:
         List[str]: A list of valid variable names extracted from the expression.
     """
     if not isinstance(expression, str):
         raise TypeError(f'Passed expression {expression} must be a string.')
 
+    if not isinstance(pattern, (str, list)):
+        raise TypeError(
+            f'pattern {pattern} must be a string or a list of strings.')
+
     if not isinstance(tokens_to_skip, list):
         raise TypeError(
-            f'Passed tokens_to_skip {tokens_to_skip} must be a list.')
+            f'tokens_to_skip {tokens_to_skip} must be a list.')
+
+    if not isinstance(avoid_duplicates, bool):
+        raise TypeError(
+            f'avoid_duplicates {avoid_duplicates} must be a bool.'
+        )
 
     tokens = []
 
@@ -207,10 +216,10 @@ def extract_tokens_from_expression(
             tokens += re.findall(pat, expression)
     elif isinstance(pattern, str):
         tokens = re.findall(pattern, expression)
-    else:
-        raise TypeError(
-            f'Passed pattern {pattern} must be a string or a list of strings.')
 
     allowed_tokens = [token for token in tokens if token not in tokens_to_skip]
+
+    if avoid_duplicates:
+        allowed_tokens = list(dict.fromkeys(allowed_tokens))
 
     return allowed_tokens
