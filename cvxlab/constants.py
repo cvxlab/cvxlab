@@ -204,7 +204,7 @@ class Constants:
 
         TOKEN_PATTERNS = {
             'text': r"\b[a-zA-Z_][a-zA-Z0-9_]*\b",
-            'numbers': r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?",
+            'numbers': r"\b(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?\b",
             'operators': [r"\+", r"-", r"\*", r"/", r"@", r"==", r">=", r"<="],
             'parentheses': [r"\(", r"\)"]
         }
