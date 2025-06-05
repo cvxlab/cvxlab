@@ -173,6 +173,9 @@ def shift(
             "Shift value must be numpy arrays or a scipy sparse matrix."
             f"Passed type: '{type(shift_values)}'.")
 
+    if issparse(shift_values):
+        shift_values = shift_values.toarray()
+
     if not set_length.size == 1:
         raise ValueError(
             "Set length must be a scalar. Passed dimension: "
