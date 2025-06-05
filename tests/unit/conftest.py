@@ -1,3 +1,4 @@
+import cvxpy
 import pytest
 import pandas as pd
 import numpy as np
@@ -5,17 +6,39 @@ import numpy as np
 from typing import Callable, Sequence, Any, Optional, Dict, Union
 
 
-def assert_equality(result: Any, expected: Any, msg: str) -> None:
-    """Helper to assert equality for various types."""
+def assert_equality(
+        result: Any,
+        expected: Any,
+        msg: str,
+        tolerance: bool = False
+) -> None:
+    """Helper to assert equality for various types, with optional tolerance."""
+
+    if isinstance(result, cvxpy.Expression):
+        result = result.value
 
     if isinstance(result, pd.DataFrame) and isinstance(expected, pd.DataFrame):
-        assert result.equals(expected), msg
+        if tolerance:
+            assert result.shape == expected.shape and \
+                (result.columns == expected.columns).all() and \
+                (result.index == expected.index).all(), msg
+            assert np.allclose(result.values, expected.values), msg
+        else:
+            assert result.equals(expected), msg
 
     elif isinstance(result, pd.Series) and isinstance(expected, pd.Series):
-        assert result.equals(expected), msg
+        if tolerance:
+            assert result.shape == expected.shape and \
+                (result.index == expected.index).all(), msg
+            assert np.allclose(result.values, expected.values), msg
+        else:
+            assert result.equals(expected), msg
 
     elif isinstance(result, np.ndarray) and isinstance(expected, np.ndarray):
-        assert np.array_equal(result, expected), msg
+        if tolerance:
+            assert np.allclose(result, expected), msg
+        else:
+            assert np.array_equal(result, expected), msg
 
     else:
         assert result == expected, msg
@@ -31,6 +54,7 @@ def run_test_cases(
             tuple[Sequence[Any], Any, Optional[type], Dict[str, Any]],
         ]
     ],
+    tolerance: bool = False,
     **common_kwargs,
 ) -> None:
     """
@@ -44,6 +68,9 @@ def run_test_cases(
         List of test cases in one of the following forms:
             ((args...), expected_output, expected_exception)
             ((args...), expected_output, expected_exception, {kwarg: val, ...})
+    tolerance : bool
+         If True, use tolerant equality for numpy arrays, Series, and DataFrames. 
+         (default is False).
     **common_kwargs
         Common keyword arguments passed to all test cases (overridden by 
             test-specific kwargs).
@@ -81,4 +108,4 @@ def run_test_cases(
                 Failed for input={input_val}, kwargs={kwargs}. 
                 Expected {expected_output}, got {result}
                 """
-            assert_equality(result, expected_output, msg)
+            assert_equality(result, expected_output, msg, tolerance=tolerance)
