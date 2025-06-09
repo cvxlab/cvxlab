@@ -198,16 +198,20 @@ class Constants:
 
     class SymbolicDefinitions:
         """Allowed constants and operators for symbolic problem definitions."""
-        ALLOWED_DIMENSIONS = ['rows', 'cols', 'intra', 'inter']
-        ALLOWED_VARIABLES_TYPES = ['constant', 'exogenous', 'endogenous']
-        NONE_SYMBOLS = [None, 'nan', 'None', 'null', '', [], {}]
-
         TOKEN_PATTERNS = {
             'text': r"\b[a-zA-Z_][a-zA-Z0-9_]*\b",
             'numbers': r"\b(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?\b",
-            'operators': [r"\+", r"-", r"\*", r"/", r"@", r"==", r">=", r"<="],
-            'parentheses': [r"\(", r"\)"]
+            'operators': [
+                r"==", r">=", r"<=",
+                r"\+", r"-", r"\*", r"/", r"@", f",",
+            ],
+            'parentheses': [r"\(", r"\)"],
         }
+
+        NONE_SYMBOLS = [None, 'nan', 'None', 'null', '', [], {}]
+
+        ALLOWED_DIMENSIONS = ['rows', 'cols', 'intra', 'inter']
+        ALLOWED_VARIABLES_TYPES = ['constant', 'exogenous', 'endogenous']
 
         USER_DEFINED_CONSTANTS = {
             'sum_vector': (np.ones, {}),
