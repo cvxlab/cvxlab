@@ -10,9 +10,11 @@ def assert_equality(
         result: Any,
         expected: Any,
         msg: str,
-        tolerance: bool = False
+        tolerance: Optional[float] = None
 ) -> None:
-    """Helper to assert equality for various types, with optional tolerance."""
+    """
+    Helper to assert equality for various types, with optional absolute tolerance.
+    """
 
     if isinstance(result, cvxpy.Expression):
         result = result.value
@@ -22,7 +24,8 @@ def assert_equality(
             assert result.shape == expected.shape and \
                 (result.columns == expected.columns).all() and \
                 (result.index == expected.index).all(), msg
-            assert np.allclose(result.values, expected.values), msg
+            assert np.allclose(
+                result.values, expected.values, atol=tolerance), msg
         else:
             assert result.equals(expected), msg
 
@@ -30,13 +33,14 @@ def assert_equality(
         if tolerance:
             assert result.shape == expected.shape and \
                 (result.index == expected.index).all(), msg
-            assert np.allclose(result.values, expected.values), msg
+            assert np.allclose(
+                result.values, expected.values, atol=tolerance), msg
         else:
             assert result.equals(expected), msg
 
     elif isinstance(result, np.ndarray) and isinstance(expected, np.ndarray):
         if tolerance:
-            assert np.allclose(result, expected), msg
+            assert np.allclose(result, expected, atol=tolerance), msg
         else:
             assert np.array_equal(result, expected), msg
 
@@ -54,7 +58,7 @@ def run_test_cases(
             tuple[Sequence[Any], Any, Optional[type], Dict[str, Any]],
         ]
     ],
-    tolerance: bool = False,
+    tolerance: Optional[float] = None,
     **common_kwargs,
 ) -> None:
     """
@@ -68,9 +72,9 @@ def run_test_cases(
         List of test cases in one of the following forms:
             ((args...), expected_output, expected_exception)
             ((args...), expected_output, expected_exception, {kwarg: val, ...})
-    tolerance : bool
-         If True, use tolerant equality for numpy arrays, Series, and DataFrames. 
-         (default is False).
+    tolerance : Optional[float]
+         If a float is passed, use tolerant equality based on the passed 
+            tolerancefor numpy arrays, Series, and DataFrames. (default is None).
     **common_kwargs
         Common keyword arguments passed to all test cases (overridden by 
             test-specific kwargs).
