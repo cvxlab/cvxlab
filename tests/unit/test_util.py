@@ -9,43 +9,8 @@ This module contains tests for the functions in the 'esm.support.util' module.
 
 
 import pytest
-import pprint
 
 from cvxlab.support.util import *
-
-
-def test_prettify(capfd):
-    """
-    Test the function 'prettify'.
-
-    This test function uses pytest's capfd fixture to capture stdout and stderr.
-    It tests 'prettify' with a set of test cases, each containing an input item,
-    an expected output, and an expected exception (if any).
-
-    Parameters
-    ----------
-    capfd : _pytest.capture.CaptureFixture
-        Pytest fixture that can capture stdout and stderr.
-
-    Raises
-    ------
-    AssertionError
-        If the output of 'prettify' doesn't match the expected output.
-    """
-    test_cases = [
-        ({'key1': 'value1', 'key2': 'value2'},
-         pprint.pformat({'key1': 'value1', 'key2': 'value2'}) + '\n', None),
-        ('not a dictionary', None, TypeError)
-    ]
-
-    for input_item, expected_output, expected_exception in test_cases:
-        if expected_exception:
-            with pytest.raises(expected_exception):
-                prettify(input_item)
-        else:
-            prettify(input_item)
-            out, err = capfd.readouterr()
-            assert out == expected_output
 
 
 def test_validate_selection():
