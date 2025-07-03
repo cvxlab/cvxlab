@@ -130,16 +130,15 @@ dmypy.json
 .pyre/
 
 # Folders
-.vscode/
-
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
 
 # File extensions
 *.log
 *.pyc
 
 # Specific files
-launch.json
-settings.json
 my_notebook.ipynb
 pyesm_sourcetrail.srctrlbm
 pyesm_sourcetrail.srctrldb
