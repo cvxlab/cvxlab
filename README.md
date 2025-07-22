@@ -1,4 +1,4 @@
-![CVXlab Logo](docs/images/PNG/CVXlab_logo%20studio_deliverable_150725-01.png)
+![CVXlab Logo](docs/images/PNG/CVXlab_logo%20studio_deliverable_150725-02.png)
 
 # cvxlab
 
