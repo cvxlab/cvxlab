@@ -1,4 +1,7 @@
+![CVXlab Logo](docs/images/PNG/CVXlab_logo%20studio_deliverable_150725-01.png)
+
 # cvxlab
+
 
 ## Table of Contents
 - [Introduction](#introduction)
