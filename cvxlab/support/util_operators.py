@@ -1,5 +1,4 @@
-"""
-util_functions.py 
+"""util_functions.py 
 
 @author: Matteo V. Rocco
 @institution: Politecnico di Milano
@@ -225,16 +224,18 @@ def annuity(
         interest_rate: Optional[cp.Parameter] = None,
 ) -> cp.Parameter:
     """ 
-    Calculate the annuity factor for a given period length, lifetime, and
-    interest rate. The annuity factor is used to calculate the present value of
-    an annuity, which is a series of equal payments made at regular intervals.
+    Calculate the annuity factor. 
+
+    The annuity factor is used to calculate the present value of an annuity for 
+    a given period length, lifetime, and interest rate, which is a series of 
+    equal payments made at regular intervals.
 
     Parameters:
         period_length (cp.Parameter): The length of the period for which the
             annuity factor is calculated.
-            lifetime (cp.Parameter): The total number of periods over which the
+        lifetime (cp.Parameter): The total number of periods over which the
             annuity is paid.
-            interest_rate (cp.Parameter): The interest rate used to discount the
+        interest_rate (cp.Parameter): The interest rate used to discount the
             annuity payments.
 
     Returns:
@@ -310,11 +311,12 @@ def weibull_distribution(
         rounding: int = 2,
 ) -> cp.Parameter:
     """
-    Generates a Weibull probability density function configured either as a 
-    one-dimensional vector or a two-dimensional matrix, based on specified 
-    dimensions. This function primarily uses parameters from 'cvxpy' to enable 
-    integration with optimization tasks and 'numpy' for handling numerical 
-    operations.
+    Generates a Weibull probability density function.
+
+    This function can be produced either as a one-dimensional vector or a 
+    two-dimensional matrix, based on specified dimensions. This function 
+    primarily uses parameters from 'cvxpy' to enable integration with 
+    optimization tasks and 'numpy' for handling numerical operations.
 
     Parameters:
         scale_factor (cp.Parameter): A cvxpy Parameter object containing a 

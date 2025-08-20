@@ -40,20 +40,20 @@ class Core:
     executing model operations.
 
     Attributes:
-        logger (Logger): Logger object for logging information.
-        files (FileManager): FileManager object for file operations.
-        settings (Dict[str, str]): Settings for various file paths and configurations.
-        paths (Dict[str, Path]): Paths to various directories and files used in the model.
-        sqltools (SQLManager): SQLManager object for database interactions.
-        index (Index): Index object for managing data table and variable indices.
-        database (Database): Database object for database operations.
-        problem (Problem): Problem object for problem definitions and operations.
+    - logger (Logger): Logger object for logging information.
+    - files (FileManager): FileManager object for file operations.
+    - settings (Dict[str, str]): Settings for various file paths and configurations.
+    - paths (Dict[str, Path]): Paths to various directories and files used in the model.
+    - sqltools (SQLManager): SQLManager object for database interactions.
+    - index (Index): Index object for managing data table and variable indices.
+    - database (Database): Database object for database operations.
+    - problem (Problem): Problem object for problem definitions and operations.
 
     Args:
-        logger (Logger): Logger object for logging information.
-        files (FileManager): FileManager object for file operations.
-        settings (Dict[str, str]): Settings dictionary containing configuration details.
-        paths (Dict[str, Path]): Paths dictionary containing paths used in the model.
+    - logger (Logger): Logger object for logging information.
+    - files (FileManager): FileManager object for file operations.
+    - settings (Dict[str, str]): Settings dictionary containing configuration details.
+    - paths (Dict[str, Path]): Paths dictionary containing paths used in the model.
     """
 
     def __init__(
@@ -316,14 +316,6 @@ class Core:
             TypeError: If a passed item is not an instance of the 'Variable' class.
             MissingDataError: If no data or related table is defined for a variable,
                 or if the data for a variable contains non-allowed values types.
-
-        Notes:
-            The method logs information about the data fetching process.
-            The method uses a context manager to handle the database connection.
-            The data is fetched using the 'filtered_table_to_dataframe' method
-                of the SQLTools instance.
-            The data is assigned to the cvxpy variable using the 'data_to_cvxpy_variable'
-                method of the Problem instance.
         """
 
         with self.logger.log_timing(
@@ -498,12 +490,6 @@ class Core:
         Raises:
             TypeError: If a passed item is not an instance of the 'DataTable' class.
             OperationalError: If no coordinates DataFrame is defined for a data table.
-
-        Notes:
-            The method logs information about the data export process.
-            The method uses a context manager to handle the database connection.
-            The data is exported using the 'dataframe_to_table' method of the 
-                SQLTools instance.
         """
         self.logger.debug(
             "Exporting data from cvxpy endogenous variable (in data table) "
@@ -657,13 +643,6 @@ class Core:
 
         Returns:
             None
-
-        Notes:
-            The method logs information about the problem definition process.
-            The symbolic problem is loaded using the 'load_symbolic_problem_from_file' 
-                method of the Problem instance.
-            The numerical problems are generated using the 'generate_numerical_problems' 
-                method of the Problem instance.
         """
         self.initialize_problems_variables()
         self.data_to_cvxpy_exogenous_vars(allow_none_values=allow_none_values)
@@ -918,8 +897,10 @@ class Core:
         try:
             for scenario_idx in scenarios_df.index:
 
-                scenario_coords = scenarios_df.loc[scenario_idx,
-                                                   scenarios_header]
+                scenario_coords = scenarios_df.loc[
+                    scenario_idx,
+                    scenarios_header
+                ]
 
                 self.logger.info("=================================")
                 if scenario_coords:
@@ -943,13 +924,6 @@ class Core:
                                 "Maximum number of iterations hit before reaching "
                                 f"convergence (tolerance: {numerical_tolerance*100}%).")
                             break
-
-                        # make a method in log class to log such table
-                        # if iterations_log and iter_count == 1:
-                        #     print('\n')
-                        #     print('iter # \t|error \t|other \t')
-                        # if iterations_log:
-                        #     print(f'{iter_count}\tcc \t dd')
 
                         if iter_count > 1:
                             self.logger.info(
