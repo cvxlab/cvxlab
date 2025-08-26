@@ -694,7 +694,6 @@ class Core:
             self.solve_integrated_problems(
                 solver=solver,
                 solver_verbose=solver_verbose,
-                iterations_log=iterations_log,
                 numerical_tolerance=numerical_tolerance,
                 maximum_iterations=maximum_iterations,
                 **kwargs,
