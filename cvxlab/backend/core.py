@@ -1,4 +1,4 @@
-"""Module defining the Core class of CVXlab.
+"""Module defining the Core class.
 
 The Core class serves as the central management point for the CVXlab package
 and orchestrates the interactions among Index (embedding all information about
@@ -47,12 +47,6 @@ class Core:
     - index (Index): Index object for managing data table and variable indices.
     - database (Database): Database object for database operations.
     - problem (Problem): Problem object for problem definitions and operations.
-
-    Args:
-    - logger (Logger): Logger object for logging information.
-    - files (FileManager): FileManager object for file operations.
-    - settings (Dict[str, str]): Settings dictionary containing configuration details.
-    - paths (Dict[str, Path]): Paths dictionary containing paths used in the model.
     """
 
     def __init__(

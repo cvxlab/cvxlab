@@ -448,7 +448,6 @@ class Model:
         verbose: bool = False,
         force_overwrite: bool = False,
         integrated_problems: bool = False,
-        iterations_log: bool = False,
         solver: Optional[str] = None,
         numerical_tolerance: Optional[float] = None,
         maximum_iterations: Optional[int] = None,
@@ -531,7 +530,6 @@ class Model:
             self.core.solve_numerical_problems(
                 solver=solver,
                 solver_verbose=verbose,
-                iterations_log=iterations_log,
                 force_overwrite=force_overwrite,
                 integrated_problems=integrated_problems,
                 numerical_tolerance=numerical_tolerance,
