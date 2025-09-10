@@ -417,7 +417,7 @@ class Variable:
             return []
 
         all_coords_w_headers = {}
-        for category in Constants.SymbolicDefinitions.ALLOWED_DIMENSIONS:
+        for category in Constants.SymbolicDefinitions.DIMENSIONS.values():
             coords_info = self.coordinates_info.get(category, {})
             coords = self.coordinates.get(category, {})
 

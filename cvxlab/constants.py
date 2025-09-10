@@ -188,7 +188,7 @@ class Constants:
                 in case of blank or nan values.
             - set_key: (Optional) dictionary with keys as set_key symbols and values
                 defining the dimension and filters for the set.
-                - dim: (Optional) ALLOWED_DIMENSIONS (included in 'coordinates').
+                - dim: (Optional) DIMENSIONS (included in 'coordinates').
                 - filters: (Optional) dictionary with keys as the filters key of the set
                     and values as the list of values to filter.
 
@@ -297,7 +297,9 @@ class Constants:
             numbers, operators, parentheses). Determines how the symbolic
             expressions are parsed and validated.
         - NONE_SYMBOLS: List of symbols considered as None or empty.
-        - ALLOWED_DIMENSIONS: List of allowed dimensions of variables, where 
+        - STD_TEXT_DATA_FILL: Standard text used to fill blank text fields in
+            SQLite sets or data tables.
+        - DIMENSIONS: List of allowed dimensions of variables, where 
             coordinates can be defined.
         - ALLOWED_VARIABLES_TYPES: List of allowed variable types for data tables.
         - USER_DEFINED_CONSTANTS: Dictionary of user-defined constants. These are
@@ -321,8 +323,15 @@ class Constants:
         }
 
         NONE_SYMBOLS = [None, 'nan', 'None', 'null', '', [], {}]
+        STD_TEXT_DATA_FILL = ''
 
-        ALLOWED_DIMENSIONS = ['rows', 'cols', 'intra', 'inter']
+        DIMENSIONS = {
+            'ROWS': 'rows',
+            'COLS': 'cols',
+            'INTRA': 'intra',
+            'INTER': 'inter',
+        }
+
         ALLOWED_VARIABLES_TYPES = ['constant', 'exogenous', 'endogenous']
 
         USER_DEFINED_CONSTANTS = {
