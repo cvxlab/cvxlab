@@ -39,14 +39,14 @@ class Core:
     and integrated problems.
 
     Attributes:
-    - logger (Logger): Logger object for logging information.
-    - files (FileManager): FileManager object for file operations.
-    - settings (Dict[str, str]): Settings for various file paths and configurations.
-    - paths (Dict[str, Path]): Paths to various directories and files used in the model.
-    - sqltools (SQLManager): SQLManager object for database interactions.
-    - index (Index): Index object for managing data table and variable indices.
-    - database (Database): Database object for database operations.
-    - problem (Problem): Problem object for problem definitions and operations.
+        logger (Logger): Logger object for logging information.
+        files (FileManager): FileManager object for file operations.
+        settings (Dict[str, str]): Settings for various file paths and configurations.
+        paths (Dict[str, Path]): Paths to various directories and files used in the model.
+        sqltools (SQLManager): SQLManager object for database interactions.
+        index (Index): Index object for managing data table and variable indices.
+        database (Database): Database object for database operations.
+        problem (Problem): Problem object for problem definitions and operations.
     """
 
     def __init__(
