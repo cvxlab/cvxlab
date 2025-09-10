@@ -1,13 +1,8 @@
-"""
-index.py
+"""Moduel defining the Index class.
 
-@author: Matteo V. Rocco
-@institution: Politecnico di Milano
-
-This module defines the Index class, which acts as a central registry for managing
-sets, data tables, and variables within the modeling system. It facilitates access
-and manipulation of these entities throughout the application.
-
+The Index class acts as a central registry for managing sets, data tables, and 
+variables within the modeling system. It facilitates access and manipulation of 
+these entities from other classes.
 The Index class loads and initializes set tables, data tables, and variable
 objects from configured sources and provides properties to access metadata and
 operational characteristics related to these entities.
@@ -31,22 +26,17 @@ from cvxlab.support.dotdict import DotDict
 
 
 class Index:
-    """
-    A central index for managing and accessing sets, data tables, and variables
-    within the system.
+    """Central registry for managing sets, data tables and variables.
 
     Attributes:
-        logger (Logger): Logger instance for logging activity within the class.
-        files (FileManager): FileManager instance for file operations.
+        logger (Logger): Logger object for logging information, warnings, and errors.
+        files (FileManager): Manages file-related operations with files.
         paths (Dict[str, Path]): Dictionary mapping of paths used in file operations.
         sets (Dict[str, SetTable]): Dictionary of set tables loaded upon initialization.
         data (Dict[str, DataTable]): Dictionary of data tables loaded upon initialization.
         variables (Dict[str, Variable]): Dictionary of variables fetched upon initialization.
-
-    Parameters:
-        logger (Logger): Logger instance from the parent or main handler.
-        files (FileManager): FileManager instance for handling file operations.
-        paths (Dict[str, Path]): Dictionary containing necessary path configurations.
+        scenarios_info (pd.DataFrame | None): DataFrame containing scenarios information,
+            initialized as None.
     """
 
     def __init__(
@@ -55,9 +45,22 @@ class Index:
             files: FileManager,
             settings: Dict[str, str],
             paths: Dict[str, Path],
-    ) -> None:
-        """
-        Initializes the Index object, loads sets, data tables, and variables.
+    ):
+        """Initialize a new instance of the Index class.
+
+        This constructor initializes the Index with a logger, file manager, paths
+        dictionary. It initializes sets and data attributes, loads and validates 
+        structures of such items based on default structures provided in Constants. 
+        Once sets and data are loaded, it checks for coherence between them and 
+        completes data tables with sets information. The method then generates variables 
+        objects and fetches their coordinates information. Finally, it initializes 
+        the 'scenarios_info' attribute as None.
+
+        Args:
+            logger (Logger): Logger object for logging operations.
+            files (FileManager): FileManager object for managing file operations.
+            settings (Dict[str, str]): A dictionary containing configuration settings.
+            paths (Dict[str, Path]): Dictionary mapping of paths used in file operations.
         """
         self.logger = logger.get_child(__name__)
 
@@ -75,25 +78,23 @@ class Index:
         self.variables: DotDict[str, Variable] = self.generate_variables()
         self.fetch_vars_coordinates_info()
 
-        self.scenarios_info: pd.DataFrame = None
-
-    def __repr__(self):
-        class_name = type(self).__name__
-        return f'{class_name}'
-
     @property
     def sets_split_problem_dict(self) -> Dict[str, str]:
-        """
-        Provides a dictionary of sets that have a split problem, mapped to
-        their respective headers. Returns an empty dictionary if no sets are
-        identified with a split problem.
+        """Dictionary containing sets that define different problems.
+
+        This property returns a dictionary collecting inter-problem sets, that is,
+        sets that defines independent numerical problems (i.e. with split problem 
+        attribute as True). The dictionary maps the names of sets (dict keys) and 
+        the related headers used in database tables for identifying sets entries 
+        names (dict values). The method returns an empty dictionary if no 
+        inter-problem sets are defined.
 
         Returns:
-            Dict[str, str]: A dictionary where keys are set identifiers and values
-                are headers associated with split problems. Returns an empty
-                dictionary if the required information is not available or applicable.
+            Dict[str, str]: A dictionary where keys are set names and values
+                are headers used in set tables. Returns an empty dictionary if 
+                the required information is not available.
         """
-        sets_split_problem_list = {}
+        sets_split_problem = {}
         name_header = Constants.Labels.NAME
 
         for key, set_table in self.sets.items():
@@ -105,38 +106,43 @@ class Index:
                 headers = set_table.table_headers.get(name_header, [])
 
                 if headers:
-                    sets_split_problem_list[key] = headers[0]
+                    sets_split_problem[key] = headers[0]
 
-        return sets_split_problem_list
+        return sets_split_problem
 
     @property
     def list_sets(self) -> List[str]:
-        """
-        Returns a list of all set identifiers currently loaded in the index.
-        Returns an empty list if no sets are loaded.
+        """List of all set names.
+
+        This property returns a list of all set names currently loaded in the Index.
+        An empty list is returned if no sets are loaded.
 
         Returns:
-            List[str]: List of set identifiers.
+            List[str]: List of set names.
         """
         return list(self.sets.keys()) if self.sets else []
 
     @property
     def list_data_tables(self) -> List[str]:
-        """
-        Returns a list of all data table identifiers currently loaded in the index.
-        Returns an empty list if no data tables are loaded.
+        """List of all data table names.
+
+        This property returns a list of all data table names currently loaded 
+        in the index. It returns an empty list if no data tables are loaded.
 
         Returns:
-            List[str]: List of data table identifiers.
+            List[str]: List of data table names.
         """
         return list(self.data.keys()) if self.sets else []
 
     @property
     def list_exogenous_data_tables(self) -> List[str]:
-        """
-        Returns a list of all data table identifiers currently loaded in the index
-        that are marked as not endogenous. Returns an empty list if no exogenous data
-        tables are loaded.
+        """List of names of exogenous data table.
+
+        This property returns a list of all data table names currently loaded into 
+        the index collecting exogenous data. The method returns an empty list if 
+        no exogenous data tables are loaded.
+        In case a data table serves as container for both exogenous and endogenous
+        data types, the table is considered exogenous.
 
         Returns:
             List[str]: List of exogenous data table identifiers.
@@ -144,16 +150,21 @@ class Index:
         endogenous_type = Constants.SymbolicDefinitions.ALLOWED_VARIABLES_TYPES[2]
         constant_type = Constants.SymbolicDefinitions.ALLOWED_VARIABLES_TYPES[0]
 
-        return [
-            key for key, data_table in self.data.items()
-            if data_table.type not in [endogenous_type, constant_type]
-        ]
+        result = []
+        for key, data_table in self.data.items():
+            data_table: DataTable
+            if data_table.type not in [endogenous_type, constant_type]:
+                result.append(key)
+
+        return result
 
     @property
     def list_all_tables(self) -> List[str]:
-        """
-        Returns a list of all table identifiers currently loaded in the index.
-        Returns an empty list if no tables are loaded.
+        """List of names of all sets tables and data tables.
+
+        This property returns a list of all names of sets tables and data tables 
+        currently loaded in the Index. The method returns an empty list if no 
+        tables are loaded.
 
         Returns:
             List[str]: List of table identifiers.
@@ -162,20 +173,90 @@ class Index:
 
     @property
     def list_variables(self) -> List[str]:
-        """
-        Returns a list of all variable identifiers currently loaded in the index.
-        Returns an empty list if no variables are loaded.
+        """List of names of all variables.
+
+        This property returns a list of names of all the variables currently 
+        loaded in the Index. Returns an empty list if no variables are loaded.
 
         Returns:
             List[str]: List of variable identifiers.
         """
         return list(self.variables.keys()) if self.variables else []
 
+    @property
+    def scenarios_info(self) -> Optional[pd.DataFrame]:
+        """Dataframe containing scenarios information.
+
+        This property returns a DataFrame containing linear combination of
+        all set values for all inter-problem sets, representing different
+        scenarios.
+
+        Returns:
+            Optional[pd.DataFrame]: A DataFrame with scenarios information if 
+                available, otherwise None.
+        """
+        self.logger.debug("Fetching scenario/s information to Index.")
+
+        scenarios_coordinates = {}
+        list_sets_split_problem = list(self.sets_split_problem_dict.values())
+        scenarios_coords_header = Constants.Labels.SCENARIO_COORDINATES
+
+        for set_key, set_header in self.sets_split_problem_dict.items():
+            set_table: SetTable = self.sets[set_key]
+            set_values = set_table.data[set_header]
+            scenarios_coordinates[set_header] = list(set_values)
+
+        scenarios_df = util.unpivot_dict_to_dataframe(
+            data_dict=scenarios_coordinates,
+            key_order=list_sets_split_problem,
+        )
+
+        util.add_column_to_dataframe(
+            dataframe=scenarios_df,
+            column_header=scenarios_coords_header,
+            column_values=None,
+        )
+
+        for scenario_idx in scenarios_df.index:
+            scenarios_coords = [
+                scenarios_df.loc[scenario_idx][set_key]
+                for set_key in list_sets_split_problem
+            ]
+            scenarios_df.at[
+                scenario_idx, scenarios_coords_header
+            ] = scenarios_coords
+
+        return scenarios_df
+
     def load_and_validate_structure(
             self,
             data_structure_key: str,
     ) -> DotDict[str, SetTable | DataTable]:
+        """Load and validate a data structure (sets or data tables).
 
+        This method loads and validates a specified data structure, which can be
+        either sets or data tables, based on the provided key. It retrieves the
+        appropriate structure and validation schema from predefined constants,
+        loads the data from the configured source, and validates each entry against
+        the corresponding schema. If any entries fail validation, it logs the
+        issues and raises a SettingsError. Upon successful validation, it transforms
+        the data into a DotDict of either SetTable or DataTable objects, depending
+        on the structure key provided.
+
+        Args:
+            data_structure_key (str): Key indicating which data structure to load
+                and validate. Must be one of the predefined structure keys available
+                in Constants.ConfigFiles.SETUP_INFO.
+
+        Raises:
+            exc.SettingsError: If the passed data structure key is not recognized.
+            exc.SettingsError: If any entries in the loaded data fail validation.
+
+        Returns:
+            DotDict[str, SetTable | DataTable]: A DotDict containing the validated
+                data structure, with keys as identifiers and values as either
+                SetTable or DataTable objects.
+        """
         structures = Constants.DefaultStructures
         config = Constants.ConfigFiles
 
@@ -245,9 +326,37 @@ class Index:
         return validated_structure
 
     def check_data_coherence(self) -> None:
+        """Check coherence between sets and data tables.
+
+        This method performs various coherence checks between the sets and data
+        tables loaded in the Index. All anomalies are collected in a dictionary
+        with keys identifying the location of the anomaly, and value as the related
+        description. Errors are raised and logged at the end of the method.
+        Further checks may be developed.
+
+        The following checks are performed looping over data tables:
+            Data tables must be of the allowed type (defined in Constants class).
+            Coordinates defining data tables must be valid (defined among sets).
+
+        For each data table, variables are looped and the following checks performed:
+            Variable property 'value' can be only assigned for 'constant' type, and 
+                it must be of the allowed type (defined in Constant class).
+            Variable property 'blank_fill' can be only defined for exogenous variables.
+            Other variable properties can be defined only as related data table 
+                coordinates.
+
+        For coordinates defined within the variable, the following checks are performed:
+            Variable dimension assigned to the coordiante must be valid (row, cols).
+            Eventual variable dimension filter must be well-defined: filter key 
+                and related values must be part of the defined filters in sets.
+
+        Raises:
+            exc.SettingsError: Raised with the list of all exceptions collected
+                during the coherence checks, identifying mistakes in model settings.
+        """
         allowed_var_types = Constants.SymbolicDefinitions.ALLOWED_VARIABLES_TYPES
         allowed_constants = Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS.keys()
-        allowed_dims = Constants.SymbolicDefinitions.ALLOWED_DIMENSIONS
+        allowed_dims = list(Constants.SymbolicDefinitions.DIMENSIONS.values())
 
         coordinates_key = Constants.Labels.COORDINATES_KEY
         filters_key = Constants.Labels.FILTERS
@@ -372,7 +481,15 @@ class Index:
             raise exc.SettingsError(msg)
 
     def data_tables_completion(self) -> None:
+        """Complete attributes of data tables based on sets tables.
 
+        This method loops over each data table and complete some attributes,
+        specifically the dictionaries table headers and coordinate headers to be
+        subsequently used to define data tables in the database.
+
+        Raises:
+            exc.MissingDataError: Raised in case information in sets are missing.
+        """
         self.logger.debug(
             "Completing data tables with information taken from related Sets.")
 
@@ -402,20 +519,14 @@ class Index:
             }
 
     def generate_variables(self) -> DotDict[str, Variable]:
-        """
-        Fetches and validates variable information from all loaded data tables,
-        generating 'Variable' objects for each valid entry.
-        The method checks each variable's data against a defined structure and
-        initializes 'Variable' instances if the data conforms to the expected format.
+        """Generate all variables as Variable instances.
+
+        This method is a Variable class factory, generating the variable DotDict 
+        instance collecting instances of all Variable objects.
 
         Returns:
-            Dict[str, Variable]: A dictionary of 'Variable' objects keyed by
+            Dict[str, Variable]: A DotDict instance with 'Variable' objects keyed by
                 their identifiers, collected across all data tables.
-
-        Raises:
-            SettingsError: If any variable data does not conform to the required
-                structure, specifying the table and the nature of the validation
-                failure.
         """
         self.logger.debug(
             "Fetching and validating variables from data tables, generating "
@@ -443,18 +554,31 @@ class Index:
         return variables_info
 
     def fetch_vars_coordinates_info(self) -> None:
-        """
-        Populates each variable in the index with detailed coordinate information,
-        categorizing data table headers into rows, columns, intra-problem sets,
+        """Fetch variables coordinates information from related data tables.
+
+        This method populates each variable in the Index with detailed coordinates 
+        information, categorizing data table headers into rows, columns, intra-problem sets,
         and inter-problem sets based on the variable's shape and configuration.
-        It derives this information from the related data tables specified for
+        The method derives this information from the related data tables specified for
         each variable.
+        Specifically, for each variable, coordinates are categorized as follows:
+            rows: corresponding to the rows dimension in the variable's shape.
+            cols: corresponding to the columns dimension in the variable's shape.
+            intra: sets that are not part of the variable's shape and do not define
+                different problems. In numerical problems, equations are defined
+                for a number of times equal to the linear combination of intra-problem
+                sets of all the variables involved.
+            inter: sets that define different problems (i.e., sets with the
+                'split_problem' attribute set to True). Each unique combination
+                of inter-problem sets defines a separate numerical problem.
 
         Raises:
-            ConceptualModelError: If there are multiple intra-problem sets found,
-                indicating a configuration error in the variable setup.
+            exc.MissingDataError: If a variable's related table is not defined, or
+                if no data is found for a variable's related table.
         """
         self.logger.debug("Fetching 'coordinates_info' to Index.variables.")
+
+        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
 
         for var_key, variable in self.variables.items():
             variable: Variable
@@ -492,15 +616,27 @@ class Index:
                         inter[key] = table_header
 
             variable.coordinates_info = {
-                'rows': rows,
-                'cols': cols,
-                'intra': intra,
-                'inter': inter,
+                dimensions['ROWS']: rows,
+                dimensions['COLS']: cols,
+                dimensions['INTRA']: intra,
+                dimensions['INTER']: inter,
             }
 
     def check_variables_coherence(self) -> None:
-        """Various checks in how variables have defined. For the moment only
-        checks if the variable coordinates are present for all dimensions.
+        """Validate variables definitions.
+
+        This method performs various checks related to how variables have defined. 
+        All anomalies are collected in a dictionary with keys identifying the location
+        of the anomaly, and value as the related description. Errors are raised and
+        logged at the end of the method. Further checks can be added. 
+
+        Current checks include:
+            If variable coordinates are defined for any dimension, the related
+                values must be not empty, otherwise the variable will have no dimensions.
+
+        Raises:
+            exc.SettingsError: Raised with the list of all exceptions collected
+                during the coherence checks, identifying mistakes in model settings.      
         """
         self.logger.debug(f"Validating variables coherence with coordinates.")
 
@@ -545,13 +681,19 @@ class Index:
             raise exc.SettingsError(msg)
 
     def fetch_foreign_keys_to_data_tables(self) -> None:
-        """
-        Assigns foreign key relationships to the data tables in the index.
-        This is achieved by referencing set tables that are associated with
-        each data table based on coordinate headers.
-        Each foreign key relationship is defined by matching coordinate headers
-        in the data tables with set tables, effectively linking related data
-        entities across the model.
+        """Define foreign key relationships to data tables.
+
+        This method assigns foreign keys relationships to the data tables in the 
+        Index. This is achieved by referencing set tables that are associated with
+        each data table based on coordinate headers. Each foreign key relationship 
+        is defined by matching coordinate headers in the data tables with set tables, 
+        effectively linking related data entities across the model.
+        The 'foreign_keys' attribute is used to generate SQLite database tables 
+        with foreign keys.
+
+        Raises:
+            exc.MissingDataError: If a table is referenced in a set but not found
+                in the Index sets, indicating a configuration or data entry error.
         """
         self.logger.debug(
             "Loading tables 'foreign_keys' to Index.data_tables.")
@@ -576,25 +718,25 @@ class Index:
             self,
             excel_file_name: str,
             excel_file_dir_path: Path | str,
-            empty_data_fill='',
     ) -> None:
-        """
-        Loads data for sets from an Excel file into the Index. If any set already
-        contains data, prompts the user to decide whether to overwrite the existing data.
+        """Load sets data from an Excel file into the Index.
 
-        Parameters:
+        This method reads data from Excel sets tables and generates the related 
+        DataFrames in set tables in the Index. If any set already contains data, 
+        prompts the user to decide whether to overwrite the existing data.
+
+        Args:
             excel_file_name (str): The name of the Excel file to load.
             excel_file_dir_path (Path | str): The directory path where the Excel
                 file is located.
-            empty_data_fill (str, optional): The value to use for filling in
-                empty cells in the Excel data.
 
         Raises:
-            MissingDataError: If a table is referenced in a set but not found
+            exc.MissingDataError: If a table is referenced in a set but not found
                 in the Excel file and not defined to be copied from another set,
                 or if necessary headers are missing.
-            SettingsError: If the set to be copied does not exist or its data
-                is improperly formatted.
+            exc.SettingsError: If a table is defined to be copied from another set,
+                but the referenced set does not exist or its data is not defined
+                or is in the wrong format.
         """
         if all(
             set_instance.data is None
@@ -612,7 +754,7 @@ class Index:
         sets_excel_data = self.files.excel_to_dataframes_dict(
             excel_file_name=excel_file_name,
             excel_file_dir_path=excel_file_dir_path,
-            empty_data_fill=empty_data_fill,
+            empty_data_fill=Constants.SymbolicDefinitions.STD_TEXT_DATA_FILL,
         )
 
         sets_excel_keys = sets_excel_data.keys()
@@ -655,15 +797,19 @@ class Index:
                 raise exc.SettingsError(msg)
 
     def load_coordinates_to_data_index(self) -> None:
-        """
-        Populates the 'coordinates_values' dictionary of each data table in the
-        index with coordinate items from corresponding sets based on headers
-        defined in 'coordinates_headers'.
-        This method maps set items to their respective data tables,
-        facilitating direct access to these items for operations that require
-        context-specific data, such as data processing or analysis tasks.
-        Ensures that each data table's coordinates are updated with actual items
-        from the sets as specified in the table's coordinate headers.
+        """Fetch coordinates values from sets to data tables.
+
+        This method populates the 'coordinates_values' dictionary of each data 
+        table in the Index, with coordinates values from corresponding sets based 
+        on headers defined in 'coordinates_headers'.
+        This method maps set items to their respective data tables, facilitating 
+        direct access to these items for operations that require context-specific 
+        data, such as data processing or analysis tasks.
+
+        Raises:
+            exc.MissingDataError: If a set key specified in the data table's
+                coordinates_headers does not exist in the Index sets, indicating
+                a configuration or data entry error.
         """
         self.logger.debug("Loading variable coordinates to Index.data.")
 
@@ -680,10 +826,12 @@ class Index:
                     raise exc.MissingDataError(msg)
 
     def load_all_coordinates_to_variables_index(self) -> None:
-        """
-        Populates the 'coordinates' attribute of each variable in the index with
-        actual set items. This method utilizes 'coordinates_info' from each variable
-        to retrieve and assign corresponding set items from the index's sets.
+        """Fetch coordinates values from sets to variables.
+
+        This method populates the 'coordinates' attribute of each variable in 
+        the Index with coordinates values taken from related sets. 
+        This method utilizes 'coordinates_info' from each variable to retrieve 
+        and to assign corresponding set items from the sets.
         The method ensures that all variables are enriched with complete and correct
         coordinate data, linking directly to the related set items based on
         specified coordinates headers.
@@ -722,19 +870,32 @@ class Index:
             variable.coordinates = coordinates
 
     def filter_coordinates_in_variables_index(self) -> None:
-        """
-        Filters the coordinate data for variables based on predefined filter
-        conditions stored in sets. This process adjusts the coordinate values
+        """Filter variables coordinates based on sets filters.
+
+        This method filters the coordinates values for each variable based on 
+        filter conditions stored in sets. This process adjusts the coordinate values
         for 'rows', 'cols', and 'intra' categories by applying the filters
-        specified in the sets' filter headers.
+        specified in the sets filter headers.
         This method modifies the variable's coordinate data directly, ensuring
         that only relevant items that meet the filter conditions are retained.
+
+        Raises:
+            exc.MissingDataError: If a set key specified in a variable's
+                coordinates does not exist in the Index sets, or if necessary
+                filter headers are missing.
         """
         self.logger.debug(
             "Filtering variables coordinates in Index.variables.")
 
-        # only rows, cols and intra problem sets can be filtered
-        categories_to_filter = ['rows', 'cols', 'intra']
+        filter_label = Constants.Labels.FILTERS
+        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+
+        # only rows, cols and intra-problem sets can be filtered
+        categories_to_filter = [
+            dimensions['ROWS'],
+            dimensions['COLS'],
+            dimensions['INTRA'],
+        ]
 
         for variable in self.variables.values():
             variable: Variable
@@ -744,8 +905,6 @@ class Index:
                 continue
 
             for coord_category, coord_dict in variable.coordinates.items():
-                assert isinstance(coord_dict, dict), \
-                    f"Expected dict, got {type(coord_dict)} instead."
 
                 # Skip if no coordinates are defined for the category
                 if not coord_dict:
@@ -766,7 +925,7 @@ class Index:
 
                     var_coord_info: dict = variable.var_info.get(coord_key, {})
                     var_coord_filter_raw: dict = var_coord_info.get(
-                        'filters', {})
+                        filter_label, {})
 
                     var_coord_filter = {
                         set_filters_headers[num]: var_coord_filter_raw[num]
@@ -795,14 +954,23 @@ class Index:
             self,
             set_key: str,
     ) -> Optional[pd.DataFrame]:
+        """Fetch set data from Index.
 
+        Args:
+            set_key (str): The key of the set in the sets dictionary.
+
+        Returns:
+            Optional[pd.DataFrame]: A DataFrame containing the set data if the 
+                set exists, otherwise None.
+        """
         if not isinstance(set_key, str) or set_key not in self.sets:
             self.logger.warning(
                 f"Set '{set_key}' not found in Index. "
                 f"Available sets: {list(self.sets.keys())}.")
             return
 
-        return self.sets[set_key].data
+        set_table: SetTable = self.sets[set_key]
+        return set_table.data
 
     def fetch_variable_data(
             self,
@@ -810,27 +978,22 @@ class Index:
             problem_index: Optional[int] = None,
             sub_problem_index: Optional[int] = None,
     ) -> Optional[pd.DataFrame]:
-        """
-        Retrieves the data for a specified variable based on optional problem
-        and sub-problem indices.
+        """Fetch variable data from Index.
 
-        Parameters:
+        This method retrieves the data for a specified variable based on optional 
+        problem and sub-problem indices.
+
+        Args:
             var_key (str): The key of the variable in the variables dictionary.
             problem_index (Optional[int]): Index specifying which problem's data
                 to access if data is dictionary-based.
-            sub_problem_index (Optional[int]): Index specifying which
-                sub-problem's data to access if data is a DataFrame with multiple rows.
+            sub_problem_index (Optional[int]): Index specifying which sub-problem's 
+                data to access if data is a DataFrame with multiple rows.
 
         Returns:
             pd.DataFrame: A DataFrame containing the requested variable data, or
                 None if any issues are encountered.
-
-        Notes:
-            The function logs a warning and returns None if the variable does
-                not exist, data is not initialized, problem index is not specified
-                when required, or any provided indices are out of bounds.
         """
-
         variable_header = Constants.Labels.CVXPY_VAR
 
         if var_key not in self.variables:
@@ -925,41 +1088,7 @@ class Index:
 
         return values_dataframe
 
-    def fetch_scenarios_info(self) -> None:
-        """ 
-        Fetch scenarios information (these will be the same for all problems and 
-        sub-problems). This dataframes serves as the base for building the problems
-        dataframes.
-        """
-        self.logger.debug("Fetching scenario/s information to Index.")
-
-        scenarios_coordinates = {}
-        list_sets_split_problem = list(self.sets_split_problem_dict.values())
-        scenarios_coords_header = Constants.Labels.SCENARIO_COORDINATES
-
-        for set_key, set_header in self.sets_split_problem_dict.items():
-            set_table: SetTable = self.sets[set_key]
-            set_values = set_table.data[set_header]
-            scenarios_coordinates[set_header] = list(set_values)
-
-        scenarios_df = util.unpivot_dict_to_dataframe(
-            data_dict=scenarios_coordinates,
-            key_order=list_sets_split_problem,
-        )
-
-        util.add_column_to_dataframe(
-            dataframe=scenarios_df,
-            column_header=scenarios_coords_header,
-            column_values=None,
-        )
-
-        for scenario_idx in scenarios_df.index:
-            scenarios_coords = [
-                scenarios_df.loc[scenario_idx][set_key]
-                for set_key in list_sets_split_problem
-            ]
-            scenarios_df.at[
-                scenario_idx, scenarios_coords_header
-            ] = scenarios_coords
-
-        self.scenarios_info = scenarios_df
+    def __repr__(self):
+        """Return a string representation of the Index instance."""
+        class_name = type(self).__name__
+        return f'{class_name}'
