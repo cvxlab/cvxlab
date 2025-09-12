@@ -231,11 +231,13 @@ class Database:
             "Generation of empty data tables in "
             f"'{Constants.ConfigFiles.SQLITE_DATABASE_FILE}'.")
 
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+
         with db_handler(self.sqltools):
             for table_key, table in self.index.data.items():
                 table: DataTable
 
-                if table.type == 'constant':
+                if table.type == allowed_var_types['CONSTANT']:
                     continue
 
                 self.sqltools.create_table(
@@ -266,11 +268,13 @@ class Database:
             f"{Constants.ConfigFiles.SQLITE_DATABASE_FILE}."
         )
 
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+
         with db_handler(self.sqltools):
             for table_key, table in self.index.data.items():
                 table: DataTable
 
-                if table.type == 'constant':
+                if table.type == allowed_var_types['CONSTANT']:
                     continue
 
                 table_headers_list = [
@@ -391,6 +395,7 @@ class Database:
                 are processed. Defaults to an empty list.
         """
         file_extension = Constants.ConfigFiles.DATA_FILES_EXTENSION
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
 
         if not Path(self.paths['input_data_dir']).exists():
             self.files.create_dir(self.paths['input_data_dir'])
@@ -402,7 +407,10 @@ class Database:
                 if table_key_list != [] and table_key not in table_key_list:
                     continue
 
-                if table.type in ['endogenous', 'constant']:
+                if table.type in [
+                    allowed_var_types['ENDOGENOUS'],
+                    allowed_var_types['EXOGENOUS']
+                ]:
                     continue
 
                 if self.settings['multiple_input_files']:
@@ -443,6 +451,7 @@ class Database:
             "to SQLite database.")
 
         file_extension = Constants.ConfigFiles.DATA_FILES_EXTENSION
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
 
         if table_key_list == []:
             table_key_list = self.index.data.keys()
@@ -465,7 +474,10 @@ class Database:
                     if table_key not in table_key_list:
                         continue
 
-                    if table.type not in ['endogenous', 'constant']:
+                    if table.type not in [
+                        allowed_var_types['ENDOGENOUS'],
+                        allowed_var_types['CONSTANT']
+                    ]:
                         file_name = table_key + file_extension
 
                         data.update(
@@ -598,11 +610,13 @@ class Database:
             force_overwrite (bool, optional): If True, forces the overwrite of
                 existing data. Defaults to False.
         """
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+
         with db_handler(self.sqltools):
             for table_key, table in self.index.data.items():
                 table: DataTable
 
-                if table.type == 'endogenous':
+                if table.type == allowed_var_types['ENDOGENOUS']:
 
                     self.logger.debug(
                         f"Reinitializing endogenous table '{table_key}' "

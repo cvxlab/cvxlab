@@ -175,7 +175,7 @@ class Constants:
             SQLite data table. Since SQLite tables names are case insensitive, the
             table_key is case insensitive (e.g., 'e' and 'E' are the same table).
         - description: (Optional) information of the data table provided by the modeler.
-        - type: type of the data table, can be one of ALLOWED_VARIABLES_TYPES or a 
+        - type: type of the data table, can be one of VARIABLE_TYPES or a 
             dictionary with keys as problem name and corresponding values as allowed types.
         - integer: (Optional) if variables of the table are integers (default: False).
         - coordinates: list of table coordinates (set_key symbols) that define the
@@ -301,7 +301,7 @@ class Constants:
             SQLite sets or data tables.
         - DIMENSIONS: List of allowed dimensions of variables, where 
             coordinates can be defined.
-        - ALLOWED_VARIABLES_TYPES: List of allowed variable types for data tables.
+        - VARIABLE_TYPES: List of allowed variable types for data tables.
         - USER_DEFINED_CONSTANTS: Dictionary of user-defined constants. These are
             defined within the dictionary values (complex constants are defined
             in util_constants module), are used to define variables (see 'value' 
@@ -332,7 +332,11 @@ class Constants:
             'INTER': 'inter',
         }
 
-        ALLOWED_VARIABLES_TYPES = ['constant', 'exogenous', 'endogenous']
+        VARIABLE_TYPES = {
+            'CONSTANT': 'constant',
+            'EXOGENOUS': 'exogenous',
+            'ENDOGENOUS': 'endogenous',
+        }
 
         USER_DEFINED_CONSTANTS = {
             'sum_vector': (np.ones, {}),

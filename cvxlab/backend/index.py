@@ -35,8 +35,6 @@ class Index:
         sets (Dict[str, SetTable]): Dictionary of set tables loaded upon initialization.
         data (Dict[str, DataTable]): Dictionary of data tables loaded upon initialization.
         variables (Dict[str, Variable]): Dictionary of variables fetched upon initialization.
-        scenarios_info (pd.DataFrame | None): DataFrame containing scenarios information,
-            initialized as None.
     """
 
     def __init__(
@@ -53,8 +51,7 @@ class Index:
         structures of such items based on default structures provided in Constants. 
         Once sets and data are loaded, it checks for coherence between them and 
         completes data tables with sets information. The method then generates variables 
-        objects and fetches their coordinates information. Finally, it initializes 
-        the 'scenarios_info' attribute as None.
+        objects and fetches their coordinates information.
 
         Args:
             logger (Logger): Logger object for logging operations.
@@ -147,13 +144,15 @@ class Index:
         Returns:
             List[str]: List of exogenous data table identifiers.
         """
-        endogenous_type = Constants.SymbolicDefinitions.ALLOWED_VARIABLES_TYPES[2]
-        constant_type = Constants.SymbolicDefinitions.ALLOWED_VARIABLES_TYPES[0]
+        var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
 
         result = []
         for key, data_table in self.data.items():
             data_table: DataTable
-            if data_table.type not in [endogenous_type, constant_type]:
+            if data_table.type not in [
+                var_types['ENDOGENOUS'],
+                var_types['CONSTANT']
+            ]:
                 result.append(key)
 
         return result
@@ -336,6 +335,7 @@ class Index:
 
         The following checks are performed looping over data tables:
             Data tables must be of the allowed type (defined in Constants class).
+            Exogenous data tables cannot be of 'integer' type.
             Coordinates defining data tables must be valid (defined among sets).
 
         For each data table, variables are looped and the following checks performed:
@@ -354,7 +354,7 @@ class Index:
             exc.SettingsError: Raised with the list of all exceptions collected
                 during the coherence checks, identifying mistakes in model settings.
         """
-        allowed_var_types = Constants.SymbolicDefinitions.ALLOWED_VARIABLES_TYPES
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
         allowed_constants = Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS.keys()
         allowed_dims = list(Constants.SymbolicDefinitions.DIMENSIONS.values())
 
@@ -369,14 +369,22 @@ class Index:
         for table_key, data_table in self.data.items():
             data_table: DataTable
 
-            # table types must be allowed
+            # data table type must be allowed
             if isinstance(data_table.type, dict):
                 table_type = data_table.type.values()
             else:
                 table_type = [data_table.type]
 
-            if not all(type in allowed_var_types for type in table_type):
-                problems[table_key] = f"Variable type not allowed."
+            if not all(
+                type in allowed_var_types.values()
+                for type in table_type
+            ):
+                problems[table_key] = f"Table type not allowed."
+
+            # exogenous data tables cannot be of 'integer' type
+            if data_table.type == allowed_var_types['EXOGENOUS'] and \
+                    getattr(data_table, 'integer', False):
+                problems[table_key] = "Exogenous table data cannot be 'integer'. "
 
             # coordinates in data table must be coherent with sets
             invalid_coordinates = [
@@ -407,7 +415,7 @@ class Index:
                     # value field must be assigned to constants only, and it
                     # must be allowed
                     elif property_key == value_key:
-                        if data_table.type != 'constant':
+                        if data_table.type != allowed_var_types['CONSTANT']:
                             problems[f"{path}.{value_key}"] = \
                                 "'value' attribute can only be assigned to constants."
 
@@ -417,7 +425,9 @@ class Index:
 
                     # blank_fill field can only be assigned to exogenous variables
                     elif property_key == blank_fill_key:
-                        if data_table.type == ('endogenous' or 'constant'):
+                        if data_table.type == (
+                            allowed_var_types['ENDOGENOUS'] or allowed_var_types['CONSTANT']
+                        ):
                             problems[f"{path}.{blank_fill_key}"] = \
                                 "'blank_fill' attribute cannot be assigned to " \
                                 "endogenous variables or constants."
@@ -995,6 +1005,7 @@ class Index:
                 None if any issues are encountered.
         """
         variable_header = Constants.Labels.CVXPY_VAR
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
 
         if var_key not in self.variables:
             self.logger.warning(
@@ -1005,7 +1016,7 @@ class Index:
 
         variable: Variable = self.variables[var_key]
 
-        if variable.type == 'constant':
+        if variable.type == allowed_var_types['CONSTANT']:
             data: cp.Constant = variable.data
             if variable.value == 'set_length':
                 values_dataframe = pd.DataFrame(data=data.value)

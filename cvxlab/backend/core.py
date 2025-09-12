@@ -117,6 +117,8 @@ class Core:
         Raises:
             SettingsError: If a variable's type is not of the allowed type.
         """
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+
         with self.logger.log_timing(
             message=f"Generating data structures for endogenous data tables...",
             level='info',
@@ -126,7 +128,7 @@ class Core:
             for data_table_key, data_table in self.index.data.items():
                 data_table: DataTable
 
-                if data_table.type == 'endogenous' or \
+                if data_table.type == allowed_var_types['ENDOGENOUS'] or \
                         isinstance(data_table.type, dict):
 
                     self.logger.debug(
@@ -176,7 +178,7 @@ class Core:
                     # generate cvxpy variables associated with data tables
                     if isinstance(data_table.coordinates_dataframe, pd.DataFrame):
                         cvxpy_var = self.problem.create_cvxpy_variable(
-                            var_type='endogenous',
+                            var_type=allowed_var_types['ENDOGENOUS'],
                             integer=data_table.integer,
                             shape=(data_table.table_length, 1),
                             name=data_table_key,
@@ -189,7 +191,7 @@ class Core:
 
                         for problem_key, coord_df in data_table.coordinates_dataframe.items():
                             cvxpy_var[problem_key] = self.problem.create_cvxpy_variable(
-                                var_type='endogenous',
+                                var_type=allowed_var_types['ENDOGENOUS'],
                                 integer=data_table.integer,
                                 shape=(len(coord_df), 1),
                                 name=f"{data_table_key}_{problem_key}",
@@ -207,27 +209,29 @@ class Core:
                 variable: Variable
 
                 # for constants, values are directly generated (no dataframes needed)
-                if variable.type == 'constant':
+                if variable.type == allowed_var_types['CONSTANT']:
 
                     self.logger.debug(
                         f"Variable '{var_key}' | type: {variable.type} | Constant "
                         f"value '{variable.value}'.")
 
                     variable.data = self.problem.generate_constant_data(
-                        variable_name=var_key,
+                        variable_key=var_key,
                         variable=variable
                     )
 
                 # for variables whose type is univocally defined, only one data structure
                 # is generated and stored in variable.data
-                elif variable.type in ['exogenous', 'endogenous']:
-
+                elif variable.type in [
+                    allowed_var_types['EXOGENOUS'],
+                    allowed_var_types['ENDOGENOUS']
+                ]:
                     self.logger.debug(
                         f"Variable '{var_key}' | type: {variable.type} | Generating "
                         "data structure.")
 
                     variable.data = self.problem.generate_vars_dataframe(
-                        variable_name=var_key,
+                        variable_key=var_key,
                         variable=variable
                     )
 
@@ -243,14 +247,14 @@ class Core:
 
                     for problem_key, problem_var_type in variable.type.items():
                         variable.data[problem_key] = self.problem.generate_vars_dataframe(
-                            variable_name=var_key,
+                            variable_key=var_key,
                             variable=variable,
                             variable_type=problem_var_type,
                         )
 
                 else:
                     msg = f"Variable type '{variable.type}' not allowed. Available " \
-                        f"types: {Constants.SymbolicDefinitions.ALLOWED_VARIABLES_TYPES}"
+                        f"types: {list(allowed_var_types.values())}"
                     self.logger.error(msg)
                     raise exc.SettingsError(msg)
 
@@ -298,6 +302,7 @@ class Core:
             values_header = Constants.Labels.VALUES_FIELD['values'][0]
             id_header = Constants.Labels.ID_FIELD['id'][0]
             allowed_values_types = Constants.NumericalSettings.ALLOWED_VALUES_TYPES
+            allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
 
             if not isinstance(var_list_to_update, list):
                 msg = "Passed method parameter must be a list."
@@ -320,7 +325,10 @@ class Core:
                     if var_key not in var_list_to_update:
                         continue
 
-                    if variable.type in ['endogenous', 'constant']:
+                    if variable.type in [
+                        allowed_var_types['ENDOGENOUS'],
+                        allowed_var_types['CONSTANT']
+                    ]:
                         continue
 
                     self.logger.debug(
@@ -345,7 +353,7 @@ class Core:
                     # notice that a variable may be exogenous for more than one problem.
                     if isinstance(variable.type, dict):
                         problem_keys = util.find_dict_keys_corresponding_to_value(
-                            variable.type, 'exogenous')
+                            variable.type, allowed_var_types['EXOGENOUS'])
                     else:
                         problem_keys = [None]
 
@@ -470,6 +478,7 @@ class Core:
             f"to SQLite database '{self.settings['sqlite_database_file']}' ")
 
         values_headers = Constants.Labels.VALUES_FIELD['values'][0]
+        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
 
         if scenarios_idx is None:
             scenarios_list = list(self.index.scenarios_info.index)
@@ -481,7 +490,10 @@ class Core:
             for data_table_key, data_table in self.index.data.items():
                 data_table: DataTable
 
-                if data_table.type in ['exogenous', 'constant']:
+                if data_table.type in [
+                    allowed_var_types['EXOGENOUS'],
+                    allowed_var_types['CONSTANT']
+                ]:
                     continue
 
                 if isinstance(data_table.coordinates_dataframe, pd.DataFrame):
@@ -556,12 +568,16 @@ class Core:
             null_entries = {}
             column_to_inspect = Constants.Labels.VALUES_FIELD['values'][0]
             column_with_info = Constants.Labels.ID_FIELD['id'][0]
+            allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
 
             with db_handler(self.sqltools):
                 for table_name, data_table in self.index.data.items():
                     data_table: DataTable
 
-                    if data_table.type in ('endogenous', 'constant'):
+                    if data_table.type in (
+                        allowed_var_types['ENDOGENOUS'],
+                        allowed_var_types['CONSTANT']
+                    ):
                         continue
 
                     null_list = self.sqltools.get_null_values(
