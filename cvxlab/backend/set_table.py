@@ -1,16 +1,9 @@
-"""
-set_table.py 
-
-@author: Matteo V. Rocco
-@institution: Politecnico di Milano
+"""Module defining the SetTable class.
 
 This module provides the SetTable class for handling and manipulating Set tables 
 in a structured format. It allows for managing Set tables with detailed logging 
-and interaction with a SQLite database. The SetTable class integrates with 
-pandas for data manipulation, providing tools to fetch, update, and manage 
-data efficiently.
+and interaction with a SQLite database.
 """
-
 import pandas as pd
 
 from typing import Any, Dict, Iterator, List, Optional, Tuple
@@ -19,32 +12,27 @@ from cvxlab.log_exc.logger import Logger
 
 
 class SetTable:
-    """
-    Generates and manipulates a Set tables with specific attributes and methods.
+    """Generate and manipulate a Set tables with specific attributes and methods.
 
-    This class encapsulates operations related to Set tables, such as fetching headers,
-    filters, and maintaining data. It integrates with a logger for activity
+    This class encapsulates operations related to Set tables, such as fetching 
+    headers, filters, and related data. It integrates with a logger for activity
     logging and uses a pandas DataFrame to handle the Set's data.
 
-    Args:
-        logger (Logger): Logger instance for logging activities.
-        key_name (str): The key/name of the Set.
-        **set_info: Arbitrary keyword arguments defining attributes of the Set,
-            such as symbols, table names, etc.
-
     Attributes:
-        logger (Logger): Logger instance for logging.
+        logger (Logger): Logger object for logging information, warnings, and errors.
         name (Optional[str]): The name of the Set.
         table_name (Optional[str]): The name of the associated SQLite table.
         split_problem (bool): Indicates whether the Set defines multiple 
-            numerical problems (namely, the Scenarios).
+            numerical problems (i.e. inter-problem set defining model Scenarios).
         description (Optional[str]): Description metadata for the Set.
         copy_from (Optional[str]): Name of another Set to copy values from.
         table_structure (Dict[str, Any]): Structure of the SQLite table for 
             data handling.
         table_headers (Dict[str, List[str]]): Headers of the SQLite table.
         table_filters (Dict[int, Any]): Filters applicable to the table.
-        set_categories (Dict[str, Any]): Categories applicable to the Set.
+        set_categories (Dict[str, Any]): Categories applicable to the Set. Not 
+            directly employed in model activity, used for data visualization and
+            aggregation of categories.
         data (Optional[pd.DataFrame]): DataFrame containing the Set's data.
     """
 
@@ -53,14 +41,18 @@ class SetTable:
             logger: Logger,
             key_name: str,
             **set_info,
-    ) -> None:
-        """
-        Initializes a SetTable instance with the Set's information.
+    ):
+        """Initialize a new instance of the SetTable class.
+
+        This constructor sets up the SetTable instance with a logger, a key name,
+        and various attributes defined in the set_info dictionary.
+        This constructor automatically calls methods to fetch names, attributes,
+        and table headers based on the provided information.
 
         Args:
             logger (Logger): Logger instance for logging activities.
             key_name (str): The key/name of the set.
-            **set_info: Arbitrary keyword arguments for set attributes.
+            **set_info: key-value pairs embedding set information.
         """
         self.logger = logger.get_child(__name__)
 
@@ -83,9 +75,7 @@ class SetTable:
 
     @property
     def set_name_header(self) -> str | None:
-        """
-        Returns the standard name header from the table headers based on 
-        configuration constants.
+        """Return the default set table name header.
 
         Returns:
             Optional[str]: The standard name header if available, otherwise None.
@@ -96,11 +86,10 @@ class SetTable:
 
     @property
     def set_excel_file_headers(self) -> List | None:
-        """
-        Returns a list of headers formatted for use in Excel files.
+        """Return a list of formatted headers for Excel files usage.
 
         Returns:
-            Optional[List[str]]: List of headers suitable for Excel, or None 
+            Optional[List]: List of headers suitable for Excel, or None 
                 if not defined.
         """
         if self.table_headers is not None:
@@ -109,9 +98,7 @@ class SetTable:
 
     @property
     def set_filters_dict(self) -> Dict[str, List[str]] | None:
-        """
-        Returns a dictionary of filter headers with their corresponding filter 
-        values.
+        """Return a dictionary of filter keys with their corresponding values.
 
         Returns:
             Optional[Dict[str, List[str]]]: Dictionary where keys are filter 
@@ -126,12 +113,11 @@ class SetTable:
 
     @property
     def set_filters_headers(self) -> Dict[int, str] | None:
-        """
-        Returns a mapping from filter index to their corresponding headers.
+        """Return a mapping from filter index to their corresponding keys.
 
         Returns:
             Optional[Dict[int, str]]: Dictionary mapping filter indices to 
-                headers, or None if not defined.
+                related keys, or None if not defined.
         """
         if self.table_filters:
             return {
@@ -142,11 +128,10 @@ class SetTable:
 
     @property
     def set_items(self) -> List[str] | None:
-        """
-        Returns a list of items in the data set based on the standard name header.
+        """Return a list of items in the set.
 
         Returns:
-            Optional[List[str]]: List of item names from the data set, or None 
+            Optional[List[str]]: List of item names from the set, or None 
                 if data is empty or header is undefined.
         """
         if self.data is not None:
@@ -154,23 +139,26 @@ class SetTable:
         return None
 
     def fetch_names(self, set_key: str) -> None:
-        """
-        Defines the Set's name and table name based on the provided key.
+        """Fetch name and SQLite table name of the set based on the provided key.
+
+        The method constructs the table name by appending a predefined prefix
+        to the uppercase version of the provided set key.
 
         Args:
-            set_key (str): The key/name of the set.
+            set_key (str): The key of the set.
         """
         prefix = Constants.Labels.SET_TABLE_NAME_PREFIX
         self.name = set_key
         self.table_name = prefix+set_key.upper()
 
     def fetch_attributes(self, set_info: dict) -> None:
-        """
-        Sets attributes on the instance from the provided dictionary, and 
-        constructs the Set's table structure.
+        """Define table_structure attribute from the provided set information.
+
+        The method get attributes on the instance from the information dictionary, 
+        and defines the structure of the SQLite table of the set.
 
         Args:
-            set_info (dict): Dictionary of attribute names and values for the Set.
+            set_info (dict): Dictionary of attributes for the set.
         """
         col_name_suffix = Constants.Labels.COLUMN_NAME_SUFFIX
         filters_header = Constants.Labels.FILTERS
@@ -211,9 +199,7 @@ class SetTable:
                 }
 
     def fetch_tables_headers(self) -> None:
-        """
-        Initializes the table headers and filters based on the predefined table 
-        structure.
+        """Define table headers based on the table structure.
 
         This method updates the instance's table_headers and table_filters attributes
         based on configuration constants. It extracts specific headers for name, filters,
@@ -252,13 +238,7 @@ class SetTable:
         }
 
     def __repr__(self) -> str:
-        """
-        Returns a string representation of the SetTable instance, excluding data 
-        and logger.
-
-        Returns:
-            str: String representation of the SetTable instance.
-        """
+        """Return a string representation of the SetTable instance."""
         output = ''
         for key, value in self.__dict__.items():
             if key in ('data', 'logger'):
@@ -270,12 +250,7 @@ class SetTable:
         return output
 
     def __iter__(self) -> Iterator[Tuple[Any, Any]]:
-        """
-        Iterates over the instance's attributes, excluding data and logger.
-
-        Yields:
-            Tuple[Any, Any]: Key-value pairs of the instance's attributes.
-        """
+        """Iterate over the instance's attributes, excluding data and logger."""
         for key, value in self.__dict__.items():
             if key not in ('data', 'logger'):
                 yield key, value

@@ -4,11 +4,6 @@ Constants of the package are useful for simplifying renaming package labels,
 defining templates for fundamental package objects (sets, data tables, variables, ...)
 for validation purposes, defining fundamental numerical settings and template 
 text messages.
-
-Classes:
-    Constants: Centralized repository of constants grouped into meaningful
-        categories for clarity and ease of access. Supports direct attribute
-        access of constants using '__getattr__' method.
 """
 from typing import Union
 import cvxpy as cp
@@ -83,6 +78,8 @@ class Constants:
         Dictionary keys default labels:
         - NAME: key related to the name of the data table object.
         - FILTERS: key related to set and data tables filters.
+        - SET: key related to the set key of the set table.
+        - DIM: key related to the dimension of the set.
         - AGGREGATIONS: key related to set tables aggregations.
         - CVXPY_VAR: key related to cvxpy variables.
         - COORDINATES_KEY: key related to the coordinates of the data table.
@@ -112,6 +109,8 @@ class Constants:
 
         NAME = 'name'
         FILTERS = 'filters'
+        SET = 'set'
+        DIM = 'dim'
         AGGREGATIONS = 'aggregations'
         CVXPY_VAR = 'variable'
         COORDINATES_KEY = 'coordinates'
@@ -299,9 +298,9 @@ class Constants:
         - NONE_SYMBOLS: List of symbols considered as None or empty.
         - STD_TEXT_DATA_FILL: Standard text used to fill blank text fields in
             SQLite sets or data tables.
-        - DIMENSIONS: List of allowed dimensions of variables, where 
+        - DIMENSIONS: Dict of allowed dimensions of variables, where 
             coordinates can be defined.
-        - VARIABLE_TYPES: List of allowed variable types for data tables.
+        - VARIABLE_TYPES: Dict of allowed variable types for data tables.
         - USER_DEFINED_CONSTANTS: Dictionary of user-defined constants. These are
             defined within the dictionary values (complex constants are defined
             in util_constants module), are used to define variables (see 'value' 
