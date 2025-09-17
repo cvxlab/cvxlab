@@ -409,7 +409,7 @@ class Database:
 
                 if table.type in [
                     allowed_var_types['ENDOGENOUS'],
-                    allowed_var_types['EXOGENOUS']
+                    allowed_var_types['CONSTANT']
                 ]:
                     continue
 

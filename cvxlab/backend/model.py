@@ -1,29 +1,16 @@
-"""
-model.py 
+"""Module defining the Model class.
 
-@author: Matteo V. Rocco
-@institution: Politecnico di Milano
-
-This module defines the Model class, the main object of the CVXLab package.
-
-The Model class gets the main user settings and data model path, and it provides
-all the methods useful for the user to handle the model and its main 
-functionalities.
+This module defines the Model class, the main object of the CVXLab package,
+in charge of getting the main model settings and paths, and providing all the 
+methods useful for the user to handle the model and its main functionalities.
 The Model class integrates various components such as logging, file management,
 and core functionalities, ensuring a cohesive workflow from numerical problem
 conceptualization, database generation and data input, numerical problem generation
 and solution, results export to database.
-The Model class embeds the generation of the Core class, which provides 
-functionalities for SQLite database management, problem formulation and solution
-through CVXPY. 
-
-The primary focus of this module is to streamline operations across database 
-interactions, data file management, numerical problem formulation, making it 
-suitable for applications in scientific computing, economic modeling, or any 
-domain requiring robust data analysis and optimization capabilities.
-
+The Model class embeds the generation of the Core class, which provides the centralized
+data indexing, functionalities for SQLite database management, problem formulation 
+and solution through cvxpy package. 
 """
-
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -40,47 +27,24 @@ from cvxlab.support import util
 
 
 class Model:
-    """
-    Class representing a modeling environment that handles SQLite data 
-    generation and processing, database interactions, numerical optimization 
-    model generation and handling with CVXPY. 
+    """Central class for generating and handling a CVXLab models.
 
+    The Model class represents a modeling environment that handles SQLite data 
+    generation and processing, database interactions, numerical optimization 
+    model generation and handling with cvxpy package. 
     This class initializes with a configuration for managing directories, 
     logging, and file management for a specific model. It also sets up various
     components including a logger, file manager, and core functionalities.
 
     Attributes:
-        logger (Logger): An instance of Logger to handle logging across the class.
+        logger (Logger): Logger object for logging information, warnings, and errors.
         files (FileManager): An instance of FileManager to manage file operations.
         settings (DotDict): A dictionary-like object storing configurations such as 
             model name, file paths, and operational flags.
         paths (DotDict): A dictionary-like object storing the paths for model 
             directories and associated files.
         core (Core): An instance of Core that manages the core functionality 
-            of the model.
-
-    Parameters of settings attribute:
-        model_dir_name (str): Name of the directory for the model (and name of 
-            the model itself).
-        main_dir_path (str): Path to the main directory where the model 
-            directory will be located.
-        model_settings_from (Literal['yml', 'xlsx']): Format of the model 
-            settings file.
-        use_existing_data (bool, optional): Flag to indicate whether to use 
-            existing data files and SQLite database. Defaults to False.
-        multiple_input_files (bool, optional): Flag to indicate whether 
-            multiple input files are expected. Defaults to False.
-        log_level (Literal['info', 'debug', 'warning', 'error'], optional): 
-            Determines the logging level. Defaults to 'info'.
-        log_format (Literal['standard', 'minimal'], optional): Specifies the 
-            format of the logs. Defaults to 'minimal'.
-        detailed_validation (bool, optional): Flag to indicate whether to 
-            perform detailed validation logging at the end of the analysis of 
-            the model formulation. Defaults to False.
-
-    Raises:
-        SettingsError: If any critical configurations are invalid or not found.
-        FileNotFoundError: If necessary files are not found in the specified paths.
+            of the model (it embeds Index, Database and Problem instances).
     """
 
     def __init__(
@@ -93,8 +57,40 @@ class Model:
             log_level: Literal['info', 'debug', 'warning', 'error'] = 'info',
             log_format: Literal['standard', 'detailed'] = 'standard',
             detailed_validation: bool = False,
-    ) -> None:
+    ):
+        """Initialize the Model instance with specified configurations.
 
+        This constructor sets up the Model instance by initializing logging,
+        file management, and core functionalities. It also checks for the
+        existence of the model directory and required setup files. If the
+        'use_existing_data' flag is set to True, it loads existing sets data
+        and variable coordinates to the Model.Index and initializes numerical
+        problems (the configuration files and model database should have been
+        already generated).
+
+        Args:
+            model_dir_name (str): The name of the model directory.
+            main_dir_path (str): The main directory path where the model
+                directory is located or where it will be generated.
+            model_settings_from (Literal['yml', 'xlsx'], optional): The format
+                of the model settings file. Can be either 'yml' or 'xlsx'. 
+                Defaults to 'xlsx'.
+            use_existing_data (bool, optional): if True, generation of Model
+                instance is also loading model coordinates and initializing
+                numerical problems. Note that setup files and model database should
+                have been already generated. Defaults to False.
+            multiple_input_files (bool, optional): if True, input data Excel files
+                are generated as one file per data table. If False, all data tables
+                are generated in a single Excel file with multiple tabs. Defaults 
+                to False.
+            log_level (Literal['info', 'debug', 'warning', 'error'], optional):
+                The logging level for the logger. Defaults to 'info'.
+            log_format (Literal['standard', 'detailed'], optional): The logging 
+                format for the logger. Defaults to 'standard'.
+            detailed_validation (bool, optional): if True, performs detailed
+                validation logging of data and model settings during initialization.
+                Defaults to False.
+        """
         config = Constants.ConfigFiles
         model_dir_path = Path(main_dir_path) / model_dir_name
 
@@ -108,7 +104,6 @@ class Model:
             message=f"Model instance generation...",
             level='info',
         ):
-
             self.files = FileManager(logger=self.logger)
 
             self.settings = DotDict({
@@ -147,9 +142,7 @@ class Model:
 
     @property
     def sets(self) -> List[str]:
-        """
-        Returns a list of sets names available in the model, that can be 
-        interpreted as the 'coordinates' of the model.
+        """List of sets names available in the model.
 
         Returns:
             List[str]: A list of set names.
@@ -158,9 +151,7 @@ class Model:
 
     @property
     def data_tables(self) -> List[str]:
-        """
-        Returns a list of data tables names available in the model, from where
-        all the problems variables are defined.
+        """List of data tables names available in the model.
 
         Returns:
             List[str]: A list of data table names.
@@ -168,21 +159,18 @@ class Model:
         return self.core.index.list_data_tables
 
     @property
-    def variables(self) -> Dict[str, List[str]]:
-        """
-        Returns a dictionary of variables, where keys represent variable types 
-        (endogenous, exogenous, constants) and values are lists of related 
-        variables keys.
+    def variables(self) -> List[str]:
+        """List of variables names available in the model.
 
         Returns:
-            Dict[str, List[str]]: A dictionary of variable types and related 
-            variables keys.
+            List[str]: A list of variable names.
         """
         return self.core.index.list_variables
 
     @property
     def is_problem_solved(self) -> bool:
-        """
+        """Status of the problem solution.
+
         Checks if the numerical problem has been solved (even if it has not 
         found a numerical solution).
 
@@ -194,25 +182,18 @@ class Model:
         else:
             return True
 
-    def __repr__(self):
-        """
-        Returns a string representation of the Model instance.
-
-        Returns:
-            str: The class name of the Model instance.
-        """
-        class_name = type(self).__name__
-        return f'{class_name}'
-
     def check_model_dir(self) -> None:
-        """
-        Validates the existence of the model directory and required setup files.
+        """Validate the existence of the model directory and required setup files.
+
         This method checks if the model directory and all the required setup 
-        files exist based on the 'model_settings_from' setting. It uses the 
-        'dir_files_check' method from the 'files' object to perform the check.
+        files exist based on the attribute 'model_settings_from'.
+        This method is called during the initialization of the Model instance, 
+        and it is not meant to be called directly by the user.
 
         Raises:
-            SettingsError: If the 'model_settings_from' parameter is not recognized.
+            exc.SettingsError: If the 'model_settings_from' parameter is not recognized.
+            exc.SettingsError: If the model directory or any of the required 
+                setup files are missing.
         """
         files_type = self.settings['model_settings_from']
 
@@ -241,24 +222,27 @@ class Model:
             self.logger.error(msg)
             raise exc.SettingsError(msg)
 
-    def load_model_coordinates(
-            self,
-            fetch_foreign_keys: bool = True,
-    ) -> None:
-        """
-        Loads sets data and variable coordinates to the Model.Index.
-        If the 'use_existing_data' setting is True, it loads existing sets 
-        data and variable coordinates provided by SQLite database.
-        Otherwise, it loads new sets data and variable coordinates to 
-        Model.Index.
-        Based on Model settings, SQLite tables foreign keys can be enabled.
+    def load_model_coordinates(self, fetch_foreign_keys: bool = True) -> None:
+        """Load sets data and define data tables/variables coordinates.
+
+        This method fetches sets data from Excel to sets instances. It then 
+        loads such data (referred as coordinates) to data tables and to variables. 
+        Then, it filter variables coordinates based on user defined filters, and 
+        checks variables coherence.
+        If 'fetch_foreign_keys' flag is enabled, the method finally fetches 
+        foreign keys to data tables to enable SQLite foreign keys constraints.
+
+        If the 'use_existing_data' flag is set to True, this method is called 
+        during the initialization of the Model instance, and it is not meant to
+        be called directly by the user.
+        If the 'use_existing_data' flag is set to False, the user can call this
+        method directly, after having generated the model instance, filled the 
+        sets Excel file with data, defined model settings (data tables, variables,
+        symbolic problem).
 
         Raises:
-            FileNotFoundError: If the sets_xlsx_file specified in the 
-            settings is missing and 'use_existing_data' is True.
-
-        Return:
-            None
+            exc.SettingsError: If the sets Excel file specified in the settings 
+                is missing.
         """
         with self.logger.log_timing(
             message=f"Loading sets and variables coordinates...",
@@ -280,23 +264,23 @@ class Model:
             self.core.index.load_all_coordinates_to_variables_index()
             self.core.index.filter_coordinates_in_variables_index()
             self.core.index.check_variables_coherence()
-            self.core.index.fetch_scenarios_info()
 
             if fetch_foreign_keys:
                 self.core.index.fetch_foreign_keys_to_data_tables()
 
     def initialize_blank_data_structure(self) -> None:
-        """
-        Initializes the blank data structure for the model:
-            - Creates a blank SQLite database with set tables and data tables.
-            - Fills the SQLite tables with sets information.
-            - Creates blank Excel input data files.
+        """Initialize blank data structure for the model.
 
+        This method generates the fundamental blank data structure for the model.
         If the SQLite database already exists, it gives the option to erase it 
         and generate a new one, or to work with the existing SQLite database.
         Same for the input data directory.
+        Specifically, the method creates:
+            A blank SQLite database with set tables and data tables, filling data 
+                tables with sets information.
+            A blank Excel input data file/s with normalized data tables for getting
+                exogenous variables data from the user. 
         """
-
         use_existing_data = self.settings['use_existing_data']
         sqlite_db_name = Constants.ConfigFiles.SQLITE_DATABASE_FILE
         sqlite_db_path = Path(self.paths['sqlite_database'])
@@ -353,12 +337,30 @@ class Model:
             else:
                 self.logger.info("Relying on existing input data directory.")
 
-    def generate_input_data_files(
-            self,
-            table_key_list: List[str] = [],
-    ) -> None:
-        """
-        Generates only one or more input data files for the model.
+    def generate_input_data_files(self, table_key_list: List[str] = []) -> None:
+        """Generate blank Excel files for data input.
+
+        This method generates blank Excel files for data input, based on the
+        data tables defined in the model. If the input data directory already
+        exists, it gives the option to erase it and generate a new one, or to
+        work with the existing input data directory.
+        This method is called within the 'initialize_blank_data_structure'
+        method. However, the user can call it directly to regenerate input
+        data file/s, for all or for specific data tables (with the 'table_key_list'
+        attribute). This is especially useful in adjusting the input data without 
+        regenerating the whole blank data structure. This feature works also in
+        case of one single Excel file, since it can overwrite only the tabs
+        related to the specified data tables.
+
+        Args:
+            table_key_list (List[str], optional): A list of data table keys 
+                for which to generate input data files. If empty, all data 
+                tables are generated. Defaults to [].
+
+        Raises:
+            exc.SettingsError: If the input data directory is missing.
+            exc.SettingsError: If any of the specified table keys are invalid 
+                (i.e., not exogenous data tables).
         """
         input_files_dir_path = Path(self.paths['input_data_dir'])
 
@@ -393,12 +395,26 @@ class Model:
             force_overwrite: bool = False,
             table_key_list: list[str] = [],
     ) -> None:
-        """
-        Loads input (exogenous) data to the SQLite database. 
+        """Load exogenous (input) data to the SQLite database.
+
+        This method loads exogenous (input) data from Excel file/s to the
+        SQLite database. It also fills NaN values in the database with Null
+        values, to ensure proper handling of missing data in SQLite.
+        This method is called directly by the user after having filled the
+        input data Excel file/s with exogenous data.
+        However, the method is also called within the 'update_database_and_problem'
+        method, which can be used in case some changes in exogenous data have been
+        made, so that the SQLite database and the problems can be updated without
+        re-generating the Model instance.
+        The user can choose to load data for all exogenous data tables, or for
+        specific data tables (with the 'table_key_list' attribute).
 
         Args:
             force_overwrite (bool, optional): Whether to force overwrite existing 
                 data without asking for user permission. Defaults to False.
+            table_key_list (list[str], optional): A list of data table keys 
+                for which to load exogenous data. If empty, all exogenous data
+                tables are loaded. Defaults to [].
         """
         with self.logger.log_timing(
             message=f"Loading input data to SQLite database...",
@@ -419,10 +435,13 @@ class Model:
             force_overwrite: bool = False,
             allow_none_values: bool = True,
     ) -> None:
-        """
-        Initializes numerical problems in the Model instance. Specifically, the
-        method initializes variables, feeds data to exogenous variables, and
-        generates numerical problems based on the symbolic formulation.
+        """Initialize numerical problems in the Model instance.
+
+        This method intializes numerical problems in the Model instance. 
+        Specifically, the method loads and validates symbolic mathematical problems,
+        checks if all exogenous data have coherently defined by user, and finally
+        generates numercal problem (i.e. initializes variables, feeds data to 
+        exogenous variables, and generates cvxpy problem/s).
 
         Args:
             force_overwrite (bool, optional): If True, forces the overwrite 
@@ -430,9 +449,6 @@ class Model:
                 permission. Used for testing purposes. Defaults to False.
             allow_none_values (bool, optional): If True, allows None values in
                 the exogenous data. Defaults to True.
-
-        Return:
-            None
         """
         with self.logger.log_timing(
             message=f"Numerical model generation...",
@@ -453,34 +469,38 @@ class Model:
         maximum_iterations: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Solves numerical problems defined by the model instance.
+        """Solve numerical problems defined by the model instance.
 
-        Parameters:
-            verbose (bool, optional): If True, prints verbose output during the 
-                model run. Defaults to False.
+        This method first performs some coherence checks (if solver is supported,
+        if numerical problems are defined, if integrated problems are possible).
+        Then, it solves the numerical problems, either independently or in an
+        integrated manner, based on the 'integrated_problems' flag.
+        Finally, it logs a summary of the problems status.
+
+        Args:
+            verbose (bool, optional): If True, logs verbose output related to 
+                numerical solver operation during the model run. Defaults to False.
             force_overwrite (bool, optional): If True, overwrites existing results. 
                 Defaults to False.
-            integrated_problems (bool, optional): If True, solves problems in 
-                an integrated manner. Defaults to False.
+            integrated_problems (bool, optional): If True, solve problems iteratively 
+                using a block Gauss-Seidel (alternating optimization) scheme, where 
+                updated endogenous variables are exchanged until convergence. 
+                Defaults to False.
             solver (str, optional): The solver to use for solving numerical 
                 problems. Defaults to None, in which case the default solver 
-                specified in Constants is used.
+                specified in 'Constants.NumericalSettings.DEFAULT_SOLVER' is used.
             numerical_tolerance (float, optional): The numerical tolerance for 
-                the solver. Defaults to None.
+                solving integrated problems. In case it is not defined, this is set
+                as 'Constants.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE'.
             maximum_iterations (int, optional): The maximum number of iterations 
-                for solving integrated problems. Defaults to None.
+                for solving integrated problems. In case it is not defined, this is
+                set as 'Constants.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING'.
             **kwargs: Additional keyword arguments to be passed to the solver.
 
         Raises:
-            SettingsError: If the specified solver is not supported by the 
-                current CVXPY version.
-            OperationalError: If no numerical problems are found.
-            SettingsError: If integrated problems are requested but only one 
-                problem is found.
-
-        Returns:
-            None
+            exc.SettingsError: In case solver is not supported by current cvxpy version.
+            exc.SettingsError: If no numerical problems are found, or if integrated
+                problems are requested but only one problem is found.
         """
         sub_problems = self.core.problem.number_of_sub_problems
         problem_scenarios = len(self.core.index.scenarios_info)
@@ -498,7 +518,7 @@ class Model:
         if sub_problems == 0:
             msg = "Numerical problem not found. Initialize problem first."
             self.logger.error(msg)
-            raise exc.OperationalError(msg)
+            raise exc.SettingsError(msg)
 
         if integrated_problems and sub_problems == 1:
             msg = "Only one problem found. Integrated problems not possible."
@@ -550,19 +570,23 @@ class Model:
         force_overwrite: bool = False,
         suppress_warnings: bool = False,
     ) -> None:
-        """
-        Loads the endogenous model results to a SQLite database. 
+        """Export model results to the SQLite database.
+
+        This method exports the results of the numerical problems to the SQLite
+        database. It can export results for all scenarios or for specific scenarios
+        (defined as the linear combinations of inter-problem sets that identify 
+        independent numerical problems), based on the 'scenarios_idx' attribute 
 
         Args:
+            scenarios_idx (Optional[List[int] | int], optional): A list of
+                scenario indices or a single scenario index for which to export
+                results. If None, results for all scenarios are exported. Defaults
+                to None.
             force_overwrite (bool, optional): Whether to overwrite/update 
                 existing data without asking user permission. Defaults to False.
             suppress_warnings (bool, optional): Whether to suppress warnings 
                 during the data loading process. Defaults to False.
-
-        Returns:
-            None
         """
-
         with self.logger.log_timing(
             message=f"Exporting endogenous model results to SQLite database...",
             level='info',
@@ -578,22 +602,17 @@ class Model:
                     suppress_warnings=suppress_warnings
                 )
 
-    def update_database_and_problem(
-            self,
-            force_overwrite: bool = False,
-    ) -> None:
-        """
-        Updates the SQLite database and initializes problems. To be used in 
-        case some changes in exogenous data have been made, so that the SQLite 
-        database and the problems can be updated without re-generating the
+    def update_database_and_problem(self, force_overwrite: bool = False) -> None:
+        """Update SQLite database with exogenous data and initialize problems.
+
+        This method updates the SQLite database and initializes numerical problems. 
+        To be used in case some changes in exogenous data have been made, so that 
+        the SQLite database and the problems can be updated without re-generating the
         Model instance.
 
         Args:
             force_overwrite (bool, optional): Whether to overwrite/update 
                 existing data without asking user permission. Defaults to False.
-
-        Returns:
-            None
         """
         sqlite_db_file = Constants.ConfigFiles.SQLITE_DATABASE_FILE
 
@@ -604,13 +623,11 @@ class Model:
         self.load_exogenous_data_to_sqlite_database(force_overwrite)
         self.initialize_problems(force_overwrite)
 
-    def reinitialize_sqlite_database(
-            self,
-            force_overwrite: bool = False,
-    ) -> None:
-        """
-        Initializes endogenous tables in SQLite database to Null values, and
-        reimports input data to exogenous tables.
+    def reinitialize_sqlite_database(self, force_overwrite: bool = False) -> None:
+        """Reinitialize SQLite database tables and reimport input data.
+
+        This method reinitializes endogenous tables in SQLite database to Null 
+        values, and reimports input data to exogenous tables.
 
         Args:
             force_overwrite (bool, optional): Whether to force overwrite 
@@ -629,10 +646,10 @@ class Model:
             self,
             numerical_tolerance: Optional[float] = None,
     ) -> None:
-        """
-        Checks the results of the model's computations. This is mainly called
-        for testing purposes.
+        """Compare model results with expected results.
 
+        This method compares the results of the model SQLite database with results
+        of another SQLite database. Mostly used for testing purposes.
         This method uses the 'check_results_as_expected' method to compare the 
         results of the current model's computations with the expected results. 
         The expected results are stored in a test database specified by the 
@@ -641,15 +658,8 @@ class Model:
         Args:
             numerical_tolerance (float, optional): The relative difference 
                 (non-percentage) tolerance for comparing numerical values in 
-                different databases.
-
-        Raises:
-            OperationalError: If the connection or cursor of the database to be 
-                checked are not initialized.
-            ModelFolderError: If the test database does not exist or is not 
-                correctly named.
-            ResultsError: If the databases are not identical in terms of table 
-                presence, structure, or contents.
+                different databases. If None, it is set to
+                'Constants.NumericalSettings.TOLERANCE_TESTS_RESULTS_CHECK'.
         """
         if not numerical_tolerance:
             numerical_tolerance = \
@@ -665,30 +675,38 @@ class Model:
     def variable(
             self,
             name: str,
-            problem_key: Optional[int] = None,
-            sub_problem_key: Optional[int] = None,
+            problem_key: Optional[str | int] = None,
+            scenario_key: Optional[int] = None,
     ) -> Optional[pd.DataFrame]:
-        """
-        Fetches data for a specific variable.
+        """Fetch variable data.
+
+        This method fetches data for a specific variable. In case the model is 
+        defined by multiple numerical problmes and for multiple scenarios (linear 
+        combination of inter-problem sets), the related keys must be passed to
+        univocally identify the values of the variable.
+        Useful for inspecting variables data during model generation and debugging.
 
         Args:
             name (str): The name of the variable.
-            problem_key (int, optional): The problem index. Defaults to None.
-            sub_problem_key (int, optional): The sub-problem index. Defaults 
-                to None.
+            problem_key (Optional[str | int], optional): The symbolic problem key. 
+                Defaults to None.
+            scenario_key (Optional[int], optional): The scenario index, corresponding
+                to a problem identified by the linear combination of inter-problem
+                sets. Defaults to None.
 
         Returns:
             Optional[pd.DataFrame]: The data for the specified variable.
         """
         return self.core.index.fetch_variable_data(
             var_key=name,
-            problem_index=problem_key,
-            sub_problem_index=sub_problem_key,
+            problem_key=problem_key,
+            scenario_key=scenario_key,
         )
 
     def set(self, name: str) -> Optional[pd.DataFrame]:
-        """
-        Fetches data for a specific set.
+        """Fetch set data.
+
+        Useful for inspecting variables data during model generation and debugging.
 
         Args:
             name (str): The name of the set.
@@ -697,3 +715,8 @@ class Model:
             Optional[pd.DataFrame]: The data for the specified set.
         """
         return self.core.index.fetch_set_data(set_key=name)
+
+    def __repr__(self):
+        """Return a string representation of the Database instance."""
+        class_name = type(self).__name__
+        return f'{class_name}'

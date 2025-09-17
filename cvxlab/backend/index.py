@@ -985,20 +985,23 @@ class Index:
     def fetch_variable_data(
             self,
             var_key: str,
-            problem_index: Optional[int] = None,
-            sub_problem_index: Optional[int] = None,
+            problem_key: Optional[int | str] = None,
+            scenario_key: Optional[int] = None,
     ) -> Optional[pd.DataFrame]:
         """Fetch variable data from Index.
 
         This method retrieves the data for a specified variable based on optional 
-        problem and sub-problem indices.
+        problem and scenario indices. Scenarios are defined by the linear combination
+        of inter-problem sets. 
 
         Args:
             var_key (str): The key of the variable in the variables dictionary.
-            problem_index (Optional[int]): Index specifying which problem's data
-                to access if data is dictionary-based.
-            sub_problem_index (Optional[int]): Index specifying which sub-problem's 
-                data to access if data is a DataFrame with multiple rows.
+            problem_key (Optional[int | str]): Key specifying which problem's data
+                to access if data is dictionary-based (i.e. if multiple numerical 
+                problems are defined). Defaults to None.
+            scenario_key (Optional[int]): Index specifying the which one among
+                the linear combination of inter-problem sets 
+                (i.e., sub-problems) to access. Defaults to None.
 
         Returns:
             pd.DataFrame: A DataFrame containing the requested variable data, or
@@ -1033,24 +1036,24 @@ class Index:
             return
 
         if isinstance(variable.data, dict):
-            if problem_index is None:
+            if problem_key is None:
                 self.logger.warning(
                     f"Variable '{var_key}' is defined for multiple problems. "
                     "A symbolic problem index must be specified.")
                 return
 
-            if problem_index not in variable.data.keys():
+            if problem_key not in variable.data.keys():
                 self.logger.warning(
                     f"Problem index must be included in {list(variable.data.keys())}.")
                 return
 
-            if len(variable.data) == 1 and problem_index is None:
-                problem_index = 0
+            if len(variable.data) == 1 and problem_key is None:
+                problem_key = 0
 
-            variable_data = variable.data[problem_index]
+            variable_data = variable.data[problem_key]
 
         else:
-            if problem_index is not None:
+            if problem_key is not None:
                 self.logger.warning(
                     f"Variable '{var_key}' is not defined for multiple problems. "
                     "Problem index must be None.")
@@ -1064,28 +1067,28 @@ class Index:
                 return
 
             if len(variable_data) > 1:
-                if sub_problem_index is None:
+                if scenario_key is None:
                     self.logger.warning(
                         f"Variable '{var_key}' is defined for multiple "
                         "sub-problems. A sub-problem index must be specified "
                         f"from 0 to {len(variable_data) - 1}.")
                     return
 
-                if sub_problem_index < 0 or sub_problem_index >= len(variable_data):
+                if scenario_key < 0 or scenario_key >= len(variable_data):
                     self.logger.warning(
                         f"Sub-problem index must be between 0 and {len(variable_data)-1}.")
                     return
 
             if len(variable_data) == 1:
-                if sub_problem_index is None:
-                    sub_problem_index = 0
-                elif sub_problem_index != 0:
+                if scenario_key is None:
+                    scenario_key = 0
+                elif scenario_key != 0:
                     self.logger.warning(
                         f"A unique sub-problem is defined for variable '{var_key}'. "
                         "Set sub-problem index to 0 or None")
                     return
 
-            variable_series = variable_data.loc[sub_problem_index]
+            variable_series = variable_data.loc[scenario_key]
             variable_values = variable_series[variable_header].value
 
             if issparse(variable_values):
