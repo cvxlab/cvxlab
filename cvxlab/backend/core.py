@@ -39,14 +39,16 @@ class Core:
     and integrated problems.
 
     Attributes:
-        logger (Logger): Logger object for logging information.
-        files (FileManager): FileManager object for file operations.
-        settings (Dict[str, str]): Settings for various file paths and configurations.
-        paths (Dict[str, Path]): Paths to various directories and files used in the model.
-        sqltools (SQLManager): SQLManager object for database interactions.
-        index (Index): Index object for managing data table and variable indices.
-        database (Database): Database object for database operations.
-        problem (Problem): Problem object for problem definitions and operations.
+
+    - logger (Logger): Logger object for logging information.
+    - files (FileManager): FileManager object for file operations.
+    - settings (Dict[str, str]): Settings for various file paths and configurations.
+    - paths (Dict[str, Path]): Paths to various directories and files used in the model.
+    - sqltools (SQLManager): SQLManager object for database interactions.
+    - index (Index): Index object for managing data table and variable indices.
+    - database (Database): Database object for database operations.
+    - problem (Problem): Problem object for problem definitions and operations.
+
     """
 
     def __init__(
@@ -464,7 +466,7 @@ class Core:
         table already exists (suppress_warnings, useful for continuous user model
         run, when only a subset of endogenous variables need to be exported).
 
-        Parameters:
+        Args:
             scenarios_idx (Optional[List[int] | int], optional): List of indices
                 of scenarios for which to fetch data. If None, fetches data for
                 all scenarios. Defaults to None.
@@ -756,7 +758,7 @@ class Core:
         The method updates the 'status' field of the input DataFrame(s) in-place 
         to reflect the solution status of each problem.
 
-        Parameters:
+        Args:
             solver (str): The solver to use. If None, default solver will be chosen
                 automatically.
             verbose (bool): If set to True, the solver will print progress information.

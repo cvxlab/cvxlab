@@ -23,35 +23,37 @@ class Variable:
     """Manages the operations of variables used in optimization models.
 
     Attributes:
-        logger (Logger): Logger object for logging information, warnings, and errors.
-        symbol (Optional[str]): The symbolic name of the variable.
-        type (Optional[str]): The type of the variable (available types defined 
-            in Constants.SymbolicDefinitions.VARIABLE_TYPES).
-        rows (Dict[str, Any]): Information about the rows dimension of the variable.
-        cols (Dict[str, Any]): Information about the columns dimension of the variable.
-        value (Optional[str]): Value type of the variable, only defined in case 
-            of constants (e.g. identity matrix, ...).
-        blank_fill (Optional[float]): Value to fill in case of missing data. Only 
-            defined for exogenous variables, reducing effort in inserting numerical 
-            data by the user.
-        related_table (Optional[str]): The database table that collect the subset
-            numerical data associated to the variable.
-        var_info (Optional[Dict[str, Any]]): Raw information about the variable
-            fetched from the model setup file/s.
-        coordinates_info (Dict[str, Any]): Maps the basic information about the 
-            variable coordinates, including sets defining variable shapes (rows, cols), 
-            inter-problem and intra-problem dimensions. Basic information includes
-            the set names and the related database table headers.
-        coordinates (Dict[str, Any]): Mapping specific coordinates values to the 
-            corresponding variable dimensions (rows, cols), inter-problem and
-            intra-problem sets, including set key and related values.
-        data (Optional[pd.DataFrame]): Defines dataframe (or a dictionary of 
-            dataframes in case the variable is of multiple types) identifying 
-            information about data associated to the variable. Specifically, the 
-            dataframe includes the number of scenarios (linear combination of 
-            inter-problem sets, if any), the cvxpy variables, the associated filters
-            (identifying the related variable data in data tables), and the key of
-            the related numerical problem.
+
+    - logger (Logger): Logger object for logging information, warnings, and errors.
+    - symbol (Optional[str]): The symbolic name of the variable.
+    - type (Optional[str]): The type of the variable (available types defined 
+        in Constants.SymbolicDefinitions.VARIABLE_TYPES).
+    - rows (Dict[str, Any]): Information about the rows dimension of the variable.
+    - cols (Dict[str, Any]): Information about the columns dimension of the variable.
+    - value (Optional[str]): Value type of the variable, only defined in case 
+        of constants (e.g. identity matrix, ...).
+    - blank_fill (Optional[float]): Value to fill in case of missing data. Only 
+        defined for exogenous variables, reducing effort in inserting numerical 
+        data by the user.
+    - related_table (Optional[str]): The database table that collect the subset
+        numerical data associated to the variable.
+    - var_info (Optional[Dict[str, Any]]): Raw information about the variable
+        fetched from the model setup file/s.
+    - coordinates_info (Dict[str, Any]): Maps the basic information about the 
+        variable coordinates, including sets defining variable shapes (rows, cols), 
+        inter-problem and intra-problem dimensions. Basic information includes
+        the set names and the related database table headers.
+    - coordinates (Dict[str, Any]): Mapping specific coordinates values to the 
+        corresponding variable dimensions (rows, cols), inter-problem and
+        intra-problem sets, including set key and related values.
+    - data (Optional[pd.DataFrame]): Defines dataframe (or a dictionary of 
+        dataframes in case the variable is of multiple types) identifying 
+        information about data associated to the variable. Specifically, the 
+        dataframe includes the number of scenarios (linear combination of 
+        inter-problem sets, if any), the cvxpy variables, the associated filters
+        (identifying the related variable data in data tables), and the key of
+        the related numerical problem.
+
     """
 
     def __init__(
@@ -540,17 +542,19 @@ class Variable:
         of the specified type or raises an error if the value type is not supported.
 
         Constants allowed:
-            'sum_vector': summation vector (vector of 1s).
-            'identity': identity matrix.
-            'set_length': scalar representing the length of a set.
-            'arange_0': vector/matrix with a range from 0 up to dimension size.
-            'arange_1': vector/matrix with a range from 1 up to dimension size.
-            'lower_triangular': lower triangular matrix of 1s (inc. diagonal).
+
+        - 'sum_vector': summation vector (vector of 1s).
+        - 'identity': identity matrix.
+        - 'set_length': scalar representing the length of a set.
+        - 'arange_0': vector/matrix with a range from 0 up to dimension size.
+        - 'arange_1': vector/matrix with a range from 1 up to dimension size.
+        - 'lower_triangular': lower triangular matrix of 1s (inc. diagonal).
 
         In case a new user-defined constant needs to be added:
-            Define the constant in the Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
-                dictionary, specifying the factory function and any required arguments.
-            Implement the related condition in this method.
+
+        - Define the constant in the Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
+            dictionary, specifying the factory function and any required arguments.
+        - Implement the related condition in this method.
 
         Args:
             value_type (str): The type of the constant to be created. User-defined 

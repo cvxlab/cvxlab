@@ -19,21 +19,23 @@ class SetTable:
     logging and uses a pandas DataFrame to handle the Set's data.
 
     Attributes:
-        logger (Logger): Logger object for logging information, warnings, and errors.
-        name (Optional[str]): The name of the Set.
-        table_name (Optional[str]): The name of the associated SQLite table.
-        split_problem (bool): Indicates whether the Set defines multiple 
-            numerical problems (i.e. inter-problem set defining model Scenarios).
-        description (Optional[str]): Description metadata for the Set.
-        copy_from (Optional[str]): Name of another Set to copy values from.
-        table_structure (Dict[str, Any]): Structure of the SQLite table for 
-            data handling.
-        table_headers (Dict[str, List[str]]): Headers of the SQLite table.
-        table_filters (Dict[int, Any]): Filters applicable to the table.
-        set_categories (Dict[str, Any]): Categories applicable to the Set. Not 
-            directly employed in model activity, used for data visualization and
-            aggregation of categories.
-        data (Optional[pd.DataFrame]): DataFrame containing the Set's data.
+
+    - logger (Logger): Logger object for logging information, warnings, and errors.
+    - name (Optional[str]): The name of the Set.
+    - table_name (Optional[str]): The name of the associated SQLite table.
+    - split_problem (bool): Indicates whether the Set defines multiple 
+        numerical problems (i.e. inter-problem set defining model Scenarios).
+    - description (Optional[str]): Description metadata for the Set.
+    - copy_from (Optional[str]): Name of another Set to copy values from.
+    - table_structure (Dict[str, Any]): Structure of the SQLite table for 
+        data handling.
+    - table_headers (Dict[str, List[str]]): Headers of the SQLite table.
+    - table_filters (Dict[int, Any]): Filters applicable to the table.
+    - set_categories (Dict[str, Any]): Categories applicable to the Set. Not 
+        directly employed in model activity, used for data visualization and
+        aggregation of categories.
+    - data (Optional[pd.DataFrame]): DataFrame containing the Set's data.
+
     """
 
     def __init__(

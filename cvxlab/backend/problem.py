@@ -36,26 +36,28 @@ class Problem:
     The Problem class provides methods for defining and solving optimization
     problems. It allows generating all items necessary to define a cvxpy numerical 
     optimization problem:
-        variables: endogenous, exogenous, and constants. Each variable type is
-            associated to data retrieved and filtered from data tables.
-        expressions: objective function and constraints, can be defined symbolically
-            by user and translated into cvxpy regular expressions.
-        problems: defined by a set of expressions, can be one or multiple
-            problems to be solved as integrated or independent sub-problems.
+
+    - variables: endogenous, exogenous, and constants. Each variable type is
+        associated to data retrieved and filtered from data tables.
+    - expressions: objective function and constraints, can be defined symbolically
+        by user and translated into cvxpy regular expressions.
+    - problems: defined by a set of expressions, can be one or multiple
+        problems to be solved as integrated or independent sub-problems.
 
     Attributes:
-        logger (Logger): Logger object for logging information, warnings, and errors.
-        files (FileManager): Manages file-related operations with files.
-        paths (Dict[str, Path]): Dictionary mapping of paths used in file operations.
-        settings (Dict[str, str]): Configuration settings for the model.
-        index (Index): Index instance providing central registry to access variables.
-        symbolic_problem (DotDict | None): Symbolic definition of the problem loaded
-            from configuration files as a dictionary of expressions (objective function,
-            equalities/inequalities).
-        numerical_problems (pd.DataFrame | None): DataFrame containing defined
-            numerical problems and the related features.
-        problem_status: Current status of the model, reflecting the outcome of
-            the latest problem-solving attempt.
+
+    - logger (Logger): Logger object for logging information, warnings, and errors.
+    - files (FileManager): Manages file-related operations with files.
+    - paths (Dict[str, Path]): Dictionary mapping of paths used in file operations.
+    - settings (Dict[str, str]): Configuration settings for the model.
+    - index (Index): Index instance providing central registry to access variables.
+    - symbolic_problem (DotDict | None): Symbolic definition of the problem loaded
+        from configuration files as a dictionary of expressions (objective function,
+        equalities/inequalities).
+    - numerical_problems (pd.DataFrame | None): DataFrame containing defined
+        numerical problems and the related features.
+    - problem_status: Current status of the model, reflecting the outcome of
+        the latest problem-solving attempt.
     """
 
     def __init__(
@@ -74,7 +76,7 @@ class Problem:
         The constructor sets up the necessary attributes for managing and solving
         optimization problems using cvxpy package.
 
-        Parameters:
+        Args:
             logger (Logger): Logger object for logging operations.
             files (FileManager): FileManager object for managing file operations.
             paths (Dict[str, Path]): Dictionary mapping of paths used in file operations.
@@ -673,14 +675,15 @@ class Problem:
         constants, numbers and other symbols (relying on util_text methods). 
         Then, the following checks are performed on each expression (Further 
         checks can be added):
-            Number of chars in extracted tokens must match the expression length;
-            Parentheses must be balanced;
-            Variables, operators and user-defined operators must be allowed;
-            Variables names not overlapped with user-defined operators;
-            Intra-problem sets in a variable must not be a dimension in other 
-                variables (example: in a same expression, i cannot have years as 
-                a variable dimension and, at the same time having time as an 
-                intra-problem set in another variable).
+
+        - Number of chars in extracted tokens must match the expression length;
+        - Parentheses must be balanced;
+        - Variables, operators and user-defined operators must be allowed;
+        - Variables names not overlapped with user-defined operators;
+        - Intra-problem sets in a variable must not be a dimension in other 
+            variables (example: in a same expression, i cannot have years as 
+            a variable dimension and, at the same time having time as an 
+            intra-problem set in another variable).
 
         Raises:
             exc.ConceptualModelError: If any of the validation checks fail.

@@ -23,33 +23,33 @@ class DataTable:
     and manipulating the data.
 
     Attributes:
-        logger (Logger): Logger object for logging information, warnings, and errors.
-        name (str): Name of the data table.
-        description (Optional[str]): Metadata for the data table. Default is None.
-        type (Optional[str | dict]): Type of allowed data defined in Constants class. 
-            Default is None.
-        integer (Optional[bool]): Flag indicating if the data table contains integer
-            values. Default is None.
-        coordinates (Optional[list]): List of coordinates that define the data structure. 
-            Default is None.
-        variables_info (Optional[Dict[str, Any]]): Dictionary containing information
-            about variables. Default is None.
-        coordinates_headers (Dict[str, str]): Dictionary mapping coordinates to 
-            their headers. Default is an empty dictionary.
-        coordinates_values (Dict[str, Any]): Dictionary mapping coordinates to 
-            their values. Default is an empty dictionary.
-        coordinates_dataframe (Optional[pd.DataFrame]): DataFrame representation 
-            of coordinates. Default is None.
-        table_headers (Dict[str, Any]): Dictionary of table headers and their types.
-            Default is an empty dictionary.
-        foreign_keys (Dict[str, Any]): Dictionary defining foreign key relationships.
-            Default is an empty dictionary.
-        cvxpy_var (Optional[pd.DataFrame[Any, cp.Variable] | cp.Variable]): CVXPY
-            variable associated with endogenous data tables. Default is None.
-        variables_list (List[str]): List of variables derived from variables_info. 
-            By default, it corresponds to the keys of variables_info.
-        table_length (int): Property that returns the number of rows in the
-            coordinates dataframe, corresponding to the number of all data entries.
+
+    - logger (Logger): Logger object for logging information, warnings, and errors.
+    - name (str): Name of the data table.
+    - description (Optional[str]): Metadata for the data table. Default is None.
+    - type (Optional[str | dict]): Type of allowed data defined in Constants class. 
+        Default is None.
+    - integer (Optional[bool]): Flag indicating if the data table contains integer
+        values. Default is None.
+    - coordinates (Optional[list]): List of coordinates that define the data structure. 
+        Default is None.
+    - variables_info (Optional[Dict[str, Any]]): Dictionary containing information
+        about variables. Default is None.
+    - coordinates_headers (Dict[str, str]): Dictionary mapping coordinates to 
+        their headers. Default is an empty dictionary.
+    - coordinates_values (Dict[str, Any]): Dictionary mapping coordinates to 
+        their values. Default is an empty dictionary.
+    - coordinates_dataframe (Optional[pd.DataFrame]): DataFrame representation 
+        of coordinates. Default is None.
+    - table_headers (Dict[str, Any]): Dictionary of table headers and their types.
+        Default is an empty dictionary.
+    - foreign_keys (Dict[str, Any]): Dictionary defining foreign key relationships.
+        Default is an empty dictionary.
+    - cvxpy_var (Optional[pd.DataFrame[Any, cp.Variable] | cp.Variable]): CVXPY
+        variable associated with endogenous data tables. Default is None.
+    - variables_list (List[str]): List of variables derived from variables_info. 
+        By default, it corresponds to the keys of variables_info.
+
     """
 
     def __init__(

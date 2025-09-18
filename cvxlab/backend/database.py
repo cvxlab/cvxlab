@@ -36,12 +36,14 @@ class Database:
     perform its operations.
 
     Attributes:
-        logger (Logger): Logger object for logging information, warnings, and errors.
-        files (FileManager): Manages file-related operations with files.
-        sqltools (SQLManager): Manages SQL database interactions.
-        index (Index): Central index for managing set tables and data tables.
-        paths (Dict): Dictionary mapping of paths used in file operations.
-        settings (Dict): Configuration settings for the application.
+
+    - logger (Logger): Logger object for logging information, warnings, and errors.
+    - files (FileManager): Manages file-related operations with files.
+    - sqltools (SQLManager): Manages SQL database interactions.
+    - index (Index): Central index for managing set tables and data tables.
+    - paths (Dict): Dictionary mapping of paths used in file operations.
+    - settings (Dict): Configuration settings for the application.
+
     """
 
     def __init__(

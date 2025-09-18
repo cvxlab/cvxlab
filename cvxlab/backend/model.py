@@ -37,14 +37,16 @@ class Model:
     components including a logger, file manager, and core functionalities.
 
     Attributes:
-        logger (Logger): Logger object for logging information, warnings, and errors.
-        files (FileManager): An instance of FileManager to manage file operations.
-        settings (DotDict): A dictionary-like object storing configurations such as 
-            model name, file paths, and operational flags.
-        paths (DotDict): A dictionary-like object storing the paths for model 
-            directories and associated files.
-        core (Core): An instance of Core that manages the core functionality 
-            of the model (it embeds Index, Database and Problem instances).
+
+    - logger (Logger): Logger object for logging information, warnings, and errors.
+    - files (FileManager): An instance of FileManager to manage file operations.
+    - settings (DotDict): A dictionary-like object storing configurations such as 
+        model name, file paths, and operational flags.
+    - paths (DotDict): A dictionary-like object storing the paths for model 
+        directories and associated files.
+    - core (Core): An instance of Core that manages the core functionality 
+        of the model (it embeds Index, Database and Problem instances).
+
     """
 
     def __init__(
@@ -276,10 +278,12 @@ class Model:
         and generate a new one, or to work with the existing SQLite database.
         Same for the input data directory.
         Specifically, the method creates:
-            A blank SQLite database with set tables and data tables, filling data 
-                tables with sets information.
-            A blank Excel input data file/s with normalized data tables for getting
-                exogenous variables data from the user. 
+
+        - A blank SQLite database with set tables and data tables, filling data 
+            tables with sets information.
+        - A blank Excel input data file/s with normalized data tables for getting
+            exogenous variables data from the user. 
+
         """
         use_existing_data = self.settings['use_existing_data']
         sqlite_db_name = Constants.ConfigFiles.SQLITE_DATABASE_FILE

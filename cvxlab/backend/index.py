@@ -29,12 +29,14 @@ class Index:
     """Central registry for managing sets, data tables and variables.
 
     Attributes:
-        logger (Logger): Logger object for logging information, warnings, and errors.
-        files (FileManager): Manages file-related operations with files.
-        paths (Dict[str, Path]): Dictionary mapping of paths used in file operations.
-        sets (Dict[str, SetTable]): Dictionary of set tables loaded upon initialization.
-        data (Dict[str, DataTable]): Dictionary of data tables loaded upon initialization.
-        variables (Dict[str, Variable]): Dictionary of variables fetched upon initialization.
+
+    - logger (Logger): Logger object for logging information, warnings, and errors.
+    - files (FileManager): Manages file-related operations with files.
+    - paths (Dict[str, Path]): Dictionary mapping of paths used in file operations.
+    - sets (Dict[str, SetTable]): Dictionary of set tables loaded upon initialization.
+    - data (Dict[str, DataTable]): Dictionary of data tables loaded upon initialization.
+    - variables (Dict[str, Variable]): Dictionary of variables fetched upon initialization.
+
     """
 
     def __init__(
@@ -334,21 +336,24 @@ class Index:
         Further checks may be developed.
 
         The following checks are performed looping over data tables:
-            Data tables must be of the allowed type (defined in Constants class).
-            Exogenous data tables cannot be of 'integer' type.
-            Coordinates defining data tables must be valid (defined among sets).
+
+        - Data tables must be of the allowed type (defined in Constants class).
+        - Exogenous data tables cannot be of 'integer' type.
+        - Coordinates defining data tables must be valid (defined among sets).
 
         For each data table, variables are looped and the following checks performed:
-            Variable property 'value' can be only assigned for 'constant' type, and 
-                it must be of the allowed type (defined in Constant class).
-            Variable property 'blank_fill' can be only defined for exogenous variables.
-            Other variable properties can be defined only as related data table 
-                coordinates.
+
+        - Variable property 'value' can be only assigned for 'constant' type, and 
+            it must be of the allowed type (defined in Constant class).
+        - Variable property 'blank_fill' can be only defined for exogenous variables.
+        - Other variable properties can be defined only as related data table 
+            coordinates.
 
         For coordinates defined within the variable, the following checks are performed:
-            Variable dimension assigned to the coordiante must be valid (row, cols).
-            Eventual variable dimension filter must be well-defined: filter key 
-                and related values must be part of the defined filters in sets.
+
+        - Variable dimension assigned to the coordiante must be valid (row, cols).
+        - Eventual variable dimension filter must be well-defined: filter key 
+            and related values must be part of the defined filters in sets.
 
         Raises:
             exc.SettingsError: Raised with the list of all exceptions collected
@@ -572,15 +577,16 @@ class Index:
         The method derives this information from the related data tables specified for
         each variable.
         Specifically, for each variable, coordinates are categorized as follows:
-            rows: corresponding to the rows dimension in the variable's shape.
-            cols: corresponding to the columns dimension in the variable's shape.
-            intra: sets that are not part of the variable's shape and do not define
-                different problems. In numerical problems, equations are defined
-                for a number of times equal to the linear combination of intra-problem
-                sets of all the variables involved.
-            inter: sets that define different problems (i.e., sets with the
-                'split_problem' attribute set to True). Each unique combination
-                of inter-problem sets defines a separate numerical problem.
+
+        - rows: corresponding to the rows dimension in the variable's shape.
+        - cols: corresponding to the columns dimension in the variable's shape.
+        - intra: sets that are not part of the variable's shape and do not define
+            different problems. In numerical problems, equations are defined
+            for a number of times equal to the linear combination of intra-problem
+            sets of all the variables involved.
+        - inter: sets that define different problems (i.e., sets with the
+            'split_problem' attribute set to True). Each unique combination
+            of inter-problem sets defines a separate numerical problem.
 
         Raises:
             exc.MissingDataError: If a variable's related table is not defined, or
