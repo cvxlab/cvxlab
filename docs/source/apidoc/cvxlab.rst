@@ -1,5 +1,5 @@
-cvxlab package
-==============
+API reference
+=============
 
 Subpackages
 -----------

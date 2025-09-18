@@ -5,4 +5,3 @@ cvxlab
    :maxdepth: 4
 
    cvxlab
-   setup

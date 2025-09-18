@@ -1,6 +1,4 @@
-.. _tutorial:
-
-Tutorial
+API reference
 ============
 
 Here is a simple guide on how to use **cvxlab**!

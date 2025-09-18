@@ -4,7 +4,7 @@ to autogenerate .rst files from class docstrings
 (terminal) python -m sphinx.ext.apidoc -o ./docs/source/apidoc ../cvxlab
 
 to generate html documentation in build directory:
-(terminal) python -m sphinx -b html source build/html
+(terminal) python -m sphinx -b html docs/source build/html
 
 to check docstring quality and spot errors
 (terminal) python -m pydocstyle cvxlab/

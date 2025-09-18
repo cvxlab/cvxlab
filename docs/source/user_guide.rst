@@ -1,6 +1,4 @@
-.. _introduction:
-
-Introduction
+User Guide
 ============
 
 Welcome to **cvxlab**!
