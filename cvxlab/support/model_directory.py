@@ -1,3 +1,10 @@
+"""Module defining utility functions for managing model directories and instances.
+
+This module provides functions to create model directories with template configuration
+files, transfer setup information from Excel files to configuration files, and save/load
+model instances. It leverages libraries such as `dill` for serialization and `pandas`
+for data manipulation.
+"""
 import dill
 import pandas as pd
 
@@ -18,7 +25,29 @@ def create_model_dir(
     export_tutorial: bool = False,
     template_file_type: Literal['yml', 'xlsx'] = 'yml',
 ) -> None:
+    """Create a model directory with template configuration files.
 
+    This function creates a new model directory with the specified name under
+    the given main directory path. It can generate template configuration files
+    in either YAML or Excel format. If the directory already exists, it can be
+    overwritten based on user confirmation or the force_overwrite flag. Optionally,
+    a tutorial file can be copied into the new model directory.
+
+    Args:
+        model_dir_name (str): The name of the model directory to create.
+        main_dir_path (str): The path to the main directory where the model
+            directory will be created.
+        force_overwrite (bool, optional): If True, overwrite existing directory
+            without confirmation. Defaults to False.
+        export_tutorial (bool, optional): If True, copy a tutorial file into
+            the new model directory. Defaults to False.
+        template_file_type (Literal['yml', 'xlsx'], optional): The type of
+            template configuration file to generate ('yml' or 'xlsx').
+            Defaults to 'yml'.
+
+    Raises:
+        ValueError: If the template file type is unsupported.
+    """
     files = FileManager(Logger())
     model_dir_path = Path(main_dir_path) / model_dir_name
 
@@ -87,7 +116,19 @@ def _generate_yaml_template(
         file_name: str,
         header: str,
 ) -> None:
+    """Generate a YAML template file from a given structure.
 
+    Recursively converts a nested dictionary structure into a YAML-formatted
+    file and saves it in the specified model directory. If the file already
+    exists, prompts the user for confirmation before overwriting.
+
+    Args:
+        structure (dict): Dictionary defining the structure of the YAML file.
+        model_dir_path (Path): Path to the model directory where the file
+            will be created.
+        file_name (str): Name of the YAML file to create.
+        header (str): Header comment to include at the top of the file.
+    """
     file_path = model_dir_path / file_name
 
     if file_path.exists():
@@ -154,7 +195,30 @@ def transfer_setup_info_xlsx(
         destination_dir_path: str | Path,
         update: Literal['settings', 'sets', 'all'] = 'all',
 ) -> None:
+    """Transfer setup information from an Excel file.
 
+    This function transfers setup information from a source Excel file to
+    existing configuration files in a destination directory. It can update
+    either the settings file, the sets file, or both, based on user input.
+    If the destination files already exist, the user is prompted for confirmation
+    before overwriting them.
+
+    This function is useful for complex model settings, in order to avoid direct
+    modifications in setup files, allows the user to work in a separate Excel file
+    and then transfer the relevant information to the model's configuration files
+    before running the model.
+
+    Args:
+        source_file_name (str): The name of the source Excel file.
+        source_dir_path (str | Path): The directory path of the source file.
+        destination_dir_path (str | Path): The directory path where the
+            configuration files are located.
+        update (Literal['settings', 'sets', 'all'], optional): Specifies which
+            files to update: 'settings', 'sets', or 'all'. Defaults to 'all'.
+
+    Raises:
+        FileNotFoundError: If the source file or destination files do not exist.
+    """
     files = FileManager(Logger())
 
     source_file_path = Path(source_dir_path, source_file_name)
@@ -254,8 +318,12 @@ def handle_model_instance(
         source_dir_path: str | Path = None,
         instance: Model = None,
 ) -> Model | None:
-    """
-    Handles saving or loading a model instance based on the specified action.
+    """Save or load model instances.
+
+    This function allows saving a model instance to a file or loading a model
+    instance from a file. Model instances are automatically saved in the model's
+    directory (defined in instance path attribute). When loading, the user
+    must provide the source directory path.
 
     Args:
         action (Literal['save', 'load']): The action to perform, either 'save' 
@@ -270,8 +338,8 @@ def handle_model_instance(
         Model | None: The loaded model instance if action is 'load', otherwise None.
 
     Raises:
-        ValueError: If the action is 'save' and the instance is not provided.
-        FileNotFoundError: If the action is 'load' and the file is not found.
+        ValueError: If the action is invalid or required parameters are missing.
+        ValueError: If the model instance is invalid when saving.
     """
     if action not in ['save', 'load']:
         raise ValueError("Invalid action. Must be either 'save' or 'load'.")
@@ -293,7 +361,16 @@ def _save_model_instance(
         instance: Model,
         file_name: str,
 ) -> None:
+    """Save a model instance to a file.
 
+    Args:
+        instance (Model): The model instance to save.
+        file_name (str): The name of the file to save the model instance.
+
+    Raises:
+        ValueError: If the model instance is invalid.
+        ValueError: If the file extension is invalid.
+    """
     if not isinstance(instance, Model):
         raise ValueError(
             "Invalid model instance. Must be a valid 'Model' instance.")
@@ -301,7 +378,9 @@ def _save_model_instance(
     if '.' in file_name:
         if not file_name.endswith('.pkl'):
             raise ValueError(
-                "Invalid file name. File name must end with '.pkl'.")
+                "Invalid file name. If file extension is provided, it must"
+                "be '.pkl'."
+            )
     else:
         file_name = f"{file_name}.pkl"
 
@@ -352,7 +431,21 @@ def _load_model_instance(
         file_name: str,
         source_dir_path: str | Path,
 ) -> Model:
+    """Load a model instance from a file.
 
+    Args:
+        file_name (str): The name of the file to load the model instance from.
+        source_dir_path (str | Path): The directory path to load the model
+            instance from.
+
+    Raises:
+        ValueError: If the file extension is invalid.
+        FileNotFoundError: If the file is not found.
+        e: If there is an error loading the model instance.
+
+    Returns:
+        Model: _description_
+    """
     if '.' in file_name:
         if not file_name.endswith('.pkl'):
             raise ValueError(
