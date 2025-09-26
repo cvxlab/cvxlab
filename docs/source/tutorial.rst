@@ -1,4 +1,6 @@
-Examples
+.. _tutorial:
+
+Tutorial
 ========
 
 Welcome to **cvxlab**!
