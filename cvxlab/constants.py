@@ -30,7 +30,7 @@ class Constants:
 
     Usage:: 
 
-        # Direct access:
+        # Attributes of sub-groups can be accessed directly
         Constants.ConfigFiles.SETUP_FILES
     """
 

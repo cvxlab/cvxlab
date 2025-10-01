@@ -92,34 +92,6 @@ def test_find_dict_depth():
         assert find_dict_depth(test_items[item]) == expected_outputs[item]
 
 
-def test_generate_dict_with_none_values():
-    """
-    Test the 'generate_dict_with_none_values' method.
-
-    This test function checks the behavior of the generate_dict_with_none_values
-    function against various input dictionaries. It asserts that the function
-    returns the expected output dictionary where each key has a corresponding
-    value of None.
-
-    Test cases:
-    - A nested dictionary with values should be converted to a dictionary with
-        the same structure, where each key has a value of None.
-    - An empty dictionary should return an empty dictionary.
-    - A dictionary with non-nested values should return a dictionary with the
-        same keys, each having a value of None.
-    """
-
-    test_items = [
-        ({1: {2: {3: 'a', 4: 'b'}}}, {1: {2: {3: None, 4: None}}}),  # nested dict
-        # non-nested dict
-        ({'x': 1, 'y': 2, 'z': 3}, {'x': None, 'y': None, 'z': None}),
-        ({}, {}),  # empty dict
-    ]
-
-    for item in test_items:
-        assert generate_dict_with_none_values(item[0]) == item[1]
-
-
 def test_pivot_dict():
     """
     Test the function 'pivot_dict'.
@@ -234,31 +206,6 @@ def test_add_item_to_dict():
         add_item_to_dict(dictionary, 'not_a_dictionary')
     with pytest.raises(TypeError):
         add_item_to_dict('not_a_dictionary', item)
-
-
-def test_merge_series_to_dataframe():
-
-    # valid inputs, default position
-    series = pd.Series([1, 2, 3], index=['A', 'A1', 'A2'], name='A')
-    dataframe = pd.DataFrame({'B': [4, 5, 6], 'C': [7, 8, 9]})
-    result = merge_series_to_dataframe(series, dataframe)
-    expected_result = pd.DataFrame(
-        {'A': [1, 1, 1], 'A1': [2, 2, 2], 'A2': [3, 3, 3], 'B': [4, 5, 6], 'C': [7, 8, 9]})
-    pd.testing.assert_frame_equal(result, expected_result)
-
-    # valid inputs, position -1
-    result = merge_series_to_dataframe(series, dataframe, -1)
-    expected_result = pd.DataFrame(
-        {'B': [4, 5, 6], 'C': [7, 8, 9], 'A': [1, 1, 1], 'A1': [2, 2, 2], 'A2': [3, 3, 3]})
-    pd.testing.assert_frame_equal(result, expected_result)
-
-    # empty series
-    with pytest.raises(ValueError):
-        merge_series_to_dataframe(pd.Series(), dataframe)
-
-    # empty dataframe
-    with pytest.raises(ValueError):
-        merge_series_to_dataframe(series, pd.DataFrame())
 
 
 def test_check_dataframes_equality():
@@ -535,42 +482,6 @@ def test_filter_dataframe():
     # filtering DataFrame with invalid df_to_filter
     with pytest.raises(ValueError):
         filter_dataframe("not a dataframe", filter_dict)
-
-
-def test_compare_dicts_ignoring_order():
-    """
-    Test the compare_dicts_ignoring_order function.
-    This function tests the compare_dicts_ignoring_order function with valid and 
-    invalid input, and checks if the function correctly compares dictionaries, 
-    handles invalid input, and raises the correct errors.
-    """
-    # comparing dictionaries with the same keys and values, but different order
-    iterable = [
-        {'A': [1, 2, 3], 'B': ['a', 'b', 'c']},
-        {'A': [3, 2, 1], 'B': ['c', 'b', 'a']},
-    ]
-    assert compare_dicts_ignoring_order(iterable) == True
-
-    # comparing dictionaries with different keys
-    iterable = [
-        {'A': [1, 2, 3], 'B': ['a', 'b', 'c']},
-        {'A': [1, 2, 3], 'C': ['a', 'b', 'c'], 'D': [5, 5, 5, 7]},
-    ]
-    assert compare_dicts_ignoring_order(iterable) == False
-
-    # comparing dictionaries with different values
-    iterable = [
-        {'A': [1, 2, 3], 'B': ['a', 'b', 'c']},
-        {'A': [4, 5, 6], 'B': ['d', 'e', 'f']},
-    ]
-    assert compare_dicts_ignoring_order(iterable) == False
-
-    # comparing dictionaries with invalid input
-    with pytest.raises(ValueError):
-        compare_dicts_ignoring_order(['not a dictionary', {}])
-
-    with pytest.raises(ValueError):
-        compare_dicts_ignoring_order('not a dictionary')
 
 
 def test_find_non_allowed_types():

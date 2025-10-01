@@ -1,14 +1,15 @@
-"""util_functions.py 
+"""Module with user-defined functions to be used as symbolic operators.
 
-@author: Matteo V. Rocco
-@institution: Politecnico di Milano
+This module provides various utility functions that are defined by users to support 
+complex calculations in symbolic problems, such as generating special matrices, 
+reshaping arrays, or any special numerical manipulation that can be hardly defined
+based on symbolic expressions.
 
-This module provides various utility functions that are defined to support 
-complex calculations in symbolic problems and generation of constants values,
-such as generating special matrices, reshaping arrays, and calculating matrix 
-inverses.
+These functions can be used as operators in the definition of symbolic problems
+in CVXlab, by adding them to the list of user-defined operators in 
+Constants.SymbolicDefinitions.USER_DEFINED_OPERATORS, and then calling them in the
+defining symbolic expressions.
 """
-
 from typing import Optional
 from scipy.sparse import issparse
 import numpy as np
@@ -19,11 +20,12 @@ def power(
         base: cp.Parameter | cp.Expression,
         exponent: cp.Parameter | cp.Expression,
 ) -> cp.Parameter:
-    """
-    Calculates the element-wise power of the base, provided an exponent. 
-    Either base or exponent can be a scalar.
+    """Calculate the element-wise power of a matrix or scalar.
 
-    Parameters:
+    This funciton calculates the element-wise power of the base, provided an 
+    exponent. Either base or exponent can be a scalar.
+
+    Args:
         base (cp.Parameter | cp.Expression): The base for the power operation. 
             The corresponding value can be a scalar or a 1-D numpy array.
         exponent (cp.Parameter | cp.Expression): The exponent for the power 
@@ -40,7 +42,6 @@ def power(
             neither is a scalar. If the base and exponent are not numpy arrays.
             If the base and exponent include non-numeric values.
     """
-
     if not isinstance(base, cp.Parameter | cp.Expression) or \
             not isinstance(exponent, cp.Parameter | cp.Expression):
         raise TypeError(
@@ -73,8 +74,7 @@ def power(
 
 
 def matrix_inverse(matrix: cp.Parameter | cp.Expression) -> cp.Parameter:
-    """
-    Calculates the inverse of a square matrix.
+    """Calculate the inverse of a matrix.
 
     Args:
         matrix (cp.Parameter | cp.Expression): The matrix to calculate the 
@@ -128,19 +128,21 @@ def shift(
         set_length: cp.Constant,
         shift_values: cp.Parameter,
 ) -> cp.Parameter:
-    """
-    Generate a square matrix of specified dimension, with all zeros except a
-    diagonal of ones that is shifted with respect to the main diagonal by a 
+    """Shift values of an identity matrix diagonal upwards/downwards.
+
+    This function generates a square matrix of specified dimension, with all zeros 
+    except a diagonal of ones that is shifted with respect to the main diagonal by a 
     specified shift_value. A positive shift_value results in a downward shift, 
     while a negative shift_value results in an upward shift. If shift_value is 0, 
     identity matrix is returned.
 
-    Parameters:
-        dimension (Tuple[int]): The dimension of the matrix row/col.
-        shift_value (int): (scalar) the number of positions to shift the diagonal.
+    Args:
+        set_length (cp.Constant): The dimension of the matrix row/col.
+        shift_values (cp.Parameter): (scalar) the number of positions to shift 
+            the diagonal.
 
     Returns:
-        np.ndarray: A square matrix with a diagonal of ones downward shifted by 
+        cp.Parameter: A square matrix with a diagonal of ones downward shifted by 
             the specified shift_value.
 
     Raises:
@@ -223,14 +225,13 @@ def annuity(
         tech_lifetime: cp.Parameter,
         interest_rate: Optional[cp.Parameter] = None,
 ) -> cp.Parameter:
-    """ 
-    Calculate the annuity factor. 
+    """Calculate the annuity factor.
 
-    The annuity factor is used to calculate the present value of an annuity for 
-    a given period length, lifetime, and interest rate, which is a series of 
-    equal payments made at regular intervals.
+    This function calculate the annuity factor, used to calculate the present 
+    value of an annuity for a given period length, lifetime, and interest rate, 
+    which is a series of equal payments made at regular intervals.
 
-    Parameters:
+    Args:
         period_length (cp.Parameter): The length of the period for which the
             annuity factor is calculated.
         lifetime (cp.Parameter): The total number of periods over which the
@@ -240,6 +241,14 @@ def annuity(
 
     Returns:
         cp.Parameter: The annuity factor calculated based on the input parameters.
+
+    Raises:
+        TypeError: If period_length or lifetime are not cvxpy Parameters, or if
+            interest_rate is provided and is not a cvxpy Parameter.
+        ValueError: If the values assigned to period_length, lifetime, or
+            interest_rate are None, or if period_length or lifetime are not
+            scalars, or if interest_rate is not a vector of size equal to
+            period_length.
     """
     if not isinstance(period_length, (cp.Parameter, cp.Constant)) or \
             not isinstance(tech_lifetime, cp.Parameter):
@@ -310,15 +319,14 @@ def weibull_distribution(
         dimensions: int,
         rounding: int = 2,
 ) -> cp.Parameter:
-    """
-    Generates a Weibull probability density function.
+    """Generate a Weibull probability density function.
 
     This function can be produced either as a one-dimensional vector or a 
     two-dimensional matrix, based on specified dimensions. This function 
     primarily uses parameters from 'cvxpy' to enable integration with 
     optimization tasks and 'numpy' for handling numerical operations.
 
-    Parameters:
+    Args:
         scale_factor (cp.Parameter): A cvxpy Parameter object containing a 
             scalar value representing the scale parameter (λ) of the Weibull 
             distribution. This value must be positive.

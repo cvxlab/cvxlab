@@ -1,26 +1,24 @@
-"""
-util_functions.py 
-
-@author: Matteo V. Rocco
-@institution: Politecnico di Milano
+"""Module with user defined functions defined as model's constants.
 
 This module provides various utility functions that are defined to support 
-complex calculations in symbolic problems and generation of constants values,
-such as generating special matrices, reshaping arrays, and calculating matrix 
-inverses.
-"""
+complex calculations in symbolic problems through generation of constants types,
+such as generating special matrices (positive semidefinite matrices).
 
+To add a new user-defined constant, simply define a new function in this module,
+then define it as a value in the Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS 
+dictionary.
+"""
 from typing import Iterable, Tuple
 import numpy as np
-import pandas as pd
 
 
 def tril(dimension: Tuple[int]) -> np.array:
-    """
+    """Define a lower triangular matrix.
+
     Generate a square matrix with ones in the lower triangular region
     (including the diagonal) and zeros elsewhere.
 
-    Parameters:
+    Args:
         dimension (Tuple[int]): The dimension of the matrix row/col.
 
     Returns:
@@ -28,8 +26,10 @@ def tril(dimension: Tuple[int]) -> np.array:
             and zeros elsewhere.
 
     Raises:
-        ValueError: If passed dimension is not greater than zero.
         TypeError: If passed dimension is not an iterable containing integers.
+        ValueError: If passed dimension is not greater than zero, 
+            or if it does not represent a vector (i.e., at least one element 
+            must be equal to 1).
     """
     if not isinstance(dimension, Tuple) and not \
             all(isinstance(i, int) for i in dimension):
@@ -57,11 +57,12 @@ def arange(
         start_from: int = 1,
         order: str = 'F',
 ) -> np.ndarray:
-    """
+    """Define a reshaped range array.
+
     Generate a reshaped array with values ranging from 'start_from' to 
     'start_from + total_elements'.
 
-    Parameters:
+    Args:
         shape_size (Iterable[int]): The shape of the output array.
         start_from (int, optional): The starting value for the range. 
             Defaults to 1.

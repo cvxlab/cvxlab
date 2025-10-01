@@ -1,13 +1,30 @@
+"""Module defining utility functions for text processing and evaluation.
+
+This module includes functions to evaluate strings representing data structures,
+add necessary brackets or quotes, convert string representations of booleans,
+and extract tokens from expressions while handling parentheses balancing.
+"""
 import ast
 import re
 from typing import Any, Iterable, List, Optional
 
 
-def str_to_be_evaluated(value: str) -> bool:
-    """
-    Checks if a string should be evaluated (i.e. if it is a dictionary, list or
-    a tuple). Raises ValueError if parentheses, brackets, or braces are not
-    correctly opened/closed.
+def is_iterable(value: str) -> bool:
+    """Check if a string represents an iterable (list, tuple, or dict).
+
+    This function checks if the input string starts with an opening
+    bracket, brace, or parenthesis, indicating that it may represent
+    a list, dictionary, or tuple.
+
+    Args:
+        value (str): The string to check.
+
+    Returns:
+        bool: True if the string represents an iterable, False otherwise.
+
+    Raises:
+        TypeError: If the input is not a string.
+        ValueError: If the string has unmatched parentheses, brackets, or braces.
     """
     if not isinstance(value, str):
         raise TypeError(f'Passed value {value} must be a string.')
@@ -28,13 +45,25 @@ def str_to_be_evaluated(value: str) -> bool:
     return bool(re.match(r'^\s*[\{\[\(]', value))
 
 
-def add_brackets(value: str) -> str | None:
-    """
-    If a string represents a list or a dict structure without brackets,
-    add open/close brackets and return a modified str.
-    If a string represents a list or a dict with brackets, no actions.
-    If a string is not representing any of the above, no actions.
-    If other types are passed, no actions.
+def add_brackets(value: str) -> Optional[str]:
+    """Check if a string represents a list or dict without brackets and add them.
+
+    This function checks if the input string represents a list or dictionary
+    structure without the necessary opening and closing brackets. If so, it adds
+    the appropriate brackets and returns the modified string. If the string
+    already contains brackets or does not represent a list or dictionary, it
+    returns the string unchanged.
+
+    Args:
+        value (str): The string to check and potentially modify.
+
+    Returns:
+        Optional[str]: The modified string with added brackets if necessary,
+            or the original string if no modification was needed.
+
+    Raises:
+        TypeError: If the input is not a string.
+        ValueError: If the string has unmatched parentheses, brackets, or braces.
     """
     if not isinstance(value, str):
         raise TypeError(f'Passed value {value} must be a string.')
@@ -71,9 +100,20 @@ def add_brackets(value: str) -> str | None:
 
 
 def add_quotes(value: str) -> str:
-    """
-    Converts all unquoted symbols into quoted symbols.
+    """Convert all unquoted symbols into quoted symbols.
 
+    This function processes a string that represents a list or dictionary and
+    ensures that all unquoted symbols are enclosed in quotes. It handles
+    various delimiters such as commas, colons, brackets, braces, and parentheses.
+
+    Args:
+        value (str): The string to process.
+
+    Returns:
+        str: The modified string with all unquoted symbols enclosed in quotes.
+
+    Raises:
+        TypeError: If the input is not a string.
     """
     if not isinstance(value, str):
         raise TypeError(f'Passed value {value} must be a string.')
@@ -105,9 +145,17 @@ def add_quotes(value: str) -> str:
 
 
 def evaluate_bool(value: Any) -> Any:
-    """
-    parse a generic expression and find str representing bool (in bool_map dict)
-    and convert them to bool
+    """Check and convert str representing bool to bool.
+
+    This function parses a generic expression and find str representing bool 
+    (in bool_map dictionary) and converts them to bool.
+
+    Args:
+        value (Any): The value to check and potentially convert.
+
+    Returns:
+        Any: The converted bool value if the input was a str representing bool,
+            otherwise returns the input value unchanged.
     """
     bool_map = {
         'true': True, 'True': True, 'TRUE': True,
@@ -127,7 +175,24 @@ def evaluate_bool(value: Any) -> Any:
 
 
 def process_str(value: Any) -> Any:
+    """Process a string to evaluate its content.
 
+    This function processes a string to determine if it represents a list,
+    dictionary, or boolean value. It adds necessary brackets or quotes,
+    evaluates the string to convert it into the corresponding Python data
+    structure, and converts string representations of booleans to actual
+    boolean values.
+
+    Args:
+        value (Any): The value to process, which may be a string or other type.
+
+    Returns:
+        Any: The processed value, which may be a list, dictionary, boolean,
+            or the original value if no processing was needed.
+
+    Raises:
+        ValueError: If the string is malformed and cannot be evaluated.
+    """
     # if value is not a string, return it as is
     if not isinstance(value, str):
         return value
@@ -136,7 +201,7 @@ def process_str(value: Any) -> Any:
     value = add_brackets(value)
 
     # in case the string is a list | dict, add quotes to all items and evaluate it
-    if str_to_be_evaluated(value):
+    if is_iterable(value):
         value = add_quotes(value)
         try:
             value = ast.literal_eval(value)
@@ -151,8 +216,17 @@ def process_str(value: Any) -> Any:
 
 
 def balanced_parentheses(parentheses_list: List[str]) -> bool:
-    """
-    Check if the parentheses in a list are balanced.
+    """Check if the parentheses in a list are balanced.
+
+    This function checks if the parentheses in the input list are balanced.
+    It uses a stack to track opening parentheses and ensures that each closing
+    parenthesis matches the most recent opening parenthesis.
+
+    Args:
+        parentheses_list (List[str]): A list of parentheses characters to check.
+
+    Returns:
+        bool: True if the parentheses are balanced, False otherwise.
     """
     stack = []
     matching = {')': '('}
@@ -173,14 +247,15 @@ def extract_tokens_from_expression(
     tokens_to_skip: Optional[List[str]] = [],
     avoid_duplicates: Optional[bool] = False,
 ) -> List[str]:
-    """
-    Parses and extracts variable names from a symbolic expression, excluding
-    any non-allowed tokens.
+    """Extract tokens from a symbolic expression.
+
+    This function parses and extracts variable names from a symbolic expression, 
+    excluding any non-allowed tokens.
     This method uses regular expressions to identify potential variable names
     within the given expression and filters out any tokens that are designated
     as non-allowed, such as mathematical operators or reserved keywords.
 
-    Parameters:
+    Args:
         expression (str): The symbolic expression from which to extract
             variable names.
         pattern (str | List[str]): The regular expression pattern(s) to use for
@@ -190,8 +265,12 @@ def extract_tokens_from_expression(
             extracting variable names. Default is an empty list.
         avoid_duplicates (Optional[bool]): if True, it eliminates duplicates from
             the resulting list by preserving items order.
+
     Returns:
         List[str]: A list of valid variable names extracted from the expression.
+
+    Raises:
+        TypeError: If the input types are incorrect.
     """
     if not isinstance(expression, str):
         raise TypeError(f'Passed expression {expression} must be a string.')
