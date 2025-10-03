@@ -33,7 +33,7 @@ def test_str_to_be_evaluated():
         ("{'a': 1, 'b': ['ciao'}", None, ValueError),
         ("{'a': 1, 'b': ['ciao', (1,]}", None, ValueError),
     ]
-    run_test_cases(str_to_be_evaluated, test_cases)
+    run_test_cases(is_iterable, test_cases)
 
 
 def test_add_brackets():

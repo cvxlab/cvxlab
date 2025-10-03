@@ -12,8 +12,7 @@ def assert_equality(
         msg: str,
         tolerance: Optional[float] = None
 ) -> None:
-    """
-    Helper to assert equality for various types, with optional absolute tolerance.
+    """Helper to assert equality for various types, with optional absolute tolerance.
     """
 
     if isinstance(result, cvxpy.Expression):

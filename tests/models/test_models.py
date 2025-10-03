@@ -40,7 +40,7 @@ def create_test_function(
     with the specified directory path and settings, and calls the specified methods 
     on each model.
 
-    Parameters:
+    Args:
         models (Dict): A dictionary containing the names of the models to test.
         models_dir_path (Path | str): The directory path where the models are located.
         methods (Dict): A dictionary containing the methods to call on each model 
