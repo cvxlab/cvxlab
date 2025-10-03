@@ -254,19 +254,24 @@ class Problem:
         err_msg = []
 
         if not related_table:
-            err_msg.append(f"Data table '{related_table_key}' not found.")
+            err_msg.append(
+                f"Slicing variables | Data table '{related_table_key}' not found.")
 
         if related_table.coordinates_dataframe is None:
             err_msg.append(
-                f"Coordinates not defined for data table '{related_table_key}'.")
+                "Slicing variables | Coordinates not defined for data table "
+                f"'{related_table_key}'."
+            )
 
         if not related_table.cvxpy_var:
             err_msg.append(
-                f"Variables not defined data table '{related_table_key}'.")
+                "Slicing variables | Variables not defined data table "
+                f"'{related_table_key}'."
+            )
 
         if err_msg:
-            self.logger.error("\n".join(err_msg))
-            raise exc.MissingDataError("\n".join(err_msg))
+            [self.logger.error(msg) for msg in err_msg]
+            raise exc.MissingDataError("Slicing variables | Failed.")
 
         # use sub_problem_key to identify the endogenous variable for sub-problem
         if sub_problem_key is not None and \
@@ -350,11 +355,14 @@ class Problem:
         else:
             err_msg.append(
                 f"Variable '{var_key}' | Supported data formats: pandas "
-                "DataFrame or a numpy array.")
+                "DataFrame or a numpy array."
+            )
 
         if err_msg:
-            self.logger.error("\n".join(err_msg))
-            raise exc.MissingDataError("\n".join(err_msg))
+            [self.logger.error(msg) for msg in err_msg]
+            raise exc.MissingDataError(
+                f"Variable '{var_key}' | Data assigment failed."
+            )
 
         # conversion to sparse matrix if data is sparse
         if util.is_sparse(

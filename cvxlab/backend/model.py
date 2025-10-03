@@ -11,8 +11,9 @@ The Model class embeds the generation of the Core class, which provides the cent
 data indexing, functionalities for SQLite database management, problem formulation 
 and solution through cvxpy package. 
 """
+from os import error
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 import pandas as pd
 import cvxpy as cp
@@ -185,12 +186,17 @@ class Model:
             return True
 
     def check_model_dir(self) -> None:
-        """Validate the existence of the model directory and required setup files.
+        """Validate the existence of the model directory and required files.
 
-        This method checks if the model directory and all the required setup 
-        files exist based on the attribute 'model_settings_from'.
-        This method is called during the initialization of the Model instance, 
-        and it is not meant to be called directly by the user.
+        This method checks if the model directory and all the required files exist.
+        This method is called during the initialization of the Model instance, and 
+        it is not meant to be called directly by the user.
+
+        Depending on the 'use_existing_data' flag, the method checks for the existence
+        of different files: if the flag is set to False, it checks for the existence
+        of the basic model settings files (.yml or .xlsx). If the flag is set to 
+        True, it also includes in the check the existence of the SQLite database file,
+        the sets Excel file, and the input data directory.
 
         Raises:
             exc.SettingsError: If the 'model_settings_from' parameter is not recognized.
@@ -198,31 +204,56 @@ class Model:
                 setup files are missing.
         """
         files_type = self.settings['model_settings_from']
+        model_dir_path = self.paths['model_dir']
+        files_to_check = []
+        subdir_to_check = []
+
+        util.validate_selection(
+            valid_selections=Constants.ConfigFiles.AVAILABLE_SOURCES,
+            selection=files_type,
+        )
 
         if files_type == 'yml':
-            setup_files = [
+            files_to_check += [
                 file + '.yml'
                 for file in Constants.ConfigFiles.SETUP_INFO.values()
             ]
         elif files_type == 'xlsx':
-            setup_files = [Constants.ConfigFiles.SETUP_XLSX_FILE]
-        else:
-            msg = "Parameter 'model_settings_from' not recognized."
-            self.logger.error(msg)
-            raise exc.SettingsError(msg)
+            files_to_check += [Constants.ConfigFiles.SETUP_XLSX_FILE]
 
-        if self.files.dir_files_check(
-            dir_path=self.paths['model_dir'],
-            files_names_list=setup_files,
-        ):
+        if self.settings['use_existing_data']:
+            files_to_check += [
+                Constants.ConfigFiles.SETS_FILE,
+                Constants.ConfigFiles.SQLITE_DATABASE_FILE,
+            ]
+            subdir_to_check += [Constants.ConfigFiles.INPUT_DATA_DIR]
+
+        err_msg = []
+
+        if not Path(model_dir_path).exists():
+            self.logger.error(
+                "Model directory validation | Model directory is missing."
+            )
+            raise exc.SettingsError("Model directory validation | Failed.")
+
+        for subdir in subdir_to_check:
+            if not Path(model_dir_path / subdir).exists():
+                err_msg.append(
+                    f"Model directory validation | '{subdir}' directory is missing."
+                )
+
+        for file in files_to_check:
+            if not Path(model_dir_path / file).exists():
+                err_msg.append(
+                    f"Model directory validation | '{file}' file is missing."
+                )
+
+        if err_msg == []:
             self.logger.debug(
-                f"Model directory and setup '{files_type}' file/s already "
-                "exist.")
-
+                f"Model directory validation | Success.")
         else:
-            msg = f"Model directory or setup '{files_type}' file/s missing."
-            self.logger.error(msg)
-            raise exc.SettingsError(msg)
+            [self.logger.error(msg) for msg in err_msg]
+            raise exc.SettingsError("Model directory validation | Failed.")
 
     def load_model_coordinates(self, fetch_foreign_keys: bool = True) -> None:
         """Load sets data and define data tables/variables coordinates.

@@ -340,15 +340,21 @@ class Core:
 
                     if variable.data is None:
                         err_msg.append(
-                            f"No data defined for variable '{var_key}'.")
+                            "Fetching data to variables | No data defined for "
+                            f"variable '{var_key}'."
+                        )
 
                     if variable.related_table is None:
                         err_msg.append(
-                            f"No related table defined for variable '{var_key}'.")
+                            "Fetching data to variables | No related table "
+                            f"defined for variable '{var_key}'."
+                        )
 
                     if err_msg:
-                        self.logger.error("\n".join(err_msg))
-                        raise exc.MissingDataError("\n".join(err_msg))
+                        [self.logger.error(msg) for msg in err_msg]
+                        raise exc.MissingDataError(
+                            "Fetching data to variables | Failed."
+                        )
 
                     # for variables whose type is end/exo depending on the problem,
                     # fetch exogenous variable data.
