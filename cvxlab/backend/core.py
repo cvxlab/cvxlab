@@ -725,28 +725,32 @@ class Core:
 
         self.problem.fetch_problem_status()
 
-    def check_results_as_expected(
+    def compare_databases(
             self,
             values_relative_diff_tolerance: float,
+            other_db_dir_path: Path | str,
+            other_db_name: str,
     ) -> None:
-        """Check if results match expected results in a reference SQLite database.
+        """COmpare results in the model SQLite database with another SQLite database.
 
-        The method checks if the results of the model SQLite database match the 
-        expected results in a reference SQLite database.
-        This method uses the 'check_databases_equality' method to compare the 
-        current database with a test database. The test database is specified 
-        by the 'sqlite_database_file_test' setting and is located in the model 
-        directory.
+        This method compares the results stored in the model's SQLite database 
+        with those in a reference database. The reference database must be specified 
+        via the 'other_db_dir_path' and 'other_db_name' arguments. 
+        The comparison uses the 'check_databases_equality' method and applies a 
+        relative difference tolerance.
 
         Args:
             values_relative_diff_tolerance (float): The relative difference 
                 tolerance (%) to use when comparing the databases. It overwrites
                 the default setting in Constants.
+            other_db_dir_path (Path | str): The directory path of the reference
+                database.
+            other_db_name (str): The name of the reference database.
         """
         with db_handler(self.sqltools):
             self.sqltools.check_databases_equality(
-                other_db_dir_path=self.paths['model_dir'],
-                other_db_name=Constants.ConfigFiles.SQLITE_DATABASE_FILE_TEST,
+                other_db_dir_path=other_db_dir_path,
+                other_db_name=other_db_name,
                 tolerance_percentage=values_relative_diff_tolerance,
             )
 

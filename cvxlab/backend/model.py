@@ -679,23 +679,46 @@ class Model:
 
     def check_model_results(
             self,
+            other_db_dir_path: Optional[Path | str] = None,
+            other_db_name: Optional[str] = None,
             numerical_tolerance: Optional[float] = None,
     ) -> None:
-        """Compare model results with expected results.
+        """Compare model SQLite database with another SQLite reference database.
 
-        This method compares the results of the model SQLite database with results
-        of another SQLite database. Mostly used for testing purposes.
-        This method uses the 'check_results_as_expected' method to compare the 
-        results of the current model's computations with the expected results. 
-        The expected results are stored in a test database specified by the 
-        'sqlite_database_file_test' setting and located in the model directory.
+        This method compares the results of the model's SQLite database with those
+        of another SQLite database, typically for testing purposes. It uses the
+        'check_results_as_expected' method to compare the current model's computations
+        with the expected results. The expected results can be stored in a specific
+        database (identified by directory path and name), or stored in a test database
+        specified by the 'sqlite_database_file_test' setting and located in the model
+        directory.
+        Both 'other_db_dir_path' and 'other_db_name' must be provided together, or both
+        must be None. If not provided, defaults are used.
 
         Args:
+            other_db_dir_path (Optional[Path | str], optional): The directory path
+                where the other SQLite database is located. If None, it defaults
+                to the model directory. Defaults to None.
+            other_db_name (Optional[str], optional): The name of the other SQLite
+                database file. If None, it defaults to the 'sqlite_database_file_test'
+                setting. Defaults to None.
             numerical_tolerance (float, optional): The relative difference 
                 (non-percentage) tolerance for comparing numerical values in 
                 different databases. If None, it is set to
                 'Constants.NumericalSettings.TOLERANCE_TESTS_RESULTS_CHECK'.
         """
+        if (other_db_dir_path is None) != (other_db_name is None):
+            msg = "Both 'other_db_dir_path' and 'other_db_name' parameters must " \
+                "be defined together, or both must be None."
+            self.logger.error(msg)
+            raise exc.SettingsError(msg)
+
+        if other_db_dir_path is None:
+            other_db_dir_path = self.paths['model_dir']
+
+        if other_db_name is None:
+            other_db_name = Constants.ConfigFiles.SQLITE_DATABASE_FILE_TEST
+
         if not numerical_tolerance:
             numerical_tolerance = \
                 Constants.NumericalSettings.TOLERANCE_TESTS_RESULTS_CHECK
@@ -704,8 +727,11 @@ class Model:
             message=f"Check model results...",
             level='info',
         ):
-            self.core.check_results_as_expected(
-                values_relative_diff_tolerance=numerical_tolerance)
+            self.core.compare_databases(
+                values_relative_diff_tolerance=numerical_tolerance,
+                other_db_dir_path=other_db_dir_path,
+                other_db_name=other_db_name,
+            )
 
     def variable(
             self,
