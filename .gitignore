@@ -130,9 +130,7 @@ dmypy.json
 .pyre/
 
 # Folders
-.vscode/*
-!.vscode/settings.json
-!.vscode/launch.json
+.vscode/
 
 # File extensions
 *.log
