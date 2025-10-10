@@ -16,6 +16,6 @@ setup(
     ],
     author='Matteo V. Rocco',
     author_email='matteovincenzo.rocco@polimi.it',
-    description='A Python-embedded, open-source modeling framework for convex numerical optimization problems.',
-    url='https://github.com/pyESM-project/pyesm',
+    description='A Python-embedded, open-source modeling laboratory for convex numerical optimization problems.',
+    url='https://github.com/cvxlab/cvxlab',
 )

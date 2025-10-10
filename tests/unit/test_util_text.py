@@ -1,3 +1,14 @@
+"""
+test_util_text.py 
+
+@author: Matteo V. Rocco
+@institution: Politecnico di Milano
+
+This module contains tests for the functions in the 'cvxlab.support.util_text' 
+module.
+"""
+
+
 from tests.unit.conftest import run_test_cases
 from cvxlab.support.util_text import *
 
@@ -22,7 +33,7 @@ def test_str_to_be_evaluated():
         ("{'a': 1, 'b': ['ciao'}", None, ValueError),
         ("{'a': 1, 'b': ['ciao', (1,]}", None, ValueError),
     ]
-    run_test_cases(str_to_be_evaluated, test_cases)
+    run_test_cases(is_iterable, test_cases)
 
 
 def test_add_brackets():
@@ -109,22 +120,47 @@ def test_process_str():
 
 
 def test_extract_tokens_from_expression():
+    std_expression = "1+ a_1 + B5 - c2 *5.6 / f_f"
+    text_pattern = r"\b[a-zA-Z_][a-zA-Z0-9_]*\b"
+    numeric_patter = r"\b(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?\b"
+    symbols_patter = [r"\+", r"-", r"\*", r"/", r"=="]
+
     expr_list = [
-        # allowed types with standard pattern
-        ("a + b_1 - c2 * d / e", ["a", "b_1", "c2", "d", "e"], None),
-        ("a+b_1-c2*d/e", ["a", "b_1", "c2", "d", "e"], None),
-        ("", [], None),
-        # skipping tokens
-        ("a + b - cb", ["a", "cb"], None, {"tokens_to_skip": ["b"]}),
-        ("bba + bb - cbb", ["bba", "cbb"], None, {"tokens_to_skip": ["bb"]}),
-        # alternative first char pattern
-        ("ab + CdD_", ["ab"], None, {"first_char_pattern": r"[a-z]"}),
-        # alternative other char pattern
-        ("a0 + cC", ["cC"], None, {"other_chars_pattern": r"[a-zA-Z]*"}),
-        ("a01 _A01", [], None, {"other_chars_pattern": r"[a-zA-Z]*"}),
-        # invalid expressions
+        # invalid expression
         (123, None, TypeError),
-        ({'a': 10, 'b': 'text'}, None, TypeError),
+        ({'a': 10}, None, TypeError),
+        # invalid pattern type
+        (std_expression, None, TypeError, {'pattern': (1, 2)}),
+        # invalid tokens_to_skip type
+        (std_expression, None, TypeError, {'tokens_to_skip': 'not a list'}),
+        # valid arguments
+        (
+            std_expression,
+            ['a_1', 'B5', 'c2', 'f_f'], None, {'pattern': text_pattern}
+        ),
+        (
+            std_expression,
+            ['1', '5.6'], None, {'pattern': numeric_patter}),
+        (
+            std_expression,
+            ['+', '+', '-', '*', '/'], None, {'pattern': symbols_patter}
+        ),
+        (
+            "a == b",
+            ['=='], None, {'pattern': symbols_patter}
+        ),
+        # valid arguments, with tokens_to_skip
+        (
+            std_expression,
+            ['c2', 'f_f'], None,
+            {'pattern': text_pattern, 'tokens_to_skip': ['a_1', 'B5']}
+        ),
+        # valid arguments, with avoid_duplicates
+        (
+            std_expression,
+            ['+', '-', '*', '/'], None,
+            {'pattern': symbols_patter, 'avoid_duplicates': True}
+        ),
     ]
 
     run_test_cases(extract_tokens_from_expression, expr_list)

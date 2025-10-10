@@ -1,8 +1,4 @@
-"""
-util.py 
-
-@author: Matteo V. Rocco
-@institution: Politecnico di Milano
+"""Module defining utility functions.
 
 This module contains a collection of utility functions designed to assist with 
 managing and manipulating data within the context of model generation and 
@@ -10,12 +6,7 @@ operation in the package. These functions include file management, data
 validation, dataframe manipulation, dictionary operations, and specific support 
 functions that enhance the interoperability of data structures used throughout 
 the application.
-
-These utilities are critical in handling the data integrity and consistency 
-required for successful model operation, providing robust tools for data 
-manipulation and validation.
 """
-
 import itertools as it
 import numpy as np
 import pandas as pd
@@ -32,8 +23,11 @@ def validate_selection(
         selection: str,
         ignore_case: bool = False,
 ) -> None:
-    """
-    Validates if a provided selection is within a list of valid selections.
+    """Validate a selected item against a list of valid selections.
+
+    This function checks if the provided selection is present in the list of
+    valid selections. It can optionally ignore case sensitivity during the
+    comparison.
 
     Args:
         valid_selections (List[str]): A list containing all valid selections.
@@ -41,13 +35,10 @@ def validate_selection(
         ignore_case (bool): If True, ignores the case of the selection. 
             Works only with string selections. Default is False.
 
-    Returns:
-        None: This function only performs validation and does not return any value.
-
     Raises:
-        ValueError: If the selection is not found within the list of valid selections.
         ValueError: If no valid selections are available.
         ValueError: If ignore_case is True but the selections are not strings.
+        ValueError: If the selection is not found within the list of valid selections.
     """
     if not valid_selections:
         raise ValueError("No valid selections are available.")
@@ -70,8 +61,7 @@ def items_in_list(
         items: List,
         control_list: Iterable,
 ) -> bool:
-    """
-    Checks if all items in a list are present in a control list.
+    """Check if all items in a list are present in a control list.
 
     Args:
         items (List): The list of items to check.
@@ -106,8 +96,7 @@ def items_in_list(
 
 
 def get_user_confirmation(message: str) -> bool:
-    """
-    Prompts the user to confirm an action via command line input.
+    """Prompt the user to confirm an action via command line input.
 
     Args:
         message (str): The message to display to the user.
@@ -120,8 +109,7 @@ def get_user_confirmation(message: str) -> bool:
 
 
 def find_dict_depth(item: dict) -> int:
-    """
-    Determines the depth of a nested dictionary.
+    """Determine the depth of a nested dictionary.
 
     Args:
         item (dict): The dictionary for which the depth is calculated.
@@ -146,42 +134,14 @@ def find_dict_depth(item: dict) -> int:
     )
 
 
-def generate_dict_with_none_values(item: dict) -> dict:
-    """
-    Converts all values in a nested dictionary to None, maintaining the structure 
-    of the dictionary.
-
-    Args:
-        item (dict): The dictionary to be converted.
-
-    Returns:
-        dict: A new dictionary with the same keys but all values set to None.
-
-    Raises:
-        TypeError: If the passed argument is not a dictionary.
-    """
-    if not isinstance(item, dict):
-        raise TypeError(
-            "Passed argument must be a dictionary. "
-            f"{type(item).__name__} was passed instead.")
-
-    dict_keys = {}
-    for key, value in item.items():
-        if isinstance(value, dict):
-            dict_keys[key] = generate_dict_with_none_values(value)
-        else:
-            dict_keys[key] = None
-
-    return dict_keys
-
-
 def pivot_dict(
         data_dict: Dict,
         keys_order: Optional[List] = None,
 ) -> Dict:
-    """
-    Converts a dictionary of lists into a nested dictionary, optionally 
-    ordering keys.
+    """Convert a dictionary of lists into a nested dictionary.
+
+    This recursive function pivots a dictionary of lists into a nested dictionary,
+    optionally ordering keys according to a specified list.
 
     Args:
         data_dict (Dict): The dictionary to be pivoted.
@@ -198,7 +158,6 @@ def pivot_dict(
         ValueError: If 'keys_order' does not correspond to the keys of 
             'data_dict'.
     """
-
     if not isinstance(data_dict, dict):
         raise TypeError(
             "Argument 'data_dict' must be a dictionary. "
@@ -240,9 +199,10 @@ def dict_cartesian_product(
         data_dict: Dict[Any, List[Any]],
         include_dict_keys: bool = True,
 ) -> List[Dict[Any, Any] | List[Any]]:
-    """
-    Generates a list of dictionaries or lists representing the cartesian 
-    product of dictionary values.
+    """Cartesian product of dictionary values.
+
+    This function generates a list of dictionaries or lists representing the 
+    cartesian product of dictionary values.
 
     Args:
         data_dict (Dict[Any, List[Any]]): The dictionary to be used for the 
@@ -292,9 +252,10 @@ def unpivot_dict_to_dataframe(
         data_dict: Dict[str, List[str]],
         key_order: Optional[List[str]] = None,
 ) -> pd.DataFrame:
-    """
-    Converts a nested dictionary into a DataFrame by performing a cartesian 
-    product of dictionary values.
+    """Unpivot a dictionary to a DataFrame.
+
+    This function converts a nested dictionary into a DataFrame by performing a 
+    cartesian product of dictionary values.
 
     Args:
         data_dict (Dict[str, List[str]]): The dictionary to be unpivoted.
@@ -354,30 +315,28 @@ def add_item_to_dict(
         item: dict,
         position: int = -1,
 ) -> dict:
-    """
-    Add a given item to a specific position in a dictionary.
+    """Add a given item to a specific position in a dictionary.
 
     Args:
         dictionary (dict): The dictionary to be modified.
         item (dict): The dictionary item to be added.
         position (int, optional): The position in the original dictionary where 
-        the item should be added. If not provided, the function adds the item 
-        at the end of the original dictionary. Default is -1.
+            the item should be added. If not provided, the function adds the item 
+            at the end of the original dictionary. Default is -1.
+
+    Returns:
+        dict: A new dictionary with the item inserted at the specified position. 
+            The order of the items is preserved.
 
     Raises:
         TypeError: If either 'dictionary' or 'item' is not of 'dict' type.
         ValueError: If 'position' is not within the range of -len(dictionary) to 
             len(dictionary).
 
-    Returns:
-        dict: A new dictionary with the item inserted at the specified position. 
-            The order of the items is preserved.
-
     Note:
         This function requires Python 3.7 or later, as it relies on the fact that 
         dictionaries preserve insertion order as of this version.
     """
-
     if not all(isinstance(arg, dict) for arg in [dictionary, item]):
         raise TypeError("Passed argument/s not of 'dict' type.")
 
@@ -398,43 +357,6 @@ def add_item_to_dict(
     return dict(items)
 
 
-def merge_series_to_dataframe(
-        series: pd.Series,
-        dataframe: pd.DataFrame,
-        position: Literal[0, -1] = 0,
-) -> pd.DataFrame:
-    """
-    Merge a given 'series' with a 'dataframe' at the specified position.
-    It repeats each value of the series as a new column of the dataframe.
-    Final dataframe has a number of column of initial dataframe plus the number
-    of items of the series.
-
-    Args:
-    - series (pd.Series): The series to be merged.
-    - dataframe (pd.DataFrame): The dataframe to merge with.
-    - position (Literal[0, -1], optional): The position at which to merge the series.
-        0 indicates merging at the beginning, and -1 indicates merging at the end.
-        Defaults to 0.
-
-    Returns:
-    pd.DataFrame: The merged dataframe.
-    """
-    if series.empty or dataframe.empty:
-        raise ValueError("Both series and dataframe must be non-empty.")
-
-    series_to_df = pd.concat(
-        objs=[series]*len(dataframe),
-        axis=1,
-    ).transpose().reset_index(drop=True)
-
-    objs = [series_to_df, dataframe]
-
-    if position == -1:
-        objs = objs[::-1]
-
-    return pd.concat(objs=objs, axis=1)
-
-
 def check_dataframes_equality(
         df_list: List[pd.DataFrame],
         skip_columns: Optional[List[str]] = None,
@@ -442,9 +364,10 @@ def check_dataframes_equality(
         rows_order_matters: bool = False,
         homogeneous_num_types: bool = True,
 ) -> bool:
-    """
-    Check the equality of multiple DataFrames while optionally skipping 
-    specified columns. The function can also ignore the order of columns
+    """Check dataframes equality.
+
+    This function checks the equality of multiple DataFrames while optionally 
+    skipping specified columns. The function can also ignore the order of columns
     and rows in the DataFrames.
 
     Args:
@@ -455,13 +378,14 @@ def check_dataframes_equality(
             with same columns in different orders are still identified as equal.
         rows_order_matters (bool, optional): If set to False, two dataframes
             with same rows in different orders are still identified as equal. 
+        homogeneous_num_types (bool, optional): If set to True, all numeric
+            values are converted to float64 for consistent comparisons.
 
     Returns:
         bool: True if all DataFrames are equal, False otherwise.
 
     Raises:
-        ValueError: If any column in skip_columns is not present in all 
-            DataFrames.
+        ValueError: If any column in skip_columns is not present in all DataFrames.
     """
     df_list_copy = deepcopy(df_list)
 
@@ -507,9 +431,10 @@ def check_dataframe_columns_equality(
     df_list: List[pd.DataFrame],
     skip_columns: Optional[List[str]] = None,
 ) -> bool:
-    """
-    Check the equality of column headers in multiple DataFrames while 
-    optionally skipping specified columns.
+    """Check the equality of column headers in multiple DataFrames.
+
+    This function checks if multiple DataFrames have the same set of column headers,
+    while optionally skipping specified columns.
 
     Args:
         df_list (List[pd.DataFrame]): A list of Pandas DataFrames to compare.
@@ -521,6 +446,7 @@ def check_dataframe_columns_equality(
 
     Raises:
         ValueError: If df_list is empty or any DataFrame in df_list has no columns.
+        TypeError: If any item in df_list is not a Pandas DataFrame.
     """
     if not df_list:
         raise ValueError("Passed list must not be empty.")
@@ -548,10 +474,11 @@ def add_column_to_dataframe(
         column_values: Any = None,
         column_position: Optional[int] = None,
 ) -> bool:
-    """
-    Inserts a new column into the provided DataFrame at the specified 
-    position or at the end if no position is specified, only if the column
-    does not already exist.
+    """Add a column to a DataFrame.
+
+    This function inserts a new column into the provided DataFrame at the specified 
+    position or at the end if no position is specified, only if the column does 
+    not already exist.
 
     Args:
         dataframe (pd.DataFrame): The pandas DataFrame to which the column 
@@ -611,10 +538,10 @@ def substitute_dict_keys(
         source_dict: Dict[str, Any],
         key_mapping_dict: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """
-    Substitute the keys in source_dict with the values from key_mapping.
-    Raises an error if a value in key_mapping does not exist as a key in 
-    source_dict.
+    """Substitute dictionary keys.
+
+    This function substitute the keys in source_dict with the values from key_mapping.
+    Raises an error if a value in key_mapping does not exist as a key in source_dict.
 
     Args:
         source_dict (dict): A dictionary whose keys need to be substituted.
@@ -645,10 +572,11 @@ def fetch_dict_primary_key(
         dictionary: Dict[str, Any],
         second_level_key: str | int,
         second_level_value: Any,
-) -> str | int:
-    """
-    Fetches the primary key from a dictionary based on a second-level key-value
-    pair. If the second-level key-value pair is not found, returns None.
+) -> Optional[str | int]:
+    """Fetch dictionary primary key by second-level key-value pair.
+
+    This function fetches the primary key from a dictionary based on a second-level 
+    key-value pair. If the second-level key-value pair is not found, returns None.
 
     Args:
         dictionary (Dict[str, Any]): The dictionary to search.
@@ -656,7 +584,7 @@ def fetch_dict_primary_key(
         second_level_value (Any): The value to search for in the second level.
 
     Returns:
-        str | int: The primary key of the dictionary where the second-level 
+        Optional[str | int]: The primary key of the dictionary where the second-level 
             key-value pair is found, or None if not found.
 
     Raises: 
@@ -679,9 +607,11 @@ def filter_dataframe(
         reorder_cols_based_on_filter: bool = False,
         reorder_rows_based_on_filter: bool = False,
 ) -> pd.DataFrame:
-    """
+    """Filter a DataFrame based on a dictionary of column criteria.
+
     Filters a DataFrame based on a dictionary identifying dataframe columns 
-    and the related items to be filtered.
+    and the related items to be filtered. The function can also reorder
+    columns and rows based on the order of keys and values in the filter_dict.
 
     Args:
         df_to_filter (pd.DataFrame): The DataFrame to filter.
@@ -755,52 +685,6 @@ def filter_dataframe(
     return filtered_df
 
 
-def compare_dicts_ignoring_order(
-        iterable: Iterable[Dict[str, List[Any]]]
-) -> bool:
-    """
-    Compares any number of dictionaries to see if they are the same, ignoring 
-    the order of items in the lists which are the values of the dictionaries.
-
-    Args:
-        iterable (Iterable[Dict[str, List[Any]]]): An iterable of dictionaries 
-            to compare.
-
-    Returns:
-        bool: True if all dictionaries are the same (ignoring order of list 
-            items), False otherwise.
-
-    Raises:
-        ValueError: If dicts is not an iterable, or if any value in dicts is 
-            not a dictionary.
-    """
-    try:
-        iter(iterable)
-    except TypeError:
-        raise ValueError("'iterable' argument must be an iterable.")
-
-    for value in iterable:
-        if not isinstance(value, dict):
-            raise ValueError(
-                "Each item in 'iterable' must be a dictionary.")
-
-    iterable = list(iterable)
-    if len(iterable) < 2:
-        return True
-
-    reference = iterable[0]
-    ref_keys = set(reference.keys())
-
-    for d in iterable[1:]:
-        if set(d.keys()) != ref_keys:
-            return False
-        for key in ref_keys:
-            if sorted(d[key]) != sorted(reference[key]):
-                return False
-
-    return True
-
-
 def find_non_allowed_types(
         dataframe: pd.DataFrame,
         allowed_types: Tuple,
@@ -808,9 +692,11 @@ def find_non_allowed_types(
         return_col_header: Optional[str] = None,
         allow_none: bool = False,
 ) -> List:
-    """
-    Find rows in a DataFrame where the value in a specified column is not of 
-    an allowed type.
+    """Find non-allowed types in a DataFrame column.
+
+    This function finds rows in a DataFrame where the value in a specified column 
+    is not of an allowed type. It can return either the values in the target column
+    or the values in another specified column for those rows. 
 
     Args:
         dataframe (pd.DataFrame): The DataFrame to check.
@@ -861,17 +747,18 @@ def find_dict_keys_corresponding_to_value(
         dictionary: Dict[Any, Any],
         target_value: Any,
 ) -> Optional[Any]:
-    """
-    This function finds all keys in a dictionary that correspond to 
-    a given value.
+    """Find all keys in a dictionary that correspond to a given value.
 
-    Parameters:
+    Args:
         dictionary (Dict[Any, Any]): The dictionary to search.
         target_value (Any): The value to find.
 
     Returns:
         List[Any]: The keys corresponding to the target value. If the value 
             is not found, returns an empty list.
+
+    Raises:
+        TypeError: If the passed argument is not a dictionary.
     """
     if not isinstance(dictionary, dict):
         raise TypeError(
@@ -891,10 +778,14 @@ def calculate_values_difference(
         modules_difference: bool = False,
         ignore_nan: bool = False,
 ) -> float:
-    """
-    Calculate the difference between two values.
+    """Calculate the difference between two values.
 
-    Parameters:
+    This function calculates the difference between two numeric values. It can
+    compute either the absolute or relative difference, and can also return the
+    module of the difference. If either value is non-numeric and ignore_nan is
+    True, the function returns None.
+
+    Args:
         value_1 (float): The first value.
         value_2 (float): The second value.
         relative_difference (bool): If True, calculate the relative difference. 
@@ -907,6 +798,9 @@ def calculate_values_difference(
     Returns:
         float: The calculated difference. If both values are non-numeric 
             and ignore_nan_values is True, nothing is returned.
+
+    Raises:
+        ValueError: If either value is non-numeric and ignore_nan is False.
     """
     if not isinstance(value_1, float | int) or \
             not isinstance(value_2, float | int):
@@ -940,8 +834,7 @@ def remove_empty_items_from_dict(
         dictionary: Dict,
         empty_values: List = [None, 'nan', 'None', 'null', '', 'NaN', [], {}],
 ) -> Dict:
-    """
-    Recursively removes keys with empty values from a dictionary.
+    """Remove keys with empty values from a dictionary.
 
     Args:
         dictionary (Dict): The dictionary to clean.
@@ -951,6 +844,8 @@ def remove_empty_items_from_dict(
 
     Raises:
         TypeError: If the passed argument is not a dictionary.
+        ValueError: If the passed empty_values list does not include at least
+            one type of the default empty values.
     """
     empty_values_list = [None, 'nan', 'None', 'null', '', 'NaN', [], {}]
 
@@ -984,11 +879,12 @@ def merge_dicts(
         dicts_list: List[Dict],
         unique_values: bool = False,
 ) -> Dict[str, List[Any]]:
-    """
-    Merges a list of dictionaries into a single dictionary.
+    """Merge a list of dictionaries into a single dictionary.
 
-    - If a key appears in multiple dictionaries, its values are combined into a list.
-    - If `unique_values` is True, ensures values are unique per key.
+    This function merges a list of dictionaries into a single dictionary.
+    If a key appears in multiple dictionaries, its values are combined into a list.
+    If `unique_values` is True, ensures values are unique per key.
+    This function is a helper for the pivot_dataframe_to_data_structure function.
 
     Args:
         dicts_list (List[Dict[str, Any]]): A list of dictionaries to merge.
@@ -1031,7 +927,29 @@ def pivot_dataframe_to_data_structure(
     merge_dict: bool = False,
     skip_process_str: bool = False,
 ) -> dict:
+    """Pivot a DataFrame into a nested dictionary structure.
 
+    This function pivots a DataFrame into a nested dictionary structure based on
+    specified primary and secondary keys. It can also merge dictionaries for
+    rows with the same primary key and process string values.
+
+    Args:
+        data (pd.DataFrame): The DataFrame to be pivoted.
+        primary_key (Optional[str  |  int], optional): The column name or index 
+            to be used as the primary key. Defaults to the first column.
+        secondary_key (Optional[str  |  int], optional): The column name or index
+            to be used as the secondary key. Defaults to None.
+        merge_dict (bool, optional): If True, merges dictionaries for rows with
+            the same primary key. Defaults to False.
+        skip_process_str (bool, optional): If True, skips processing string
+            values. Defaults to False.
+
+    Raises:
+        ValueError: If primary or secondary key is not found in DataFrame columns.
+
+    Returns:
+        dict: A nested dictionary representing the pivoted DataFrame.
+    """
     data_structure = {}
     primary_key = primary_key or data.columns[0]
 
@@ -1099,9 +1017,20 @@ def pivot_dataframe_to_data_structure(
 
 
 def transform_dict_none_to_values(dictionary: Dict, none_to: Any) -> Dict:
-    """ 
-    Parse dictionary values, and in case such values are None transform them
-    to value_to.
+    """Transform None values in a dictionary to a specified value.
+
+    This function iterates through a dictionary and replaces any None values
+    with a specified value.
+
+    Args:
+        dictionary (Dict): The dictionary to be transformed.
+        none_to (Any): The value to replace None values with.
+
+    Returns:
+        Dict: A new dictionary with None values replaced by the specified value.
+
+    Raises:
+        TypeError: If the passed argument is not a dictionary.    
     """
     if not isinstance(dictionary, Dict):
         raise TypeError(f"Dict type expected, '{type(dictionary)}' passed.")
@@ -1118,10 +1047,9 @@ def transform_dict_none_to_values(dictionary: Dict, none_to: Any) -> Dict:
 
 
 def is_sparse(array: np.ndarray, threshold: float) -> bool:
-    """
-    Checks if a numpy ndarray can be considered sparse based on a given threshold.
+    """Check if a numpy ndarray can be considered sparse based on a given threshold.
 
-    Parameters:
+    Args:
         array (np.ndarray): The numpy array to check.
         threshold (float): The proportion of zero elements required to consider
             the array as sparse.

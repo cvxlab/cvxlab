@@ -1,17 +1,7 @@
-"""
-logging.py 
+"""Logging utilities for CVXlab.
 
-@author: Matteo V. Rocco
-@institution: Politecnico di Milano
-
-This module defines the Logger class, which is used for logging throughout the 
-package. It supports multiple formats and custom configurations specific to 
-the needs of the application.
-
-The Logger class provides a simplified interface for creating and managing 
-logs at various levels (INFO, DEBUG, WARNING, ERROR, CRITICAL). It includes a 
-method to generate child loggers that inherit properties from a parent logger, 
-ensuring consistent log behavior across different modules of the package.
+Provides the Logger class for consistent, colorized logging across the package.
+Supports configurable formats, log levels, child loggers, and timing context managers.
 """
 
 import logging
@@ -22,25 +12,16 @@ from typing import Literal
 
 
 class Logger:
-    """
-    A customizable logging class for creating and managing logs in the application.
+    """Logger class for CVXlab applications.
 
-    The Logger provides facilities for logging messages with different importance 
-    levels, ranging from debug messages to critical system messages. It is 
-    designed to be easy to configure and use within a package, supporting 
-    structured logging practices.
+    Supports configurable log formats, colorized output, and hierarchical child 
+    loggers. Provides convenience methods for logging at different levels and 
+    timing code execution.
 
     Attributes:
-        log_format (str): The format of the log messages. Choices are 'minimal' 
-            or 'standard'.
-        str_format (str): The string representation of the log format.
-        logger (logging.Logger): The underlying logger instance from Python's 
-            logging module.
-
-    Args:
-        logger_name (str): The name of the logger, defaults to 'default_logger'.
-        log_level (str): The threshold for the logger, defaults to 'INFO'.
-        log_format (str): The format used for log messages, defaults to 'minimal'.
+    - log_format (str): Selected log format key.
+    - str_format (str): Log format string.
+    - logger (logging.Logger): Underlying Python logger instance.
     """
 
     LEVELS = {
@@ -58,11 +39,10 @@ class Logger:
     }
 
     COLORS = {
-        # set warning to orange
-        'WARNING': '\033[38;5;214m',  # Orange
-        'ERROR': '\033[31m',  # Red
-        'DEBUG': '\033[32m',  # Green
-        'RESET': '\033[0m',  # Reset to default
+        'WARNING': '\033[38;5;214m',    # Orange
+        'ERROR': '\033[31m',            # Red
+        'DEBUG': '\033[32m',            # Green
+        'RESET': '\033[0m',             # Reset to default
     }
 
     def __init__(
@@ -71,8 +51,14 @@ class Logger:
             log_level: Literal['INFO', 'DEBUG', 'WARNING', 'ERROR'] = 'INFO',
             log_format: Literal[
                 'minimal', 'standard', 'detailed'] = 'standard',
-    ) -> None:
+    ):
+        """Initialize a Logger instance.
 
+        Args:
+            logger_name (str): Name for the logger (default: 'default_logger').
+            log_level (str): Logging level ('INFO', 'DEBUG', etc.; default: 'INFO').
+            log_format (str): Format style for log messages ('minimal', 'standard', 'detailed').
+        """
         self.log_format = log_format
         self.str_format = self.FORMATS[log_format]
         self.logger = logging.getLogger(logger_name)
@@ -92,9 +78,14 @@ class Logger:
             stream_handler.setFormatter(self.get_colors(formatter))
             self.logger.addHandler(stream_handler)
 
-    def get_colors(self, formatter):
-        """
-        Wraps the formatter to apply colors based on log level.
+    def get_colors(self, formatter) -> logging.Formatter:
+        """Wrap a formatter to apply ANSI colors based on log level.
+
+        Args:
+            formatter (logging.Formatter): Formatter to wrap.
+
+        Returns:
+            logging.Formatter: Formatter with colorized output.
         """
         class ColoredFormatter(logging.Formatter):
             def format(self, record):
@@ -106,16 +97,13 @@ class Logger:
         return ColoredFormatter(formatter._fmt)
 
     def get_child(self, name: str) -> 'Logger':
-        """
-        Creates and returns a child Logger with a specified name, inheriting 
-        properties from this Logger instance.
+        """Create a child Logger inheriting configuration from this logger.
 
         Args:
-            name (str): The name identifier for the child logger, typically 
-                __name__ from the module where the logger is used.
+            name (str): Child logger name (typically module __name__).
 
         Returns:
-            Logger: A new Logger instance configured as a child of this one.
+            Logger: Configured child Logger instance.
         """
         child_logger = self.logger.getChild(name.split('.')[-1])
 
@@ -129,29 +117,44 @@ class Logger:
         return new_logger
 
     def log(self, message: str, level: str = logging.INFO) -> None:
-        """Basic log message. 
+        """Log a message at a specified level.
 
         Args:
-            message (str): message to be displayed.
-            level (str, optional): level of the log message. Defaults 
-                to logging.INFO.
+            message (str): Message to log.
+            level (str): Logging level (default: logging.INFO).
         """
         self.logger.log(msg=message, level=level)
 
     def info(self, message: str):
-        """INFO log message."""
+        """Log a message at INFO level.
+
+        Args:
+            message (str): Message to log.
+        """
         self.logger.log(msg=message, level=logging.INFO)
 
     def debug(self, message: str):
-        """DEBUG log message."""
+        """Log a message at DEBUG level.
+
+        Args:
+            message (str): Message to log.
+        """
         self.logger.log(msg=message, level=logging.DEBUG)
 
     def warning(self, message: str):
-        """WARNING log message."""
+        """Log a message at WARNING level.
+
+        Args:
+            message (str): Message to log.
+        """
         self.logger.log(msg=message, level=logging.WARNING)
 
     def error(self, message: str):
-        """ERROR log message."""
+        """Log a message at ERROR level.
+
+        Args:
+            message (str): Message to log.
+        """
         self.logger.log(msg=message, level=logging.ERROR)
 
     @contextmanager
@@ -162,12 +165,18 @@ class Logger:
             log_format: str = None,
             success: bool = True,
     ):
-        """
-        Context manager to time the execution of a code block and log the duration.
+        """Context manager to log timing and status of a code block.
+
+        Logs start, completion (with duration), and failure if an exception occurs.
 
         Args:
-            message (str): The message that will be logged at the start of the task.
-            level (str): The log level for the messages (e.g., 'info', 'debug', etc.)
+            message (str): Message describing the timed block.
+            level (str): Log level for timing messages (e.g., 'info', 'debug').
+            log_format (str, optional): Temporary log format for this block.
+            success (bool, optional): Initial success status (default: True).
+
+        Yields:
+            dict: Status dictionary with 'success' key.
         """
         log_level = self.LEVELS.get(level.upper(), logging.INFO)
         log_function = getattr(
