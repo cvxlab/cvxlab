@@ -12,7 +12,6 @@ CVXlab documentation
 - `Issue Tracker <https://github.com/cvxlab/cvxlab/issues>`_
 
 
-
 Package features
 ----------------
 
@@ -57,6 +56,7 @@ text
    tutorial
    resources
    api_reference
+   contributing.md
 
 
 .. note::
