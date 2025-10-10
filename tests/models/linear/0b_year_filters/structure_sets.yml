@@ -1,0 +1,53 @@
+# structure of sets
+
+scenarios:
+    symbol: scenarios
+    table_name: _set_SCENARIOS
+    split_problem: True
+    table_structure:
+        name: scenario_Names
+
+techs:
+    symbol: techs  
+    table_name: _set_TECHS 
+    table_structure:
+        name: techs_Names
+        filters:
+            ownership:
+                header: techs_Ownership
+                values: [private, public]
+            
+flows:
+    symbol: flows   
+    table_name: _set_FLOWS 
+    table_structure:
+        name: flows_Names
+        aggregation: flows_Agg
+        filters: 
+            powertrain:
+                header: flows_Powertrain
+                values: [icev, bev]
+            mode:  
+                header: flows_Mode
+                values: [urban, motorway]
+
+flows_agg:
+    symbol: flows_agg 
+    table_name: _set_FLOWS_AGG 
+    table_structure:
+        name: flows_agg_Names
+
+days:
+    symbol: days 
+    table_name: _set_DAYS 
+    table_structure:
+        name: days_Names
+        filters: 
+            strikes:  
+                header: days_Strikes
+                values: [normal, strikes]
+            we:  
+                header: days_we
+                values: [wd, we]
+
+

@@ -1,0 +1,33 @@
+# -----------------------------------------------------------------------------
+# sets
+scenarios:
+    symbol: scen
+    table_name: _set_SCENARIOS
+    split_problem: True
+    table_structure:
+        name: scen_Names
+
+sensitivities:
+    symbol: sens   
+    table_name: _set_SENSITIVITIES 
+    split_problem: True 
+    table_structure:
+        name: sens_Names 
+
+techs:
+    symbol: techs  
+    table_name: _set_TECHS 
+    table_structure:
+        name: techs_Names 
+
+flows_from:
+    symbol: flows_from   
+    table_name: _set_FLOWS_FROM 
+    table_structure:
+        name: ff_Names 
+
+flows_to:
+    symbol: flows_to   
+    table_name: _set_FLOWS_TO 
+    table_structure:
+        name: ft_Names 

@@ -1,0 +1,44 @@
+# variables of the model
+
+# -----------------------------------------------------------------------------
+# exogenous variables
+
+Technical_coeffs:
+    description: technical coefficients
+    type: exogenous
+    coordinates: [cases, products, technologies]
+    variables_info:
+        A:
+            products: 
+                dim: rows
+            technologies:
+                dim: cols 
+
+# -----------------------------------------------------------------------------
+# endogenous variables
+
+Leontief_inverse_coeffs:
+    description: Leontief inverse coefficients
+    type: endogenous
+    coordinates: [cases, products, technologies]
+    variables_info:
+        L:
+            products: 
+                dim: rows
+            technologies:
+                dim: cols
+
+
+# -----------------------------------------------------------------------------
+# constants
+
+Constants:
+    description: constants variables
+    type: constant
+    coordinates: [products, technologies]
+    variables_info:
+        I:
+            value: identity
+            products:
+                dim: rows
+

@@ -1,0 +1,41 @@
+# structure of sets
+
+scenarios:
+    symbol: s
+    table_name: _set_scenario
+    split_problem: True
+    table_structure:
+        name: scenario_Names
+
+techs:
+    symbol: techs
+    table_name: _set_techs
+    table_structure:
+        name: techs_Names
+        filters:
+            fuel:
+                header: t_fuel
+                values: [fossil, res]
+            capacity: 
+                header: t_capacity
+                values: [non cap, cap]
+            
+flows:
+    symbol: flows
+    table_name: _set_flows
+    table_structure:
+        name: flows_Names
+        aggregation: flows_agg
+
+flows_agg:
+    symbol: flows_agg
+    table_name: _set_flows_agg
+    table_structure:
+        name: flows_agg_Names
+
+years:
+    symbol: Y
+    table_name: _set_Y
+    table_structure:
+        name: Y
+

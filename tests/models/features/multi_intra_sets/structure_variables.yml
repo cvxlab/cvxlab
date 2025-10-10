@@ -1,0 +1,58 @@
+# variables of the model
+
+# -----------------------------------------------------------------------------
+# exogenous variables
+
+dp:
+    name: hourly demand profiles
+    type: exogenous
+    coordinates: [hours, technologies, products]
+    variables_info:
+        dp:
+            hours:
+                dim: rows
+            technologies: 
+                dim: cols
+                filters: {0: [detailed]}
+
+u:
+    name: technical coefficients
+    type: exogenous
+    coordinates: [technologies, products]
+    variables_info:
+        u:
+            technologies: 
+                dim: rows
+                filters: {0: [detailed]}
+
+X:
+    name: technology activity
+    type: exogenous
+    coordinates: [scenarios, technologies, years]
+    variables_info:
+        X:
+            technologies: 
+                dim: rows
+                filters: {0: [detailed]}
+            years:
+                filters: {0: [run]}
+
+            
+
+# -----------------------------------------------------------------------------
+# endogenous variables
+
+U_h:
+    name: hourly technology activity
+    type: endogenous
+    coordinates: [scenarios, products, technologies, years, hours]
+    variables_info:
+        U_h:
+            hours:
+                dim: rows
+            technologies: 
+                dim: cols
+                filters: {0: [detailed]}
+            years:
+                filters: {0: [run]}
+

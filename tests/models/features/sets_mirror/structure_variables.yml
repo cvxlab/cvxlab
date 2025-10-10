@@ -1,0 +1,43 @@
+# variables of the model
+
+# -----------------------------------------------------------------------------
+# exogenous variables
+
+A_ex:
+    name: exogenous data
+    type: exogenous
+    coordinates: [flows, flows_to]
+    variables_info:
+        A_ex:
+            flows:
+                dim: rows
+            flows_to: 
+                dim: cols 
+
+# -----------------------------------------------------------------------------
+# constants
+
+constants: 
+    name: constant values
+    type: constant
+    coordinates: [flows]
+    variables_info:
+        I_ff:
+            value: identity
+            flows:
+                dim: rows
+        
+# -----------------------------------------------------------------------------
+# endogenous variables
+
+A_en:
+    name: endogenous data
+    type: endogenous
+    coordinates: [flows, flows_to]
+    variables_info:
+        A_en:
+            flows:
+                dim: rows
+            flows_to:
+                dim: cols
+

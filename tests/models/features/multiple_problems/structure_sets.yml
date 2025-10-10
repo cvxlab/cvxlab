@@ -1,0 +1,10 @@
+# -----------------------------------------------------------------------------
+# sets
+
+scenarios:
+    split_problem: True
+
+uncertainty:
+    split_problem: True
+
+products:

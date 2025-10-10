@@ -1,0 +1,79 @@
+# variables of the model
+
+# -----------------------------------------------------------------------------
+# exogenous variables
+
+u:
+  name: use coefficients
+  type: exogenous
+  coordinates: [products, technologies]
+  variables_info:
+    u:
+      products:
+        dim: rows
+      technologies:
+        dim: cols
+
+r:
+  name: environmental transactions coefficients
+  type: exogenous
+  coordinates: [emissions, technologies]
+  variables_info:
+    r:
+      emissions:
+        dim: rows
+      technologies:
+        dim: cols
+
+v:
+  name: supply coefficients
+  type: exogenous
+  coordinates: [technologies, products]
+  variables_info:
+    v:
+      technologies:
+        dim: rows
+      products:
+        dim: cols
+
+r_e_p:
+  name: footprint by product
+  type: endogenous
+  coordinates: [emissions, products]
+  variables_info:
+    r_e_p:
+      emissions:
+        dim: rows
+      products:
+        dim: cols
+
+r_e_t:
+  name: footprint by technology activity
+  type: endogenous
+  coordinates: [emissions, technologies]
+  variables_info:
+    r_e_t:
+      emissions:
+        dim: rows
+      technologies:
+        dim: cols
+
+I_pp:
+  name: identity, product by product
+  type: constant
+  coordinates: [products]
+  variables_info:
+    I_pp:
+      value: identity
+      products:
+        dim: cols
+
+I_tt:
+  name: identity, technology by technology
+  type: constant
+  coordinates: [technologies]
+  variables_info:
+    I_tt:
+      value: identity
+      technologies:
+        dim: cols

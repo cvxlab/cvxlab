@@ -1,0 +1,77 @@
+
+# -----------------------------------------------------------------------------
+# exogenous variables
+
+V:
+    name: user data
+    type: exogenous
+    coordinates: [scenarios, sensitivity, time, technologies, flows]
+    variables_info:
+        V_tfp:
+            technologies: 
+                dim: rows
+                filters: {0: Supply technology}
+            flows:
+                dim: cols 
+                filters: {0: Product flow}
+        V_tfc:
+            technologies: 
+                dim: rows
+                filters: {0: Supply technology}
+            flows:
+                dim: cols
+                filters: {0: Cost flow}
+        V_yt:
+            time: 
+                dim: rows
+            technologies:
+                dim: cols
+                filters: {0: Supply technology}
+
+# -----------------------------------------------------------------------------
+# constants
+
+constants: 
+    name: constant values
+    type: constant
+    coordinates: [flows, time]
+    variables_info:
+        i_1f:
+            value: sum_vector
+            flows:
+                dim: cols
+                filters: {0: Product flow}
+        T_yy:
+            value: lower_triangular
+            time:
+                dim: rows
+            
+# -----------------------------------------------------------------------------
+# endogenous variables
+
+X:
+    name: results
+    type: endogenous
+    coordinates: [scenarios, sensitivity, time, technologies, flows]
+    variables_info:
+        X_tfp:
+            technologies: 
+                dim: rows
+                filters: {0: Supply technology}
+            flows:
+                dim: cols
+                filters: {0: Product flow}
+        X_tfc:
+            technologies: 
+                dim: rows
+                filters: {0: Supply technology}
+            flows:
+                dim: cols
+                filters: {0: Cost flow}
+        X_yt:
+            time: 
+                dim: rows
+            technologies:
+                dim: cols 
+                filters: {0: Supply technology}
+

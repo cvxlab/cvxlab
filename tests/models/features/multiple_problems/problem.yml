@@ -1,0 +1,15 @@
+# SYMBOLIC PROBLEM
+
+# definition of the objective function (scalar, optional)
+
+objective:
+    - Maximize(sum(X))
+
+# definition of the constraints (vector expressions)
+
+expressions: 
+    - X <= C
+
+
+
+

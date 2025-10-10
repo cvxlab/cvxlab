@@ -1,0 +1,41 @@
+# -----------------------------------------------------------------------------
+# sets
+
+case:
+    symbol: c
+    table_name: _set_CASES
+    split_problem: True
+    table_structure:
+        name: c_Name
+
+years:
+    symbol: y
+    table_name: _set_YEARS
+    table_structure:
+        name: y_Name
+    
+technologies:
+    symbol: t
+    table_name: _set_TECHNOLOGIES
+    table_structure:
+        name: t_Name
+
+tech_lifetime:
+    symbol: tl
+    table_name: _set_TECH_LIFETIME
+    table_structure:
+        name: tl_Name
+        filters: 
+            0:
+                header: tl_type
+                values: [Standard, Residual_start]
+
+capacity:
+    symbol: cap
+    table_name: _set_CAPACITY
+    table_structure:
+        name: cap_Name
+        filters: 
+            0:
+                header: cap_Type
+                values: [New, Disposed_start, Disposed_new, Operational]

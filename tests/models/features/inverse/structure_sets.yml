@@ -1,0 +1,12 @@
+# -----------------------------------------------------------------------------
+# sets
+
+cases:
+    description: cases of the problem
+    split_problem: True
+
+products:
+    description: products names
+
+technologies:
+    description: technologies names

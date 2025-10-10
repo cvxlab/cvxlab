@@ -1,0 +1,36 @@
+# -----------------------------------------------------------------------------
+# sets
+
+# technology_mix:
+#     symbol: tm
+#     table_name: _set_TECHS_MIX 
+#     split_problem: True # (optional) if the items of the set defines separate problems 
+#     table_structure:
+#         name: [tm_Names
+
+technologies:
+    symbol: t
+    table_name: _set_TECHNOLOGIES 
+    table_structure:
+        name: t_Names
+        filters:
+            0: 
+                header: t_Mix
+                values: [electricity]
+
+products:
+    symbol: p
+    table_name: _set_PRODUCTS 
+    table_structure:
+        name: p_Names
+        filters:
+            0: 
+                header: p_Mix
+                values: [electricity]
+
+emissions:
+    symbol: e
+    table_name: _set_AIR_EMISSIONS 
+    table_structure:
+        name: e_Names
+        
