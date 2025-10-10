@@ -1,3 +1,5 @@
+.. _api_utility_functions:
+
 Utility functions
 =================
 

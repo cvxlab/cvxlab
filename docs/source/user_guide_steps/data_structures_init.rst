@@ -1,6 +1,6 @@
 .. _data-structures-init:
 
-Initializatiion of data structures
-----------------------------------
+Initialization of data structures
+---------------------------------
 
 text

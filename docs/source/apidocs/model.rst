@@ -1,3 +1,5 @@
+.. _api_model:
+
 Model
 =====
 
@@ -44,7 +46,6 @@ Helper methods
 .. automethod:: cvxlab.Model.variable
 .. automethod:: cvxlab.Model.reinitialize_sqlite_database
 .. automethod:: cvxlab.Model.check_model_results
-.. automethod:: cvxlab.Model.check_model_dir
 
 
 

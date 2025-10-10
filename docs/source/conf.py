@@ -6,14 +6,17 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+from cvxlab import __version__
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../cvxlab/'))
 
+
 project = 'CVXlab'
 copyright = '2025, Matteo V. Rocco'
 author = 'Matteo V. Rocco'
-release = '0.0.1'
+github_url = "https://github.com/cvxlab/cvxlab"
+version = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -22,6 +25,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",   # For Google or NumPy style
     "sphinx.ext.viewcode",   # Link to source code
+    "sphinxcontrib.mermaid",  # For mermaid diagrams
 ]
 
 templates_path = ['_templates']
@@ -34,9 +38,10 @@ exclude_patterns = []
 html_theme = 'pydata_sphinx_theme'
 html_theme_options = {
     "logo": {
-        "image_light": "CVXlab_logo_color.png",
-        "image_dark": "CVXlab_logo_bw.png",
+        "image_light": "CVXlab_logo_light.png",
+        "image_dark": "CVXlab_logo_dark.png",
     },
+    "github_url": github_url,
     "navigation_with_keys": True,
     "show_toc_level": 2,
 }
