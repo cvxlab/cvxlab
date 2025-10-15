@@ -1,50 +1,53 @@
 .. _conceptual-model-definition:
 
 Conceptual model definition
----------------------------
+===========================
 
 The CVXlab modeling process must be grounded on a solid conceptualization and 
-mathematical definition of the problem to be solved. 
+mathematical definition of the problem to be solved. As its name suggests, CVXlab 
+is primarily designed for **convex optimization problems**.
 
-CVXlab numerical problems can be formulated as 
+Definition of convex optimization problems and related mathematical concepts
+lies outside the scope of this documentation. Fundational knowledge of Opearations 
+Research and can be found in several references. Among others, we suggest the textbook:
+`Introduction to Operations Research (F.Hillier and G.Lieberman, McGraw Hill Education, 
+2024) <https://www.mheducation.com/highered/product/Introduction-to-Operations-Research-Hillier.html>`_
 
-
-**What is a linear optimization model?**
-
-A **linear optimization model** (also known as a linear programming model) is a 
-mathematical problem used to find the best outcome (such as maximum profit or 
-minimum cost) in a system described by linear relationships.
-
-**General formulation**
-
-A linear optimization problem can be written as:
-
-.. math::
-
-   \begin{align}
-   \text{minimize} \quad   & c^T x \\
-   \text{subject to} \quad & A x \leq b \\
-                           & x \geq 0
-   \end{align}
-
-where:
-
-- :math:`x` is the vector of **decision variables** (endogenous variables),
-- :math:`c` is the vector of **objective coefficients**,
-- :math:`A` is the matrix of **constraint coefficients**,
-- :math:`b` is the vector of **right-hand side values** (exogenous data).
-
-**Endogenous vs. Exogenous variables**
-
-- **Endogenous variables** are the decision variables whose values are determined 
-  by solving the optimization problem (e.g., :math:`x` above).
-- **Exogenous variables** are parameters or data provided to the model, not determined 
-  by the optimization (e.g., :math:`c`, :math:`A`, :math:`b`).
+Since numerical problem generation and solution in CVXlab is grounded on the CVXPY
+package, we also recommend referring to the `CVXPY documentation <https://www.cvxpy.org/
+tutorial/intro/index.html>`_ for a comprehensive description of supported problem 
+types.
 
 
-**References**
+Defining problem Sets
+----------------------
 
-Fundational knowledge of Opearations Research can be found in the following references: 
+*Sets* represent the dimensions of the model, defining its scope. 
 
-- `Introduction to Operations Research, Frederick Hillier and Gerald Lieberman, McGraw Hill Education, 2024
-  <https://www.mheducation.com/highered/product/Introduction-to-Operations-Research-Hillier.html>`_
+As example, a production planning model may be defined over a set of *products* 
+and a set of *time periods*. An energy system optimization model may be defined 
+over a set of *technologies*, *energy carriers*, *locations* and *time periods*.
+
+Each set is identified by a name, and its elements are 
+
+
+
+
+defined by a list of elements (*coordinates*, in the following), used to 
+identify model variables. 
+
+
+Defining model sets and coordinates:
+
+- *Sets* are defined in model setup file/s.
+- *Coordinates* of each sets are defined in a dedicated Excel file, automatically
+  generated once CVXlab Model instance is generated (see :ref:`Fill sets data (model 
+  coordinates) <fill-sets-data>`).
+
+Defining problem expressions
+----------------------------
+
+ttt
+
+
+

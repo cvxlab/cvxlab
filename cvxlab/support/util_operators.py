@@ -78,7 +78,7 @@ def matrix_inverse(matrix: cp.Parameter | cp.Expression) -> cp.Parameter:
 
     Args:
         matrix (cp.Parameter | cp.Expression): The matrix to calculate the 
-        inverse of.
+            inverse of.
 
     Returns:
         cp.Parameter: The inverse of the input matrix.
@@ -340,14 +340,14 @@ def weibull_distribution(
         dimensions (int): Determines the output dimension of the Weibull PDF:
             1 for a vector output,
             2 for a matrix output where each subsequent column is a downward 
-                rolled version of the Weibull PDF vector.
+            rolled version of the Weibull PDF vector.
         rounding (int, optional): Number of decimal places to which the 
             computed Weibull PDF values are rounded. Defaults to 2.
 
     Returns:
-        cp.Parameter: A cvxpy Parameter object that contains the Weibull PDF 
-            in the specified dimension (vector or matrix). This can be 
-            directly used in further cvxpy optimizations.
+        cp.Parameter: A cvxpy Parameter object that contains the Weibull PDF in 
+            the specified dimension (vector or matrix). This can be directly used 
+            in further cvxpy optimizations.
 
     Raises:
         ValueError: If any of the input parameters (scale_factor, shape_factor,

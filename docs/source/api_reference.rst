@@ -25,3 +25,4 @@ constants and default settings used throughout the package.
    apidocs/model
    apidocs/utility_functions
    apidocs/constants
+   apidocs/user_defined_operators
