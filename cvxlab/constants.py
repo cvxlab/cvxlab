@@ -10,7 +10,7 @@ from typing import Union
 import cvxpy as cp
 import numpy as np
 
-from cvxlab.support import util_constants, util_operators
+from cvxlab.support import util, util_constants, util_operators
 
 
 class Constants:
@@ -371,7 +371,7 @@ class Constants:
             'ENDOGENOUS': 'endogenous',
         }
 
-        USER_DEFINED_CONSTANTS = {
+        ALLOWED_CONSTANTS = {
             'sum_vector': (np.ones, {}),
             'identity': (np.eye, {}),
             'set_length': (np.max, {}),
@@ -380,19 +380,7 @@ class Constants:
             'lower_triangular': (util_constants.tril, {}),
         }
 
-        USER_DEFINED_OPERATORS = {
-            'tran': cp.transpose,
-            'diag': cp.diag,
-            'sum': cp.sum,
-            'mult': cp.multiply,
-            'shift': util_operators.shift,
-            'pow': util_operators.power,
-            'minv': util_operators.matrix_inverse,
-            'weib': util_operators.weibull_distribution,
-            'annuity': util_operators.annuity,
-            'Minimize': cp.Minimize,
-            'Maximize': cp.Maximize,
-        }
+        ALLOWED_OPERATORS = util_operators.OPERATORS
 
     class NumericalSettings:
         """Settings for numerical solvers and tolerances.
