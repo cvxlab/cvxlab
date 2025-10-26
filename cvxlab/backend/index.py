@@ -340,6 +340,7 @@ class Index:
         - Data tables must be of the allowed type (defined in Constants class).
         - Exogenous data tables cannot be of 'integer' type.
         - Coordinates defining data tables must be valid (defined among sets).
+        - All inter-problem sets must be embedded in endogenous data tables coordinates.
 
         For each data table, variables are looped and the following checks performed:
 
@@ -360,7 +361,7 @@ class Index:
                 during the coherence checks, identifying mistakes in model settings.
         """
         allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
-        allowed_constants = Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS.keys()
+        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS.keys()
         allowed_dims = list(Constants.SymbolicDefinitions.DIMENSIONS.values())
 
         coordinates_key = Constants.Labels.COORDINATES_KEY
@@ -399,6 +400,17 @@ class Index:
             if invalid_coordinates:
                 path = f"{table_key}.{coordinates_key}"
                 problems[path] = f"Invalid coordinates: {invalid_coordinates}"
+
+            # all inter-problem sets must be embedded in endogenous data tables coordinates
+            if data_table.type == allowed_var_types['ENDOGENOUS'] or \
+                    isinstance(data_table.type, dict):
+                missing_sets = set(self.sets_split_problem_dict) - \
+                    set(data_table.coordinates)
+
+                if missing_sets:
+                    path = f"{table_key}.{coordinates_key}"
+                    problems[path] = f"Missing inter-problem sets in coordinates: " \
+                        f"{list(missing_sets)}"
 
             # for each variable in data table
             for var_key, var_info in data_table.variables_info.items():
