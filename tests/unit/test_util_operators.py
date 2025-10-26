@@ -11,8 +11,8 @@ module.
 
 import numpy as np
 
-from tests.unit.conftest import run_test_cases
 from cvxlab.support.util_operators import *
+from tests.unit.conftest import run_test_cases
 
 
 def test_power():

@@ -701,13 +701,13 @@ class Problem:
 
         source_format = self.settings['model_settings_from']
         token_patterns = Constants.SymbolicDefinitions.TOKEN_PATTERNS
-        allowed_operators = Constants.SymbolicDefinitions.USER_DEFINED_OPERATORS
+        allowed_operators = Constants.SymbolicDefinitions.ALLOWED_OPERATORS
         problem_structure_labels = [
             Constants.Labels.OBJECTIVE,
             Constants.Labels.EXPRESSIONS,
         ]
 
-        problems = []
+        errors = []
 
         if util.find_dict_depth(self.symbolic_problem) == 1:
             symbolic_problem = {None: self.symbolic_problem}
@@ -750,14 +750,14 @@ class Problem:
                 )
 
                 if tokens_len != expression_len:
-                    problems.append(
+                    errors.append(
                         msg_str + f"Items in expression not recognized as tokens. "
                         f"(expression length: {expression_len}, tokens length: {tokens_len}. "
                     )
 
                 # check if parentheses are balanced
                 if not util_text.balanced_parentheses(tokens['parentheses']):
-                    problems.append(msg_str + "Parentheses are not balanced.")
+                    errors.append(msg_str + "Parentheses are not balanced.")
 
                 # spot non-allowed variables/operators
                 non_allowed_tokens = [
@@ -766,7 +766,7 @@ class Problem:
                     if token not in allowed_operators
                 ]
                 if non_allowed_tokens:
-                    problems.append(
+                    errors.append(
                         msg_str + f"Non-allowed tokens: {non_allowed_tokens}.")
 
                 # variables names not overlapped with custom operators
@@ -775,7 +775,7 @@ class Problem:
                     if token in self.index.list_variables and token in allowed_operators
                 ]
                 if non_allowed_vars_keys:
-                    problems.append(
+                    errors.append(
                         msg_str + f"Variable names overlapped with custom operators: "
                         f"{non_allowed_vars_keys}.")
 
@@ -797,7 +797,7 @@ class Problem:
                 for var_key, dim_sets in shape_set_map.items():
                     overlapping_sets = intra_problem_sets & dim_sets
                     if overlapping_sets:
-                        problems.append(
+                        errors.append(
                             msg_str +
                             f"Variable '{var_key}' has shape_set(s) overlapped "
                             f"with intra-problem set(s) of the expression: "
@@ -806,13 +806,69 @@ class Problem:
 
                 # other checks can be added here ...
 
-        if problems:
+        if errors:
             self.logger.error(
                 f"Expressions validation report {'=' * 35}")
-            for error_msg in problems:
+            for error_msg in errors:
                 self.logger.error(f"Validation error | {error_msg}")
 
             msg = f"Symbolic expressions validation not successful. " \
+                f"Check setup '{source_format}' file. "
+            self.logger.error(msg)
+            raise exc.ConceptualModelError(msg)
+
+    def check_data_tables_and_problem_coherence(self) -> None:
+        """Check coherence between symbolic problems and data tables.
+
+        This method checks the coherence between the symbolic problem definitions
+        and the data tables definitions in the index. Specific checks include:
+
+        - For mixed type data tables, table types must be specified for all problems.
+        - further checks can be added here ...
+
+        Raises:
+            exc.ConceptualModelError: If any coherence checks fail.
+        """
+        self.logger.debug(
+            f"Checking coherence between symbolic problems and data tables.")
+
+        source_format = self.settings['model_settings_from']
+
+        errors = []
+
+        for table_key, data_table in self.index.data.items():
+            data_table: DataTable
+
+            # mixed type data tables must specify data type for all problems
+            if isinstance(data_table.type, dict):
+
+                valid_problem_keys = set(self.symbolic_problem.keys())
+                defined_keys = set(data_table.type.keys())
+
+                # check for invalid keys (typos)
+                invalid_keys = defined_keys - valid_problem_keys
+                if invalid_keys:
+                    errors.append(
+                        f"Data table '{table_key}' | Invalid problem keys "
+                        f"in type definition: {invalid_keys}."
+                    )
+
+                # check for missing problem keys (only if no invalid keys found)
+                else:
+                    missing_keys = valid_problem_keys - defined_keys
+                    if missing_keys:
+                        errors.append(
+                            f"Data table '{table_key}' | Missing type definition "
+                            f"for problem keys: {missing_keys}."
+                        )
+
+        if errors:
+            self.logger.error(
+                f"Data tables and problems coherence validation report {'=' * 35}")
+            for error_msg in errors:
+                self.logger.error(f"Validation error | {error_msg}")
+
+            msg = f"Data tables and problems coherence check not successful. " \
                 f"Check setup '{source_format}' file. "
             self.logger.error(msg)
             raise exc.ConceptualModelError(msg)
@@ -1226,7 +1282,7 @@ class Problem:
         """
         local_vars = {}
         if allowed_operators is None:
-            allowed_operators = Constants.SymbolicDefinitions.USER_DEFINED_OPERATORS
+            allowed_operators = Constants.SymbolicDefinitions.ALLOWED_OPERATORS
 
         try:
             # pylint: disable-next=exec-used
@@ -1286,7 +1342,7 @@ class Problem:
         text_pattern = Constants.SymbolicDefinitions.TOKEN_PATTERNS['text']
         allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
         allowed_operators = list(
-            Constants.SymbolicDefinitions.USER_DEFINED_OPERATORS.keys())
+            Constants.SymbolicDefinitions.ALLOWED_OPERATORS.keys())
 
         if symbolic_expressions is []:
             msg = "No symbolic expressions have passed. Check symbolic problem."

@@ -160,6 +160,8 @@ class DataTable:
         is generated. In case more than one intra-problem set (i.e. 'sets_split_problems' 
         is provided), a dictionary of dataframes is generated, each corresponding 
         to a combination of inter-problem sets. 
+        Before generating the dataframes, the method checks if all the intra-problem
+        sets are defined as data table coordinates.
 
         Args:
             sets_split_problems (Optional[Dict[str, str]], optional): A dictionary 
@@ -168,6 +170,8 @@ class DataTable:
         Raises:
             MissingDataError: If 'self.coordinates' or 'self.coordinates_values' 
                 are not defined.
+            SettingsError: If any of the intra-problem sets are not defined
+                as data table coordinates.
             TypeError: If 'self.coordinates_values' is not a dictionary.
         """
         if not self.coordinates or not self.coordinates_values:
@@ -189,6 +193,15 @@ class DataTable:
             self.coordinates_dataframe = coordinates_df
 
         else:
+            # sets_split_problems must be in the coordinates_values keys
+            missing_coords = set(sets_split_problems) - set(self.coordinates)
+            if missing_coords:
+                msg = f"Data table '{self.name}' | The following inter-problem " \
+                    "sets coordinates not defined as data table coordinates: " \
+                    f"{missing_coords}"
+                self.logger.error(msg)
+                raise exc.SettingsError(msg)
+
             coords_split_problems = {
                 key: value
                 for key, value in self.coordinates_values.items()

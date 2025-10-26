@@ -1,21 +1,68 @@
-"""Module with user-defined functions to be used as symbolic operators.
+"""Module with allowed functions to be used as symbolic operators.
 
-This module provides various utility functions that are defined by users to support 
-complex calculations in symbolic problems, such as generating special matrices, 
+This module provides various utility functions that are defined to support calculations 
+in symbolic problems, ranging from simple operations like transposition and diagonal
+extraction to more complex operations such as generating special matrices, 
 reshaping arrays, or any special numerical manipulation that can be hardly defined
 based on symbolic expressions.
 
-These functions can be used as operators in the definition of symbolic problems
-in CVXlab, by adding them to the list of user-defined operators in 
-Constants.SymbolicDefinitions.USER_DEFINED_OPERATORS, and then calling them in the
-defining symbolic expressions.
+To add a new operator, simply define a regular function, using the `@operator` 
+decorator to register the function with a specific name. This allows the function 
+to be easily referenced and used within the symbolic framework as any other regular
+operator.
 """
 from typing import Optional
 from scipy.sparse import issparse
 import numpy as np
 import cvxpy as cp
 
+_OPERATORS_REGISTRY = {}
 
+
+def operator(name: str):
+    def decorator(func):
+        _OPERATORS_REGISTRY[name] = func
+        return func
+    return decorator
+
+
+@operator('tran')
+def transposition(x):
+    """Transpose a matrix or vector."""
+    return cp.transpose(x)
+
+
+@operator('diag')
+def diagonal(x):
+    """Extract the diagonal of a matrix or create a diagonal matrix from a vector."""
+    return cp.diag(x)
+
+
+@operator('sum')
+def summation(x, axis=None):
+    """Sum elements of a matrix or vector along a specified axis."""
+    return cp.sum(x, axis=axis)
+
+
+@operator('mult')
+def multiplication(x, y):
+    """Element-wise multiplication of two matrices or vectors."""
+    return cp.multiply(x, y)
+
+
+@operator('Minimize')
+def minimize(x):
+    """Create a minimization objective."""
+    return cp.Minimize(x)
+
+
+@operator('Maximize')
+def maximize(x):
+    """Create a maximization objective."""
+    return cp.Maximize(x)
+
+
+@operator('pow')
 def power(
         base: cp.Parameter | cp.Expression,
         exponent: cp.Parameter | cp.Expression,
@@ -73,12 +120,13 @@ def power(
     return cp.Parameter(shape=power.shape, value=power)
 
 
+@operator('minv')
 def matrix_inverse(matrix: cp.Parameter | cp.Expression) -> cp.Parameter:
     """Calculate the inverse of a matrix.
 
     Args:
         matrix (cp.Parameter | cp.Expression): The matrix to calculate the 
-        inverse of.
+            inverse of.
 
     Returns:
         cp.Parameter: The inverse of the input matrix.
@@ -124,6 +172,7 @@ def matrix_inverse(matrix: cp.Parameter | cp.Expression) -> cp.Parameter:
     return cp.Parameter(shape=matrix_val.shape, value=inverse)
 
 
+@operator('shift')
 def shift(
         set_length: cp.Constant,
         shift_values: cp.Parameter,
@@ -220,6 +269,7 @@ def shift(
     return cp.Parameter(shape=(sl, sl), value=matrix)
 
 
+@operator('annuity')
 def annuity(
         period_length: cp.Parameter | cp.Constant,
         tech_lifetime: cp.Parameter,
@@ -312,6 +362,7 @@ def annuity(
     return cp.Parameter(shape=(pl, pl), value=annuity)
 
 
+@operator('weib')
 def weibull_distribution(
         scale_factor: cp.Parameter,
         shape_factor: cp.Parameter,
@@ -340,14 +391,14 @@ def weibull_distribution(
         dimensions (int): Determines the output dimension of the Weibull PDF:
             1 for a vector output,
             2 for a matrix output where each subsequent column is a downward 
-                rolled version of the Weibull PDF vector.
+            rolled version of the Weibull PDF vector.
         rounding (int, optional): Number of decimal places to which the 
             computed Weibull PDF values are rounded. Defaults to 2.
 
     Returns:
-        cp.Parameter: A cvxpy Parameter object that contains the Weibull PDF 
-            in the specified dimension (vector or matrix). This can be 
-            directly used in further cvxpy optimizations.
+        cp.Parameter: A cvxpy Parameter object that contains the Weibull PDF in 
+            the specified dimension (vector or matrix). This can be directly used 
+            in further cvxpy optimizations.
 
     Raises:
         ValueError: If any of the input parameters (scale_factor, shape_factor,
@@ -444,3 +495,6 @@ def weibull_distribution(
         weib_parameter.value = weib_dist_matrix
 
     return weib_parameter
+
+
+OPERATORS = _OPERATORS_REGISTRY

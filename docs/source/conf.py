@@ -26,6 +26,7 @@ extensions = [
     "sphinx.ext.napoleon",   # For Google or NumPy style
     "sphinx.ext.viewcode",   # Link to source code
     "sphinxcontrib.mermaid",  # For mermaid diagrams
+    "myst_parser",           # For Markdown support
 ]
 
 templates_path = ['_templates']

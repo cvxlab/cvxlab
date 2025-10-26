@@ -116,7 +116,7 @@ class Variable:
         filter_key = Constants.Labels.FILTERS
         set_key = Constants.Labels.SET
         dim_key = Constants.Labels.DIM
-        allowed_constants = Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
+        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS
         dimensions = Constants.SymbolicDefinitions.DIMENSIONS
 
         if self.var_info is None:
@@ -565,7 +565,7 @@ class Variable:
             exc.ConceptualModelError: If the shape of the variable is not 
                 suitable for creating the constant.
         """
-        allowed_constants = Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
+        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS
 
         util.validate_selection(
             valid_selections=allowed_constants,
