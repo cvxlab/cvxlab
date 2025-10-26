@@ -619,6 +619,8 @@ class Core:
         The method calls the 'load_symbolic_problem_from_file' and
         'validate_symbolic_expressions' methods of the Problem instance to load
         and validate the symbolic problem definitions from a file.
+        The method also performs a coherence check between data tables and problem
+        definitions.
         """
         with self.logger.log_timing(
             message=f"Loading and validating symbolic problem...",
@@ -626,6 +628,7 @@ class Core:
         ):
             self.problem.load_symbolic_problem_from_file(force_overwrite)
             self.problem.validate_symbolic_expressions()
+            self.problem.check_data_tables_and_problem_coherence()
 
     def generate_numerical_problem(
             self,
