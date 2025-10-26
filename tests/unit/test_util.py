@@ -11,6 +11,7 @@ This module contains tests for the functions in the 'esm.support.util' module.
 import pytest
 
 from cvxlab.support.util import *
+from tests.unit.conftest import run_test_cases
 
 
 def test_validate_selection():
@@ -36,7 +37,7 @@ def test_validate_selection():
             validate_selection(valid_selections, selection)
 
 
-def test_confirm_action(monkeypatch):
+def test_get_user_confirmation(monkeypatch):
     """
     Test the function 'confirm_action'.
     This test function checks the following scenarios:
@@ -51,10 +52,10 @@ def test_confirm_action(monkeypatch):
         If the output of 'confirm_action' doesn't match the expected output.
     """
     monkeypatch.setattr('builtins.input', lambda _: 'y')
-    assert confirm_action("Confirm?") == True
+    assert get_user_confirmation("Confirm?") == True
 
     monkeypatch.setattr('builtins.input', lambda _: 'n')
-    assert confirm_action("Confirm?") == False
+    assert get_user_confirmation("Confirm?") == False
 
 
 def test_find_dict_depth():
@@ -70,26 +71,16 @@ def test_find_dict_depth():
      - tests a non-dictionary input
     """
 
-    test_items = {
-        1: {1: 1, 2: 2},
-        2: {1: {2: 2, 3: {4: 4, 5: 5}}, 6: 6},
-        3: {},
-        4: {1: {2: 'two', 3: (4, 5)}, 6: [7, 8]},
-        5: [],
-        6: 'dictionary',
-    }
+    test_cases = [
+        ({1: 1, 2: 2}, 1, None),
+        ({1: {2: 2, 3: {4: 4, 5: 5}}, 6: 6}, 3, None),
+        ({}, 0, None),
+        ({1: {2: 'two', 3: (4, 5)}, 6: [7, 8]}, 2, None),
+        ([], None, TypeError),
+        ('dictionary', None, TypeError),
+    ]
 
-    expected_outputs = {
-        1: 1,
-        2: 3,
-        3: 0,
-        4: 2,
-        5: 0,
-        6: 0,
-    }
-
-    for item in test_items:
-        assert find_dict_depth(test_items[item]) == expected_outputs[item]
+    run_test_cases(find_dict_depth, test_cases)
 
 
 def test_pivot_dict():
