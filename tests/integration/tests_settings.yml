@@ -1,0 +1,8 @@
+log_level: 'info'
+
+methods:
+    update_database_and_problem: {force_overwrite: True}
+    initialize_problems: {force_overwrite: True}
+    run_model: {force_overwrite: True}
+    load_results_to_database: {force_overwrite: True}
+    check_model_results: {}
