@@ -59,8 +59,7 @@ def test_get_user_confirmation(monkeypatch):
 
 
 def test_find_dict_depth():
-    """
-    Test for 'find_dict_depth' method.
+    """Test the 'find_dict_depth' method.
 
     Test cases:
      - tests a dictionary with only 1 depth
@@ -70,7 +69,6 @@ def test_find_dict_depth():
      - tests a non-dictionary input
      - tests a non-dictionary input
     """
-
     test_cases = [
         ({1: 1, 2: 2}, 1, None),
         ({1: {2: 2, 3: {4: 4, 5: 5}}, 6: 6}, 3, None),

@@ -10,7 +10,7 @@ from typing import Union
 import cvxpy as cp
 import numpy as np
 
-from cvxlab.support import util, util_constants, util_operators
+from cvxlab.support import util_constants, util_operators
 
 
 class Constants:
@@ -470,4 +470,4 @@ class Constants:
             if hasattr(subgroup, name):
                 return getattr(subgroup, name)
         raise AttributeError(
-            f"Constant or group '{name}' not found in {cls.__name__}.")
+            f"Constant '{name}' not found in {cls.__name__}.")
