@@ -431,7 +431,7 @@ class Constants:
             int, float, np.dtype('float64'), np.dtype('int64'))
         ALLOWED_TEXT_TYPE = str
         ALLOWED_SOLVERS = cp.installed_solvers()
-        DEFAULT_SOLVER = 'GUROBI'
+        DEFAULT_SOLVER = 'SCIPY'
         TOLERANCE_TESTS_RESULTS_CHECK = 0.02
         TOLERANCE_MODEL_COUPLING_CONVERGENCE = 0.01
         MAXIMUM_ITERATIONS_MODEL_COUPLING = 20
