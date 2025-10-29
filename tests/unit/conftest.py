@@ -70,6 +70,7 @@ def run_test_cases(
         ]
     ],
     tolerance: Optional[float] = None,
+    unpack_tuple_args: bool = True,
     **common_kwargs,
 ) -> None:
     """Run tests for any function signature.
@@ -89,6 +90,9 @@ def run_test_cases(
         tolerance (Optional[float]):
             If provided, uses tolerant equality based on the specified tolerance
             for numpy arrays, Series, and DataFrames. Default is None.
+        unpack_tuple_args (bool):
+            If True, unpacks the first element of each test case tuple as positional
+            arguments to the function. If False, passes it as a single argument.
         **common_kwargs:
             Common keyword arguments to pass to all test cases, which can be overridden
             by test-specific kwargs.
@@ -113,7 +117,7 @@ def run_test_cases(
             raise ValueError("Each test case must have 3 or 4 elements")
 
         # if input_val is a tuple, treat as positional args
-        if isinstance(input_val, tuple):
+        if isinstance(input_val, tuple) and unpack_tuple_args:
             call_args = input_val
             def call_func(): return func(*call_args, **kwargs)
         else:
