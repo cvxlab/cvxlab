@@ -51,13 +51,14 @@ We welcome new feature suggestions! Please open an issue on our [GitHub Issues](
 
 ## Code Style & Testing
 
-- Follow existing code style and conventions.
+- When modify/improve the package, follow existing code style and conventions.
 - Add or update docstrings and documentation as needed.
-- Run tests before submitting:
-  ```sh
-  pytest
-  ```
 - Add new tests for new features or bug fixes.
+- Before submitting, run all tests (make sure the `cvxlab` conda environment is activated):
+  ```sh
+  conda activate cvxlab
+  python -m pytest
+  ```
 
 ---
 

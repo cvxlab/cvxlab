@@ -1,4 +1,4 @@
-![CVXlab Logo]()
+![CVXlab Logo](docs/images/logo_10-25/png/CVXlab_logo_260925-02.png)
 
 # CVXlab
 
