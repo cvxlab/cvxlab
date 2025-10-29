@@ -10,7 +10,7 @@ from typing import Union
 import cvxpy as cp
 import numpy as np
 
-from cvxlab.support import util_constants, util_operators
+from cvxlab.support import util, util_constants, util_operators
 
 
 class Constants:
@@ -371,15 +371,7 @@ class Constants:
             'ENDOGENOUS': 'endogenous',
         }
 
-        ALLOWED_CONSTANTS = {
-            'sum_vector': (np.ones, {}),
-            'identity': (np.eye, {}),
-            'set_length': (np.max, {}),
-            'arange_1': (util_constants.arange, {}),
-            'arange_0': (util_constants.arange, {'start_from': 0}),
-            'lower_triangular': (util_constants.tril, {}),
-        }
-
+        ALLOWED_CONSTANTS = util_constants.CONSTANTS
         ALLOWED_OPERATORS = util_operators.OPERATORS
 
     class NumericalSettings:

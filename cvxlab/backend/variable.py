@@ -10,6 +10,7 @@ convert SQL data to formats usable by optimization tools like cvxpy.
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import cvxpy as cp
+from cvxpy.lin_ops.lin_utils import is_scalar
 import numpy as np
 import pandas as pd
 
@@ -541,83 +542,29 @@ class Variable:
         values. Depending on the value type, the method either creates a constant 
         of the specified type or raises an error if the value type is not supported.
 
-        Constants allowed:
-
-        - 'sum_vector': summation vector (vector of 1s).
-        - 'identity': identity matrix.
-        - 'set_length': scalar representing the length of a set.
-        - 'arange_0': vector/matrix with a range from 0 up to dimension size.
-        - 'arange_1': vector/matrix with a range from 1 up to dimension size.
-        - 'lower_triangular': lower triangular matrix of 1s (inc. diagonal).
-
-        In case a new user-defined constant needs to be added:
-
-        - Define the constant in the Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
-            dictionary, specifying the factory function and any required arguments.
-        - Implement the related condition in this method.
+        NOTICE THAT the constant creation receives as argument the variable shape 
+        size only. More complex constants may require additional arguments, which can be 
+        added in future developments.
 
         Args:
             value_type (str): The type of the constant to be created. User-defined 
-            constants defined in: Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
+            constants are defined in util_constants module and registered in
+            Constants.SymbolicDefinitions.ALLOWED_CONSTANTS.
 
         Raises:
             exc.SettingsError: If the provided value type is not supported.
-            exc.ConceptualModelError: If the shape of the variable is not 
-                suitable for creating the constant.
         """
         allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS
 
-        util.validate_selection(
-            valid_selections=allowed_constants,
-            selection=value_type,
-        )
+        factory_function = allowed_constants[value_type]
 
-        factory_function, args = allowed_constants[value_type]
-
-        if value_type == 'sum_vector':
-            if self.is_vector:
-                return factory_function(self.shape_size, **args)
-            else:
-                msg = 'Summation vector must be a vector (one dimension). ' \
-                    'Check variable shape.'
-
-        elif value_type == 'identity':
-            if self.is_vector:
-                return factory_function(max(self.shape_size), **args)
-            else:
-                msg = 'Identity matrix must be defined by a unique set '\
-                    'as either rows or cols. Check variable shape.'
-
-        elif value_type == 'set_length':
-            if self.is_vector:
-                result = factory_function(self.shape_size, **args)
-                result_array = np.array(result)
-                if result_array.ndim == 0:
-                    result_array = result_array.reshape(-1, 1)
-                return result_array
-            else:
-                msg = 'One unique dimension can be set as row-col for the ' \
-                    'set_length variable .'
-
-        elif value_type in ['arange_0', 'arange_1']:
-            return factory_function(self.shape_size, **args)
-
-        elif value_type == 'lower_triangular':
-            if self.is_vector:
-                return factory_function(self.shape_size, **args)
-            else:
-                msg = 'Lower triangular matrix must be defined by a unique set '\
-                    'as either rows or cols. Check variable shape.'
-
-        else:
-            msg = f"Variable 'value': '{value_type}' not supported. " \
+        if value_type not in allowed_constants:
+            msg = f"Constant definition | type: '{value_type}' not supported. " \
                 f"Supported value types: {allowed_constants.keys()}"
             self.logger.error(msg)
             raise exc.SettingsError(msg)
 
-        if msg:
-            self.logger.error(msg)
-            raise exc.ConceptualModelError(msg)
+        return factory_function(self.shape_size)
 
     def __repr__(self) -> str:
         """Provide a string representation of the Variable object."""
