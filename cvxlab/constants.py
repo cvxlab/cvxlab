@@ -10,7 +10,7 @@ from typing import Union
 import cvxpy as cp
 import numpy as np
 
-from cvxlab.support import util, util_constants, util_operators
+from cvxlab.support import util_constants, util_operators
 
 
 class Constants:
@@ -70,8 +70,11 @@ class Constants:
         SQLITE_DATABASE_FILE_BKP = 'database_bkp.db'
         SQLITE_DATABASE_FILE_TEST = 'database_expected.db'
         TUTORIAL_FILE_NAME = 'API_usage_guide.ipynb'
-        TUTORIALS_FILE_PATH = r'docs/tutorials'
+        TUTORIALS_DIR_PATH = r'docs/tutorials'
+        TEMPLATES_DIR_PATH = r'docs/templates'
         INSTANCES_DIR = 'instances'
+        CUSTOM_OPERATORS_FILE_NAME = 'user_defined_operators.py'
+        CUSTOM_CONSTANTS_FILE_NAME = 'user_defined_constants.py'
 
     class Labels:
         """Default labels and field names for dictionary keys and dataframes.
