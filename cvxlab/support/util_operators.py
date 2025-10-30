@@ -6,17 +6,6 @@ and diagonal extraction to more complex operations such as generating special ma
 reshaping arrays, or any special numerical manipulation that can be hardly defined
 based on symbolic expressions.
 
-There are two ways to add a new user-defined operators:
-
-1. Add a new function directly in the current module `cvxlab.support.util_operators`:
-   simefply dine a new function in this module, that will be embedded in the package
-   as a built-in operator.
-
-2. Users can define custom operators in their model directory by defining the related
-   function in the 'user_defined_operator.py' file, and loading the module when
-   generating the Model instance. This way, users can extend the package with their
-   own custom operators without modifying the package code (ideal for model users).
-
 Functions are registered as operators in Constants class, and can be directly
 used in defining symbolic problem expressions simply by writing its name followed 
 by parentheses containing the required arguments (defined as problems variables).
