@@ -69,7 +69,7 @@ class Constants:
         SQLITE_DATABASE_FILE = 'database.db'
         SQLITE_DATABASE_FILE_BKP = 'database_bkp.db'
         SQLITE_DATABASE_FILE_TEST = 'database_expected.db'
-        TUTORIAL_FILE_NAME = 'API_usage_guide.ipynb'
+        TUTORIAL_FILE_NAME = 'API_reference.ipynb'
         TUTORIALS_DIR_PATH = r'docs/tutorials'
         TEMPLATES_DIR_PATH = r'docs/templates'
         INSTANCES_DIR = 'instances'
