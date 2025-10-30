@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Literal
 
 from cvxlab.backend.model import Model
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc.logger import Logger
 from cvxlab.support import util
 from cvxlab.support.file_manager import FileManager
@@ -60,8 +60,8 @@ def create_model_dir(
     Raises:
         ValueError: If the template file type is unsupported.
     """
-    structures = Constants.DefaultStructures
-    config_files = Constants.ConfigFiles
+    structures = Defaults.DefaultStructures
+    config_files = Defaults.ConfigFiles
 
     model_dir_path = Path(main_dir_path) / model_dir_name
 
@@ -99,7 +99,7 @@ def create_model_dir(
             )
 
     elif template_file_type == 'xlsx':
-        structure_mapping = Constants.DefaultStructures.XLSX_TEMPLATE_COLUMNS
+        structure_mapping = Defaults.DefaultStructures.XLSX_TEMPLATE_COLUMNS
         template_file_name = config_files.SETUP_XLSX_FILE
 
         files.dict_to_excel_headers(
@@ -153,8 +153,8 @@ def _generate_yaml_template(
             indent: int,
     ) -> list[str]:
 
-        optional_key = Constants.DefaultStructures.OPTIONAL
-        any_key = Constants.DefaultStructures.ANY
+        optional_key = Defaults.DefaultStructures.OPTIONAL
+        any_key = Defaults.DefaultStructures.ANY
         yaml_lines = []
         indent_str = '    ' * indent
 
@@ -227,18 +227,18 @@ def copy_utility_files(
     files_config = {
         'tutorial': {
             'included': include_tutorial,
-            'source_path': Constants.ConfigFiles.TUTORIALS_DIR_PATH,
-            'file_name': Constants.ConfigFiles.TUTORIAL_FILE_NAME,
+            'source_path': Defaults.ConfigFiles.TUTORIALS_DIR_PATH,
+            'file_name': Defaults.ConfigFiles.TUTORIAL_FILE_NAME,
         },
         'custom_operators_template': {
             'included': include_custom_operators_template,
-            'source_path': Constants.ConfigFiles.TEMPLATES_DIR_PATH,
-            'file_name': Constants.ConfigFiles.CUSTOM_OPERATORS_FILE_NAME,
+            'source_path': Defaults.ConfigFiles.TEMPLATES_DIR_PATH,
+            'file_name': Defaults.ConfigFiles.CUSTOM_OPERATORS_FILE_NAME,
         },
         'custom_constants_template': {
             'included': include_custom_constants_template,
-            'source_path': Constants.ConfigFiles.TEMPLATES_DIR_PATH,
-            'file_name': Constants.ConfigFiles.CUSTOM_CONSTANTS_FILE_NAME,
+            'source_path': Defaults.ConfigFiles.TEMPLATES_DIR_PATH,
+            'file_name': Defaults.ConfigFiles.CUSTOM_CONSTANTS_FILE_NAME,
         },
     }
 
@@ -288,8 +288,8 @@ def transfer_setup_info_xlsx(
     files = FileManager(Logger())
 
     source_file_path = Path(source_dir_path, source_file_name)
-    settings_file_name = Constants.ConfigFiles.SETUP_XLSX_FILE
-    sets_file_name = Constants.ConfigFiles.SETS_FILE
+    settings_file_name = Defaults.ConfigFiles.SETUP_XLSX_FILE
+    sets_file_name = Defaults.ConfigFiles.SETS_FILE
 
     target_files = {
         'settings': ['settings'],
@@ -302,7 +302,7 @@ def transfer_setup_info_xlsx(
             'destination_file_name': settings_file_name,
             'destination_file_path': Path(destination_dir_path, settings_file_name),
             'cols_to_drop': ['notes', 'skip'],
-            'tabs_to_update': list(Constants.ConfigFiles.SETUP_INFO.values()),
+            'tabs_to_update': list(Defaults.ConfigFiles.SETUP_INFO.values()),
         },
         'sets': {
             'destination_file_name': sets_file_name,
@@ -340,7 +340,7 @@ def transfer_setup_info_xlsx(
             xlsx_file = pd.ExcelFile(source_file_path)
             tabs_to_update = [
                 tab for tab in xlsx_file.sheet_names
-                if tab.startswith(Constants.Labels.SET_TABLE_NAME_PREFIX)
+                if tab.startswith(Defaults.Labels.SET_TABLE_NAME_PREFIX)
             ]
 
         # confirmation
@@ -454,7 +454,7 @@ def _save_model_instance(
     model_dir_path = instance.paths['model_dir']
     model_name = instance.settings['model_name']
 
-    instances_dir = Constants.ConfigFiles.INSTANCES_DIR
+    instances_dir = Defaults.ConfigFiles.INSTANCES_DIR
     instances_save_path = Path(model_dir_path) / instances_dir
     instance_file_path = instances_save_path / file_name
 

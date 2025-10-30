@@ -1,11 +1,11 @@
-"""Unit tests for the Constants class in cvxlab.constants module."""
+"""Unit tests for the Defaults class in cvxlab.defaults module."""
 
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from tests.unit.conftest import run_test_cases
 
 
 def test_getattr_method():
-    """Test the '__getattr__' method of the Constants class."""
+    """Test the '__getattr__' method of the Defaults class."""
 
     test_cases = [
         ('SETUP_XLSX_FILE', 'model_settings.xlsx', None),
@@ -14,4 +14,4 @@ def test_getattr_method():
         ('NONE_SYMBOLS', [None, 'nan', 'None', 'null', '', [], {}], None),
     ]
 
-    run_test_cases(Constants.__getattr__, test_cases)
+    run_test_cases(Defaults.__getattr__, test_cases)

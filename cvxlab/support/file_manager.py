@@ -19,7 +19,7 @@ import yaml
 import pandas as pd
 import numpy as np
 
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
 from cvxlab.support import util
@@ -553,8 +553,8 @@ class FileManager:
         file_path = Path(excel_file_dir_path, excel_file_name)
 
         if set_values_type:
-            values_dtype = Constants.NumericalSettings.STD_VALUES_TYPE
-            values_name = Constants.Labels.VALUES_FIELD['values'][0]
+            values_dtype = Defaults.NumericalSettings.STD_VALUES_TYPE
+            values_name = Defaults.Labels.VALUES_FIELD['values'][0]
 
         if not os.path.exists(file_path):
             self.logger.error(f'{excel_file_name} does not exist.')
@@ -654,7 +654,7 @@ class FileManager:
             dataframe.replace('', None, inplace=True)
             # replace true/True/TRUE/false/False/FALSE with bool
             dataframe.replace(
-                Constants.DefaultStructures.ALLOWED_BOOL,
+                Defaults.DefaultStructures.ALLOWED_BOOL,
                 inplace=True
             )
 
@@ -685,7 +685,7 @@ class FileManager:
         Raises:
             SettingsError: If file or tab is empty or source not recognized.
         """
-        available_sources = Constants.ConfigFiles.AVAILABLE_SOURCES
+        available_sources = Defaults.ConfigFiles.AVAILABLE_SOURCES
         util.validate_selection(
             selection=source,
             valid_selections=available_sources
@@ -701,7 +701,7 @@ class FileManager:
                 raise exc.SettingsError(msg)
 
         elif source == 'xlsx':
-            file_name = Constants.ConfigFiles.SETUP_XLSX_FILE
+            file_name = Defaults.ConfigFiles.SETUP_XLSX_FILE
             raw_data = self.excel_tab_to_dataframe(
                 file_name, dir_path, structure_key)
 
@@ -710,9 +710,9 @@ class FileManager:
                 self.logger.error(msg)
                 raise exc.SettingsError(msg)
 
-            data_pivot_keys = Constants.DefaultStructures.XLSX_PIVOT_KEYS
+            data_pivot_keys = Defaults.DefaultStructures.XLSX_PIVOT_KEYS
             merge_dict = True if \
-                structure_key == Constants.ConfigFiles.SETUP_INFO[2] else False
+                structure_key == Defaults.ConfigFiles.SETUP_INFO[2] else False
 
             skip_process_str = True if structure_key == 'problem' else False
 
@@ -749,8 +749,8 @@ class FileManager:
             Dict[str, str]: Dictionary of problems found.
         """
         problems = {}
-        optional_label = Constants.DefaultStructures.OPTIONAL
-        any_label = Constants.DefaultStructures.ANY
+        optional_label = Defaults.DefaultStructures.OPTIONAL
+        any_label = Defaults.DefaultStructures.ANY
         all_optional_fields = False
 
         if all(

@@ -1,13 +1,4 @@
-"""
-test_util.py 
-
-@author: Matteo V. Rocco
-@institution: Politecnico di Milano
-
-This module contains tests for the functions in the 'esm.support.util' module.
-"""
-
-
+"""Test for the cvxlab/support/util.py module."""
 import pytest
 
 from cvxlab.support.util import *

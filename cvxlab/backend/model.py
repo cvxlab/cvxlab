@@ -17,7 +17,7 @@ from typing import Any, List, Literal, Optional
 import pandas as pd
 import cvxpy as cp
 
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.backend.core import Core
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
@@ -99,7 +99,7 @@ class Model:
                 validation logging of data and model settings during initialization.
                 Defaults to False.
         """
-        config = Constants.ConfigFiles
+        config = Defaults.ConfigFiles
         model_dir_path = Path(main_dir_path) / model_dir_name
 
         self.logger = Logger(
@@ -217,24 +217,24 @@ class Model:
         subdir_to_check = []
 
         util.validate_selection(
-            valid_selections=Constants.ConfigFiles.AVAILABLE_SOURCES,
+            valid_selections=Defaults.ConfigFiles.AVAILABLE_SOURCES,
             selection=files_type,
         )
 
         if files_type == 'yml':
             files_to_check += [
                 file + '.yml'
-                for file in Constants.ConfigFiles.SETUP_INFO.values()
+                for file in Defaults.ConfigFiles.SETUP_INFO.values()
             ]
         elif files_type == 'xlsx':
-            files_to_check += [Constants.ConfigFiles.SETUP_XLSX_FILE]
+            files_to_check += [Defaults.ConfigFiles.SETUP_XLSX_FILE]
 
         if self.settings['use_existing_data']:
             files_to_check += [
-                Constants.ConfigFiles.SETS_FILE,
-                Constants.ConfigFiles.SQLITE_DATABASE_FILE,
+                Defaults.ConfigFiles.SETS_FILE,
+                Defaults.ConfigFiles.SQLITE_DATABASE_FILE,
             ]
-            subdir_to_check += [Constants.ConfigFiles.INPUT_DATA_DIR]
+            subdir_to_check += [Defaults.ConfigFiles.INPUT_DATA_DIR]
 
         err_msg = []
 
@@ -290,7 +290,7 @@ class Model:
             level='info',
         ):
             try:
-                sets_xlsx_file = Constants.ConfigFiles.SETS_FILE
+                sets_xlsx_file = Defaults.ConfigFiles.SETS_FILE
                 self.core.index.load_sets_data_to_index(
                     excel_file_name=sets_xlsx_file,
                     excel_file_dir_path=self.paths['model_dir']
@@ -325,7 +325,7 @@ class Model:
 
         """
         use_existing_data = self.settings['use_existing_data']
-        sqlite_db_name = Constants.ConfigFiles.SQLITE_DATABASE_FILE
+        sqlite_db_name = Defaults.ConfigFiles.SQLITE_DATABASE_FILE
         sqlite_db_path = Path(self.paths['sqlite_database'])
         input_files_dir_path = Path(self.paths['input_data_dir'])
 
@@ -531,13 +531,13 @@ class Model:
                 Defaults to False.
             solver (str, optional): The solver to use for solving numerical 
                 problems. Defaults to None, in which case the default solver 
-                specified in 'Constants.NumericalSettings.DEFAULT_SOLVER' is used.
+                specified in 'Defaults.NumericalSettings.DEFAULT_SOLVER' is used.
             numerical_tolerance (float, optional): The numerical tolerance for 
                 solving integrated problems. In case it is not defined, this is set
-                as 'Constants.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE'.
+                as 'Defaults.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE'.
             maximum_iterations (int, optional): The maximum number of iterations 
                 for solving integrated problems. In case it is not defined, this is
-                set as 'Constants.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING'.
+                set as 'Defaults.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING'.
             **kwargs: Additional keyword arguments to be passed to the solver.
 
         Raises:
@@ -547,10 +547,10 @@ class Model:
         """
         sub_problems = self.core.problem.number_of_sub_problems
         problem_scenarios = len(self.core.index.scenarios_info)
-        allowed_solvers = Constants.NumericalSettings.ALLOWED_SOLVERS
+        allowed_solvers = Defaults.NumericalSettings.ALLOWED_SOLVERS
 
         if solver is None:
-            solver = Constants.NumericalSettings.DEFAULT_SOLVER
+            solver = Defaults.NumericalSettings.DEFAULT_SOLVER
 
         if solver not in allowed_solvers:
             msg = f"Solver '{solver}' not supported by current CVXPY version. " \
@@ -657,7 +657,7 @@ class Model:
             force_overwrite (bool, optional): Whether to overwrite/update 
                 existing data without asking user permission. Defaults to False.
         """
-        sqlite_db_file = Constants.ConfigFiles.SQLITE_DATABASE_FILE
+        sqlite_db_file = Defaults.ConfigFiles.SQLITE_DATABASE_FILE
 
         self.logger.info(
             f"Updating SQLite database '{sqlite_db_file}' "
@@ -676,7 +676,7 @@ class Model:
             force_overwrite (bool, optional): Whether to force overwrite 
                 existing data. Used for testing purposes. Defaults to False.
         """
-        sqlite_db_file = Constants.ConfigFiles.SQLITE_DATABASE_FILE
+        sqlite_db_file = Defaults.ConfigFiles.SQLITE_DATABASE_FILE
 
         self.logger.info(
             f"Reinitializing SQLite database '{sqlite_db_file}' "
@@ -713,7 +713,7 @@ class Model:
             numerical_tolerance (float, optional): The relative difference 
                 (non-percentage) tolerance for comparing numerical values in 
                 different databases. If None, it is set to
-                'Constants.NumericalSettings.TOLERANCE_TESTS_RESULTS_CHECK'.
+                'Defaults.NumericalSettings.TOLERANCE_TESTS_RESULTS_CHECK'.
         """
         if (other_db_dir_path is None) != (other_db_name is None):
             msg = "Both 'other_db_dir_path' and 'other_db_name' parameters must " \
@@ -725,11 +725,11 @@ class Model:
             other_db_dir_path = self.paths['model_dir']
 
         if other_db_name is None:
-            other_db_name = Constants.ConfigFiles.SQLITE_DATABASE_FILE_TEST
+            other_db_name = Defaults.ConfigFiles.SQLITE_DATABASE_FILE_TEST
 
         if not numerical_tolerance:
             numerical_tolerance = \
-                Constants.NumericalSettings.TOLERANCE_TESTS_RESULTS_CHECK
+                Defaults.NumericalSettings.TOLERANCE_TESTS_RESULTS_CHECK
 
         with self.logger.log_timing(
             message=f"Check model results...",
@@ -755,13 +755,13 @@ class Model:
         custom_scripts = {
             'operators': {
                 'to_be_imported': self.settings['import_custom_operators'],
-                'file_name': Constants.ConfigFiles.CUSTOM_OPERATORS_FILE_NAME,
-                'target_registry': Constants.SymbolicDefinitions.ALLOWED_OPERATORS,
+                'file_name': Defaults.ConfigFiles.CUSTOM_OPERATORS_FILE_NAME,
+                'target_registry': Defaults.SymbolicDefinitions.ALLOWED_OPERATORS,
             },
             'constants': {
                 'to_be_imported': self.settings['import_custom_constants'],
-                'file_name': Constants.ConfigFiles.CUSTOM_CONSTANTS_FILE_NAME,
-                'target_registry': Constants.SymbolicDefinitions.ALLOWED_CONSTANTS,
+                'file_name': Defaults.ConfigFiles.CUSTOM_CONSTANTS_FILE_NAME,
+                'target_registry': Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS,
             }
         }
 

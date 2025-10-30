@@ -1,4 +1,4 @@
-"""Module collecting all fundamental constants of the package.
+"""Module collecting all fundamental default settings of the package.
 
 Constants of the package are useful for simplifying renaming package labels,
 defining templates for fundamental package objects (sets, data tables, variables, ...)
@@ -13,11 +13,11 @@ import numpy as np
 from cvxlab.support import util_constants, util_operators
 
 
-class Constants:
-    """Centralized repository for constants of the package.
+class Defaults:
+    """Centralized repository for default settings of the package.
 
     Constants are grouped into meaningful categories (sub-classes) for clarity and 
-    ease of access. Supports direct attribute access of constants using '__getattr__' method.
+    ease of access. Supports direct attribute access of default settings using '__getattr__' method.
 
     Subgroups:
 
@@ -450,7 +450,7 @@ class Constants:
 
     @classmethod
     def __getattr__(cls, name):
-        """Provide direct access to constants by searching nested groups.
+        """Provide direct access to default settings by searching nested groups.
 
         Args:
             name (str): The name of the attribute to retrieve.

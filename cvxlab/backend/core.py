@@ -19,7 +19,7 @@ from cvxlab.backend.index import Index, Variable
 from cvxlab.backend.problem import Problem
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.support import util
 from cvxlab.support.file_manager import FileManager
 from cvxlab.support.sql_manager import SQLManager, db_handler
@@ -78,7 +78,7 @@ class Core:
         self.sqltools = SQLManager(
             logger=self.logger,
             database_path=self.paths['sqlite_database'],
-            database_name=Constants.ConfigFiles.SQLITE_DATABASE_FILE,
+            database_name=Defaults.ConfigFiles.SQLITE_DATABASE_FILE,
         )
 
         self.index = Index(
@@ -119,7 +119,7 @@ class Core:
         Raises:
             SettingsError: If a variable's type is not of the allowed type.
         """
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         with self.logger.log_timing(
             message=f"Generating data structures for endogenous data tables...",
@@ -299,12 +299,12 @@ class Core:
                 "to cvxpy exogenous variables...",
             level='info',
         ):
-            filter_header = Constants.Labels.FILTER_DICT_KEY
-            cvxpy_var_header = Constants.Labels.CVXPY_VAR
-            values_header = Constants.Labels.VALUES_FIELD['values'][0]
-            id_header = Constants.Labels.ID_FIELD['id'][0]
-            allowed_values_types = Constants.NumericalSettings.ALLOWED_VALUES_TYPES
-            allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+            filter_header = Defaults.Labels.FILTER_DICT_KEY
+            cvxpy_var_header = Defaults.Labels.CVXPY_VAR
+            values_header = Defaults.Labels.VALUES_FIELD['values'][0]
+            id_header = Defaults.Labels.ID_FIELD['id'][0]
+            allowed_values_types = Defaults.NumericalSettings.ALLOWED_VALUES_TYPES
+            allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
             if not isinstance(var_list_to_update, list):
                 msg = "Passed method parameter must be a list."
@@ -393,7 +393,7 @@ class Core:
                             # find the index of variable_data that matches the combination
                             # of inter-problem-sets defined by scenarios_idx
                             else:
-                                info_label = Constants.Labels.SCENARIO_COORDINATES
+                                info_label = Defaults.Labels.SCENARIO_COORDINATES
                                 scenarios_to_fetch = \
                                     self.index.scenarios_info.loc[scenarios_idx].drop(
                                         columns=[info_label]
@@ -485,8 +485,8 @@ class Core:
             "Exporting data from cvxpy endogenous variable (in data table) "
             f"to SQLite database '{self.settings['sqlite_database_file']}' ")
 
-        values_headers = Constants.Labels.VALUES_FIELD['values'][0]
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        values_headers = Defaults.Labels.VALUES_FIELD['values'][0]
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         if scenarios_idx is None:
             scenarios_list = list(self.index.scenarios_info.index)
@@ -574,9 +574,9 @@ class Core:
             level='info',
         ):
             null_entries = {}
-            column_to_inspect = Constants.Labels.VALUES_FIELD['values'][0]
-            column_with_info = Constants.Labels.ID_FIELD['id'][0]
-            allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+            column_to_inspect = Defaults.Labels.VALUES_FIELD['values'][0]
+            column_with_info = Defaults.Labels.ID_FIELD['id'][0]
+            allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
             with db_handler(self.sqltools):
                 for table_name, data_table in self.index.data.items():
@@ -851,16 +851,16 @@ class Core:
         """
         if maximum_iterations is None:
             maximum_iterations = \
-                Constants.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING
+                Defaults.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING
 
         if numerical_tolerance is None:
             numerical_tolerance = \
-                Constants.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE
+                Defaults.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE
 
-        sqlite_db_file_name = Constants.ConfigFiles.SQLITE_DATABASE_FILE
-        sqlite_db_file_name_bkp = Constants.ConfigFiles.SQLITE_DATABASE_FILE_BKP
-        scenarios_header = Constants.Labels.SCENARIO_COORDINATES
-        problem_status_header = Constants.Labels.PROBLEM_STATUS
+        sqlite_db_file_name = Defaults.ConfigFiles.SQLITE_DATABASE_FILE
+        sqlite_db_file_name_bkp = Defaults.ConfigFiles.SQLITE_DATABASE_FILE_BKP
+        scenarios_header = Defaults.Labels.SCENARIO_COORDINATES
+        problem_status_header = Defaults.Labels.PROBLEM_STATUS
 
         sqlite_db_path = self.paths['model_dir']
         base_name, extension = os.path.splitext(sqlite_db_file_name)

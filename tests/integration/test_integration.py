@@ -12,7 +12,7 @@ import atexit
 
 from pathlib import Path
 
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from tests.integration.conftest import (
     load_test_settings,
     sanitize_fixture_name,
@@ -21,10 +21,10 @@ from tests.integration.conftest import (
 )
 
 
-# Constants and paths
+# Defaults and paths
 tests_settings_file = 'tests_settings.yml'
 model_fixture_dir = 'fixtures'
-db_name = Constants.ConfigFiles.SQLITE_DATABASE_FILE
+db_name = Defaults.ConfigFiles.SQLITE_DATABASE_FILE
 
 root_path = Path(__file__).parent
 test_settings_path = Path(root_path, tests_settings_file)

@@ -7,7 +7,7 @@ and interaction with a SQLite database.
 import pandas as pd
 
 from typing import Any, Dict, Iterator, List, Optional, Tuple
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc.logger import Logger
 
 
@@ -83,7 +83,7 @@ class SetTable:
             Optional[str]: The standard name header if available, otherwise None.
         """
         if self.table_headers is not None:
-            return self.table_headers[Constants.Labels.NAME][0]
+            return self.table_headers[Defaults.Labels.NAME][0]
         return None
 
     @property
@@ -149,7 +149,7 @@ class SetTable:
         Args:
             set_key (str): The key of the set.
         """
-        prefix = Constants.Labels.SET_TABLE_NAME_PREFIX
+        prefix = Defaults.Labels.SET_TABLE_NAME_PREFIX
         self.name = set_key
         self.table_name = prefix+set_key.upper()
 
@@ -162,11 +162,11 @@ class SetTable:
         Args:
             set_info (dict): Dictionary of attributes for the set.
         """
-        col_name_suffix = Constants.Labels.COLUMN_NAME_SUFFIX
-        filters_header = Constants.Labels.FILTERS
-        aggregations_header = Constants.Labels.AGGREGATIONS
-        aggregations_suffix = Constants.Labels.COLUMN_AGGREGATION_SUFFIX
-        name_header = Constants.Labels.NAME
+        col_name_suffix = Defaults.Labels.COLUMN_NAME_SUFFIX
+        filters_header = Defaults.Labels.FILTERS
+        aggregations_header = Defaults.Labels.AGGREGATIONS
+        aggregations_suffix = Defaults.Labels.COLUMN_AGGREGATION_SUFFIX
+        name_header = Defaults.Labels.NAME
 
         # set all attributes except filters and aggregations
         for key, value in set_info.items():
@@ -204,14 +204,14 @@ class SetTable:
         """Define table headers based on the table structure.
 
         This method updates the instance's table_headers and table_filters attributes
-        based on configuration constants. It extracts specific headers for name, filters,
+        based on configuration defaults. It extracts specific headers for name, filters,
         and aggregation from the table's structural definition, and sets them up for
         easy access throughout the class's methods.
         """
-        name_key = Constants.Labels.NAME
-        filters_key = Constants.Labels.FILTERS
-        aggregations_key = Constants.Labels.AGGREGATIONS
-        generic_field_type = Constants.Labels.GENERIC_FIELD_TYPE
+        name_key = Defaults.Labels.NAME
+        filters_key = Defaults.Labels.FILTERS
+        aggregations_key = Defaults.Labels.AGGREGATIONS
+        generic_field_type = Defaults.Labels.GENERIC_FIELD_TYPE
 
         # Fetching filters and aggregations
         self.table_filters = self.table_structure.get(filters_key, None)

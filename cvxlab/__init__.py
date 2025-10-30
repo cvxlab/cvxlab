@@ -7,7 +7,7 @@ licensing information.
 """
 
 from cvxlab.backend.model import Model
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.support.model_directory import (
     create_model_dir,
     copy_utility_files,

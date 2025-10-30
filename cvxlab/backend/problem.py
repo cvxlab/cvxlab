@@ -21,7 +21,7 @@ import numpy as np
 import cvxpy as cp
 
 from cvxlab.backend.data_table import DataTable
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
 from cvxlab.support import util, util_text
@@ -130,7 +130,7 @@ class Problem:
         Returns:
             list: A list of keys for data tables with endogenous data.
         """
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
         endogenous_tables_keys = []
         for table_key, data_table in self.index.data.items():
             data_table: DataTable
@@ -157,13 +157,13 @@ class Problem:
 
         Args:
             var_type (str): The type of the cvxpy object to create. Valid
-                values are defined in Constants.SymbolicDefinitions.VARIABLE_TYPES.
+                values are defined in Defaults.SymbolicDefinitions.VARIABLE_TYPES.
             shape (Tuple[int, ...]): The shape of the Variable or Parameter to
                 be created.
             integer (Optional[bool]): Define an endogenous variable to be
                 integer. Default to False.
             name (Optional[str]): The name assigned to the Variable or Parameter.
-                This is not used for Constants. Default to None.
+                This is not used for constants. Default to None.
             value (Optional[int | np.ndarray | np.matrix]): The numeric value
                 for a Constant. This is ignored for Variable or Parameter types.
 
@@ -175,7 +175,7 @@ class Problem:
                 'integer' is True for non-endogenous variables, or if 'value'
                 is not provided for Constant type.
         """
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         if var_type != allowed_var_types['ENDOGENOUS'] and integer == True:
             msg = "Only endogenous data tables can be defined as integers."
@@ -242,7 +242,7 @@ class Problem:
             MissingDataError: If the DataTable is missing necessary configurations
                 or the data is undefined.
         """
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         if var_type != allowed_var_types['ENDOGENOUS']:
             msg = "Only endogenous variables can be sliced from DataTable."
@@ -367,7 +367,7 @@ class Problem:
         # conversion to sparse matrix if data is sparse
         if util.is_sparse(
             data_values,
-            Constants.NumericalSettings.SPARSE_MATRIX_ZEROS_THRESHOLD
+            Defaults.NumericalSettings.SPARSE_MATRIX_ZEROS_THRESHOLD
         ):
             data_values_converted = csr_matrix(data_values)
         else:
@@ -403,8 +403,8 @@ class Problem:
         Raises:
             SettingsError: If the variable's value or type is not specified.
         """
-        sparse_threshold = Constants.NumericalSettings.SPARSE_MATRIX_ZEROS_THRESHOLD
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        sparse_threshold = Defaults.NumericalSettings.SPARSE_MATRIX_ZEROS_THRESHOLD
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         if not variable.value or not variable.type:
             msg = f"Variable '{variable_key}' | Type or value of the constant " \
@@ -465,9 +465,9 @@ class Problem:
             variable_type = variable.type
 
         headers = {
-            'cvxpy': Constants.Labels.CVXPY_VAR,
-            'filter': Constants.Labels.FILTER_DICT_KEY,
-            'sub_problem_key': Constants.Labels.SUB_PROBLEM_KEY,
+            'cvxpy': Defaults.Labels.CVXPY_VAR,
+            'filter': Defaults.Labels.FILTER_DICT_KEY,
+            'sub_problem_key': Defaults.Labels.SUB_PROBLEM_KEY,
         }
 
         if variable.sets_parsing_hierarchy:
@@ -523,7 +523,7 @@ class Problem:
             var_data.at[row, headers['filter']] = var_filter
 
         # identify sub_problem_key
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
         inter_coord_label = 'inter'
 
         if variable_type not in [
@@ -602,8 +602,8 @@ class Problem:
             exc.SettingsError: _description_
         """
         source = self.settings['model_settings_from']
-        problem_key = Constants.ConfigFiles.SETUP_INFO[2]
-        problem_structure = Constants.DefaultStructures.PROBLEM_STRUCTURE[1]
+        problem_key = Defaults.ConfigFiles.SETUP_INFO[2]
+        problem_structure = Defaults.DefaultStructures.PROBLEM_STRUCTURE[1]
 
         if self.symbolic_problem:
             if not force_overwrite:
@@ -700,11 +700,11 @@ class Problem:
             f"Validating symbolic problem expressions coherence.")
 
         source_format = self.settings['model_settings_from']
-        token_patterns = Constants.SymbolicDefinitions.TOKEN_PATTERNS
-        allowed_operators = Constants.SymbolicDefinitions.ALLOWED_OPERATORS
+        token_patterns = Defaults.SymbolicDefinitions.TOKEN_PATTERNS
+        allowed_operators = Defaults.SymbolicDefinitions.ALLOWED_OPERATORS
         problem_structure_labels = [
-            Constants.Labels.OBJECTIVE,
-            Constants.Labels.EXPRESSIONS,
+            Defaults.Labels.OBJECTIVE,
+            Defaults.Labels.EXPRESSIONS,
         ]
 
         errors = []
@@ -913,7 +913,7 @@ class Problem:
             variables_subset (DotDict): A subset of variables to check for uniform
                 coordinate settings.
             coord_category (str): The category of coordinates to check (defined
-                in Constants.SymbolicDefinitions.DIMENSIONS dictionary).
+                in Defaults.SymbolicDefinitions.DIMENSIONS dictionary).
 
         Returns:
             Dict[str, List[str]] | None: A dictionary of coordinates if uniform
@@ -1038,13 +1038,13 @@ class Problem:
                     'status' (the solution status, initially set to None).
         """
         headers = {
-            'objective': Constants.Labels.OBJECTIVE,
-            'expressions': Constants.Labels.EXPRESSIONS,
-            'problem': Constants.Labels.PROBLEM,
-            'status': Constants.Labels.PROBLEM_STATUS,
+            'objective': Defaults.Labels.OBJECTIVE,
+            'expressions': Defaults.Labels.EXPRESSIONS,
+            'problem': Defaults.Labels.PROBLEM,
+            'status': Defaults.Labels.PROBLEM_STATUS,
         }
 
-        scenarios_coords_header = Constants.Labels.SCENARIO_COORDINATES
+        scenarios_coords_header = Defaults.Labels.SCENARIO_COORDINATES
         list_sets_split_problem = list(
             self.index.sets_split_problem_dict.values())
 
@@ -1151,8 +1151,8 @@ class Problem:
                 intra-problem set.
         """
         allowed_variables = {}
-        cvxpy_var_header = Constants.Labels.CVXPY_VAR
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        cvxpy_var_header = Defaults.Labels.CVXPY_VAR
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         for var_key, variable in variables_set_dict.items():
             variable: Variable
@@ -1282,7 +1282,7 @@ class Problem:
         """
         local_vars = {}
         if allowed_operators is None:
-            allowed_operators = Constants.SymbolicDefinitions.ALLOWED_OPERATORS
+            allowed_operators = Defaults.SymbolicDefinitions.ALLOWED_OPERATORS
 
         try:
             # pylint: disable-next=exec-used
@@ -1339,10 +1339,10 @@ class Problem:
         """
         numerical_expressions = []
 
-        text_pattern = Constants.SymbolicDefinitions.TOKEN_PATTERNS['text']
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        text_pattern = Defaults.SymbolicDefinitions.TOKEN_PATTERNS['text']
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
         allowed_operators = list(
-            Constants.SymbolicDefinitions.ALLOWED_OPERATORS.keys())
+            Defaults.SymbolicDefinitions.ALLOWED_OPERATORS.keys())
 
         if symbolic_expressions is []:
             msg = "No symbolic expressions have passed. Check symbolic problem."
@@ -1496,9 +1496,9 @@ class Problem:
                 module='cvxpy.reductions.solvers.solving_chain'
             )
 
-        scenarios_info_header = Constants.Labels.SCENARIO_COORDINATES
-        problem_header = Constants.Labels.PROBLEM
-        status_header = Constants.Labels.PROBLEM_STATUS
+        scenarios_info_header = Defaults.Labels.SCENARIO_COORDINATES
+        problem_header = Defaults.Labels.PROBLEM
+        status_header = Defaults.Labels.PROBLEM_STATUS
 
         if scenarios_idx is None:
             scenarios_idx = list(self.index.scenarios_info.index)
@@ -1547,8 +1547,8 @@ class Problem:
             self.logger.warning(msg)
             raise exc.OperationalError(msg)
 
-        status_header = Constants.Labels.PROBLEM_STATUS
-        scenario_header = Constants.Labels.SCENARIO_COORDINATES
+        status_header = Defaults.Labels.PROBLEM_STATUS
+        scenario_header = Defaults.Labels.SCENARIO_COORDINATES
 
         if isinstance(self.numerical_problems, pd.DataFrame):
             problem_df = self.numerical_problems
