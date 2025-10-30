@@ -12,8 +12,10 @@ including tutorials and example models.
 Tutorials
 ---------
 
-A comprehensive Jupyter notebook is available as a tutorial of the CVXlab 
-modeling process: `CVXlab API Usage Guide <../tutorials/API_usage_guide.ipynb>`_
+A comprehensive `Jupyter notebook <../tutorials/API_usage_guide.ipynb>`_ is available 
+as a tutorial of the CVXlab modeling process and its main APIs.
+
+
 
 
 
