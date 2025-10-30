@@ -684,10 +684,10 @@ class Core:
             force_overwrite (bool): If True, forces the re-solution of problems 
                 even if they have already been solved without prompting the user.
             maximum_iterations (Optional[int], optional): The maximum number of 
-                iterations for the solver. Overwrite default setting in Constants. 
+                iterations for the solver. Overwrite default setting in Defaults. 
                 Defaults to None.
             numerical_tolerance (Optional[float], optional): The numerical 
-                tolerance for the solver. Overwrite default setting in Constants. 
+                tolerance for the solver. Overwrite default setting in Defaults. 
                 Defaults to None.
             **kwargs: Additional keyword arguments passed to the solver.
 
@@ -745,7 +745,7 @@ class Core:
         Args:
             values_relative_diff_tolerance (float): The relative difference 
                 tolerance (%) to use when comparing the databases. It overwrites
-                the default setting in Constants.
+                the default setting in Defaults.
             other_db_dir_path (Path | str): The directory path of the reference
                 database.
             other_db_name (str): The name of the reference database.
@@ -842,10 +842,10 @@ class Core:
             solver_verbose (bool): If True, enables verbose output during problem 
                 solving.
             maximum_iterations (Optional[int], optional): The maximum number of 
-                iterations for the solver. Overwrite default setting in Constants. 
+                iterations for the solver. Overwrite default setting in Defaults. 
                 Defaults to None.
             numerical_tolerance (Optional[float], optional): The numerical 
-                tolerance for the solver. Overwrite default setting in Constants. 
+                tolerance for the solver. Overwrite default setting in Defaults. 
                 Defaults to None.
             **kwargs (Any): Additional arguments to pass to the solver.
         """
