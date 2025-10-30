@@ -11,7 +11,6 @@ The Model class embeds the generation of the Core class, which provides the cent
 data indexing, functionalities for SQLite database management, problem formulation 
 and solution through cvxpy package. 
 """
-from os import error
 from pathlib import Path
 from typing import Any, List, Literal, Optional
 
@@ -57,6 +56,8 @@ class Model:
             model_settings_from: Literal['yml', 'xlsx'] = 'xlsx',
             use_existing_data: bool = False,
             multiple_input_files: bool = False,
+            import_custom_operators: bool = False,
+            import_custom_constants: bool = False,
             log_level: Literal['info', 'debug', 'warning', 'error'] = 'info',
             log_format: Literal['standard', 'detailed'] = 'standard',
             detailed_validation: bool = False,
@@ -86,6 +87,10 @@ class Model:
                 are generated as one file per data table. If False, all data tables
                 are generated in a single Excel file with multiple tabs. Defaults 
                 to False.
+            import_custom_operators (bool, optional): if True, user-defined
+                operators are imported during initialization. Defaults to False.
+            import_custom_constants (bool, optional): if True, user-defined
+                constants are imported during initialization. Defaults to False.
             log_level (Literal['info', 'debug', 'warning', 'error'], optional):
                 The logging level for the logger. Defaults to 'info'.
             log_format (Literal['standard', 'detailed'], optional): The logging 
@@ -115,6 +120,8 @@ class Model:
                 'model_settings_from': model_settings_from,
                 'use_existing_data': use_existing_data,
                 'multiple_input_files': multiple_input_files,
+                'import_custom_operators': import_custom_operators,
+                'import_custom_constants': import_custom_constants,
                 'detailed_validation': detailed_validation,
                 'sets_xlsx_file': config.SETS_FILE,
                 'input_data_dir': config.INPUT_DATA_DIR,
@@ -131,6 +138,7 @@ class Model:
             })
 
             self.check_model_dir()
+            self.import_custom_scripts()
 
             self.core = Core(
                 logger=self.logger,
@@ -733,6 +741,62 @@ class Model:
                 other_db_name=other_db_name,
             )
 
+    def import_custom_scripts(self) -> None:
+        """Import user-defined custom operators and constants.
+
+        This method imports user-defined custom operators and constants from
+        the model directory, if the corresponding import flags are enabled in
+        the model settings and the files are present. 
+
+        Raises:
+            FileNotFoundError: If the specified custom operators or constants 
+                files are not found in the model directory.    
+        """
+        custom_scripts = {
+            'operators': {
+                'to_be_imported': self.settings['import_custom_operators'],
+                'file_name': Constants.ConfigFiles.CUSTOM_OPERATORS_FILE_NAME,
+                'target_registry': Constants.SymbolicDefinitions.ALLOWED_OPERATORS,
+            },
+            'constants': {
+                'to_be_imported': self.settings['import_custom_constants'],
+                'file_name': Constants.ConfigFiles.CUSTOM_CONSTANTS_FILE_NAME,
+                'target_registry': Constants.SymbolicDefinitions.ALLOWED_CONSTANTS,
+            }
+        }
+
+        for script_type, config in custom_scripts.items():
+            if config['to_be_imported']:
+                try:
+                    custom_functions = self.files.load_functions_from_module(
+                        dir_path=self.paths['model_dir'],
+                        file_name=config['file_name'],
+                    )
+
+                    if not custom_functions:
+                        self.logger.warning(
+                            f"Custom '{script_type}' import | "
+                            f"No functions found in '{config['file_name']}'."
+                        )
+                        continue
+
+                    # register functions
+                    for function in custom_functions:
+                        function_name = function.__name__
+                        config['target_registry'][function_name] = function
+
+                        self.logger.info(
+                            f"Custom '{script_type}' import | Imported "
+                            f"{len(custom_functions)} custom function(s) "
+                            f"from '{config['file_name']}'."
+                        )
+
+                except FileNotFoundError:
+                    self.logger.warning(
+                        f"Custom '{script_type}' import | "
+                        f"'{config['file_name']}' file not found in model directory."
+                    )
+
     def variable(
             self,
             name: str,
@@ -778,6 +842,6 @@ class Model:
         return self.core.index.fetch_set_data(set_key=name)
 
     def __repr__(self):
-        """Return a string representation of the Database instance."""
+        """Return a string representation of the Model instance."""
         class_name = type(self).__name__
         return f'{class_name}'
