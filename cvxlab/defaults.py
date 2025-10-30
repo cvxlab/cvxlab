@@ -1,6 +1,6 @@
 """Module collecting all fundamental default settings of the package.
 
-Constants of the package are useful for simplifying renaming package labels,
+Defaults of the package are useful for simplifying renaming package labels,
 defining templates for fundamental package objects (sets, data tables, variables, ...)
 for validation purposes, defining fundamental numerical settings and template 
 text messages.
@@ -16,12 +16,12 @@ from cvxlab.support import util_constants, util_operators
 class Defaults:
     """Centralized repository for default settings of the package.
 
-    Constants are grouped into meaningful categories (sub-classes) for clarity and 
+    Defaults are grouped into meaningful categories (sub-classes) for clarity and 
     ease of access. Supports direct attribute access of default settings using '__getattr__' method.
 
     Subgroups:
 
-    - ConfigFiles: Constants related to configuration and file management.
+    - ConfigFiles: Defaults related to configuration and file management.
     - Labels: Standard headers and field names.
     - DefaultStructures: Default structures for data validation.
     - SymbolicDefinitions: Allowed constants and operators for symbolic problem definitions.
@@ -31,13 +31,13 @@ class Defaults:
     Usage:: 
 
         # Attributes of sub-groups can be accessed directly
-        Constants.ConfigFiles.SETUP_FILES
+        Defaults.ConfigFiles.SETUP_FILES
     """
 
     _SUBGROUPS = []
 
     class ConfigFiles:
-        """Constants related to configuration and file management.
+        """Defaults related to configuration and file management.
 
         - SETUP_INFO: Dictionary mapping setup information groups.
         - SETUP_XLSX_FILE: Default name of the setup Excel file.
