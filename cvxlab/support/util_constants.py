@@ -4,12 +4,19 @@ This module provides various utility functions that are defined to support
 complex calculations in symbolic problems through generation of constants types,
 such as generating special matrices (positive semidefinite matrices).
 
-To add a new user-defined constant, simply define a new function in this module.
-Functions are registered as constants using the `@constant` decorator, which adds 
-them to the `_CONSTANTS_REGISTRY` dictionary. 
+There are two ways to add a new user-defined constant:
 
-Registry is called in the Constants class, and functions generate constants in 
-Variable class (see backend.Variable.define_constant() method).
+1. Add a new constant directly in the current module `cvxlab.support.util_constants`:
+   simply define a new function in this module, that will be embedded in the package
+   as a built-in constant.
+
+2. Users can define custom constants in their model directory by defining the related
+   function in the 'user_defined_constants.py' file, and loading the module when
+   generating the Model instance. This way, users can extend the package with their
+   own custom constants without modifying the package code (ideal for model users).
+
+Functions are registered as constants in Constants class, and actual constants data
+are generated when generating variables (see backend.Variable.define_constant() method).
 """
 import numpy as np
 
