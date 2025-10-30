@@ -10,6 +10,7 @@ from types import NoneType
 from typing import List, Dict, Any, Literal, Optional
 from pathlib import Path
 
+import importlib.util
 import os
 import shutil
 import json
@@ -120,7 +121,7 @@ class FileManager:
                 f"Folder '{dir_name}' does not exist. The folder cannot be erased.")
             return False
 
-    def load_file(
+    def load_structured_file(
             self,
             file_name: str,
             dir_path: Path,
@@ -156,6 +157,35 @@ class FileManager:
             self.logger.error(
                 f"Could not load file '{file_name}': {str(error)}")
             return {}
+
+    def load_functions_from_module(
+            self,
+            file_name: str,
+            dir_path: Path | str,
+    ) -> list[callable]:
+        """Load functions from a Python module.
+
+        Returns:
+            list[callable]: List of functions defined in the file.
+        """
+        file_path = Path(dir_path) / file_name
+
+        if not os.path.exists(file_path):
+            self.logger.error(f"File '{file_name}' does not exist.")
+            return []
+
+        spec = importlib.util.spec_from_file_location(
+            "module.name", file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        functions_list = [
+            getattr(module, attr) for attr in dir(module)
+            if callable(getattr(module, attr))
+        ]
+
+        self.logger.debug(f"Functions loaded from '{file_name}'.")
+        return functions_list
 
     def erase_file(
             self,
@@ -663,7 +693,7 @@ class FileManager:
 
         if source == 'yml':
             file_name = structure_key + '.yml'
-            data = self.load_file(file_name, dir_path)
+            data = self.load_structured_file(file_name, dir_path)
 
             if not data:
                 msg = f"File '{file_name}' is empty."
