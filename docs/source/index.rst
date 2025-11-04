@@ -93,7 +93,7 @@ activities summarized below:
 
    installation
    user_guide
-   tutorial
+   tutorials
    resources
    api_reference
    contributing.md

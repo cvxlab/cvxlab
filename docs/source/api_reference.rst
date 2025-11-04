@@ -3,7 +3,7 @@ API reference
 
 CVXlab is designed to be intuitive enough so that it may be used without diving 
 into APIs structures. Reading :ref:`User Guide <user_guide>`, practicing with the 
-tutorial notebook available in the :ref:`Tutorial <tutorial>` section, and  
+tutorial notebook available in the :ref:`Tutorials <tutorials>` section, and  
 looking at existing models in :ref:`Models gallery <models_gallery>` will suffice 
 in acquainting you with the package. Nonetheless, API reference are here included 
 for those who are comfortable reading technical documentation. 
@@ -16,12 +16,19 @@ The classes and functions documented in this section are those imported into the
 - :ref:`Utility functions <api_utility_functions>` section documents various utility 
   functions available in the package, including functions for initializing model 
   directory and handling model class instances. 
-- :ref:`Symbolic operators <api_symbolic_operators>` documents the various symbolic
+- :ref:`Symbolic operators <api_symbolic_operators>` documents built-in symbolic
   operators available in CVXlab, including standard arithmetic operations, matrix
-  operations, and various mathematical functions.
-- :ref:`Constants <api_constants>` documents the cvxlab.constants module, which 
+  operations, and various mathematical functions. Provides guidelines on how to
+  create new or add built-in symbolic operators to the package.
+- :ref:`Constants <api_constants_types>` documents the various built-in constants 
+  data types available in CVXlab, necessary to assign numerical values to constants 
+  in numerical problems. Provides guidelines on how to create new or add built-in 
+  constant data types to the package.
+- :ref:`Templates <api_templates>` documents the template modules included in the 
+  CVXlab package, including user-defined symbolic operators and user-defined constants.
+- :ref:`Defaults <api_defaults>` documents the cvxlab.constants module, which 
   includes various default settings used throughout the package that may be customized
-  by the user.
+  by the developer.
 
 
 .. toctree::
@@ -31,4 +38,6 @@ The classes and functions documented in this section are those imported into the
    apidocs/model
    apidocs/utility_functions
    apidocs/symbolic_operators
-   apidocs/constants
+   apidocs/constants_types
+   apidocs/templates
+   apidocs/defaults

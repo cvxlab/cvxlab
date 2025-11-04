@@ -3,11 +3,12 @@
 Symbolic operators
 ==================
 
-CVXlab supports a variety of mathematical operators that can be used in defining 
-symbolic expressions. These operators include standard arithmetic operations, 
-matrix operations, and various mathematical functions.
+CVXlab supports a variety of built-in mathematical operators that can be used 
+within symbolic expressions. These operators include standard arithmetic operations, 
+matrix operations, and various mathematical functions, allowing users to construct
+complex expressions for optimization problems. 
 
-**Standard operators** include: 
+Symbolic operators defined as **mathematical signs** include: 
 
 - ``==`` : Equality
 - ``>=`` : Greater than or equal comparison
@@ -18,7 +19,9 @@ matrix operations, and various mathematical functions.
 - ``/``  : Division (element-wise for matrices)
 - ``@``  : Matrix multiplication (for matrices)
 
-**Other operators** are defined as functions in module ``cvxlab.support.util_operators``,
+Other **regular symbolic operators** works like functions, taking variables as 
+inputs arguments and returning a cvxpy expression when symbolic expression is processed.
+These operators are defined as functions in module ``cvxlab.support.util_operators``,
 and are listed below:
 
 - ``Minimize()`` : Create a maximization objective 
@@ -45,35 +48,41 @@ and are listed below:
   (:func:`weibull_distribution() <cvxlab.support.util_operators.weibull_distribution>`)
 
 
-.. _adding_user_defined_operators:
+.. _adding_symbolic_operators:
 
-Adding user-defined operators
------------------------------
+Adding symbolic operators
+-------------------------
 
-CVXlab allows new **user-defined** operators to be defined and used in model expressions.
+CVXlab allows **new symbolic operators** to be defined and used in model expressions.
 This is particularly useful when the model requires specific mathematical functions
 not available in CVXPY or when existing functions need to be adapted to the model's
 specific needs. As example, it may be complex to define *probability density functions* 
 of exogenous variables, or to implement *piece-wise linear functions with specific 
 breakpoints*, based on simple mathematical expressions. 
 
-In such cases, a new operator can be defined and then used in problem expressions 
+In such cases, a symbolic operator can be defined and then used in problem expressions 
 as any other operator listed above. Definition of new operators should be performed
-by defininig a new regular function in ``cvxlab/support/util_operators.py`` module. 
-The function must be decorated with the key ``@operator('function_name')``, where 
-``function_name`` is the name that will be used to call the operator in model expressions.
+in two ways:
 
-Before committing the new operator to the main package, it is recommended to:
+1. *Adding a new built-in symbolic operator to the CVXPY library.* 
+   To do so, it is sufficient to add a new function the module `cvxlab.support.
+   util_operators.py`, following instructions provided in the module. This way, 
+   the new operator will be available to all users of the package. This approach 
+   is recommended when the operator is generally useful and can be reused in 
+   multiple models. It is recommended to properly document and test the new operator 
+   before committing it to the main package (see :doc:`/contributing`).
 
-- Provide comprehensive docstring accompanying the defined function.
-- Include the new operator in the list of available operators in this documentation 
-  page (``docs/source/apidocs/symbolic_operators.rst``).
-- Add appropriate unit tests in ``tests/unit/test_util_operators.py`` to ensure the 
-  operator behaves as expected.
+2. *Defining a new custom symbolic operator in the model directory.*
+   To accomplish this, users can define new operator/s as regular functions in 
+   the :ref:`user_defined_operators.py <api_user_defined_operators>` file (template 
+   can be found in ``template/user_defined_operators.py``). New operators are loaded 
+   once Model instance is generated. This way, users can use their own custom 
+   symbolic operators in defining problems without modifying the package code 
+   (ideal for model users).
 
 
-Available operators reference
------------------------------
+Built-in operators reference
+----------------------------
 
 .. automodule:: cvxlab.support.util_operators
   :members:
