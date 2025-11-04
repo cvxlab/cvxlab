@@ -49,8 +49,6 @@ class Defaults:
         - SQLITE_DATABASE_FILE: Default name for the SQLite database file.
         - SQLITE_DATABASE_FILE_BKP: Default name for the SQLite database backup file.
         - SQLITE_DATABASE_FILE_TEST: Default name for the SQLite database test file.
-        - TUTORIAL_FILE_NAME: Default name for the tutorial file.
-        - TUTORIALS_FILE_PATH: Default relative path for tutorial directory.
         - INSTANCES_DIR: Default name for the directory containing saved Model instances.
 
         """
@@ -69,8 +67,6 @@ class Defaults:
         SQLITE_DATABASE_FILE = 'database.db'
         SQLITE_DATABASE_FILE_BKP = 'database_bkp.db'
         SQLITE_DATABASE_FILE_TEST = 'database_expected.db'
-        TUTORIAL_FILE_NAME = 'API_reference.ipynb'
-        TUTORIALS_DIR_PATH = r'docs/tutorials'
         TEMPLATES_DIR_PATH = r'docs/templates'
         INSTANCES_DIR = 'instances'
         CUSTOM_OPERATORS_FILE_NAME = 'user_defined_operators.py'

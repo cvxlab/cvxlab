@@ -25,7 +25,6 @@ def create_model_dir(
     model_dir_name: str,
     main_dir_path: str,
     force_overwrite: bool = False,
-    include_tutorial: bool = False,
     include_user_operators_template: bool = False,
     include_user_constants_template: bool = False,
     template_file_type: Literal['yml', 'xlsx'] = 'yml',
@@ -36,8 +35,8 @@ def create_model_dir(
     the given main directory path. It can generate template configuration files
     in either YAML or Excel format. If the directory already exists, it can be
     overwritten based on user confirmation or the force_overwrite flag. Optionally,
-    supplementary files can be copied into the new model directory (tutorial 
-    template, user defined operators/constants functions template).  
+    supplementary files can be copied into the new model directory (user defined 
+    operators/constants functions template).  
 
     Args:
         model_dir_name (str): The name of the model directory to create.
@@ -45,8 +44,6 @@ def create_model_dir(
             directory will be created.
         force_overwrite (bool, optional): If True, overwrite existing directory
             without confirmation. Defaults to False.
-        include_tutorial (bool, optional): If True, copy a tutorial file into
-            the new model directory. Defaults to False.
         include_user_operators_template (bool, optional): If True, copy a
             user-defined operators template file into the new model directory.
             Defaults to False.
@@ -115,7 +112,6 @@ def create_model_dir(
 
     copy_utility_files(
         path_destination=model_dir_path,
-        include_tutorial=include_tutorial,
         include_custom_operators_template=include_user_operators_template,
         include_custom_constants_template=include_user_constants_template,
     )
@@ -202,21 +198,17 @@ def _generate_yaml_template(
 
 def copy_utility_files(
     path_destination: Path,
-    include_tutorial: bool = False,
     include_custom_operators_template: bool = False,
     include_custom_constants_template: bool = False,
 ) -> None:
     """Copy utility files to the model directory.
 
-    This function copy utility files such as tutorial scripts and templates
-    for user-defined custom operators and constants to a defined path, based on 
-    the provided flags.
+    This function copy utility files such as templates for user-defined custom 
+    operators and constants to a defined path, based on the provided flags.
 
     Args:
         path_destination (Path): The path to the model directory where the files
             will be included.
-        include_tutorial (bool, optional): If True, include the tutorial
-            script to the model directory. Defaults to False.
         include_custom_operators_template (bool, optional): If True, include
             the template for user-defined custom operators to the model
             directory. Defaults to False.
@@ -225,11 +217,6 @@ def copy_utility_files(
             directory. Defaults to False.
     """
     files_config = {
-        'tutorial': {
-            'included': include_tutorial,
-            'source_path': Defaults.ConfigFiles.TUTORIALS_DIR_PATH,
-            'file_name': Defaults.ConfigFiles.TUTORIAL_FILE_NAME,
-        },
         'custom_operators_template': {
             'included': include_custom_operators_template,
             'source_path': Defaults.ConfigFiles.TEMPLATES_DIR_PATH,
