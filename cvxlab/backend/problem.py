@@ -1092,6 +1092,7 @@ class Problem:
                 headers['objective'], None)
 
             if symbolic_objective:
+                # in case of multiple expressions, sum is used as default
                 objective = sum(
                     self.define_expressions_list(
                         symbolic_expressions=symbolic_objective,

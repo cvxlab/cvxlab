@@ -68,23 +68,23 @@ process.
 In generating and handling a CVXlab model, the user must follow the five fundamental
 activities summarized below:
 
-- The user defines the model settings and the related structure: model scope, 
-  structure of variables, and list of mathematical expressions, including objective 
-  function and constraints. 
-- The user proceeds by generating a CVXlab Model object, consisting in a Python 
+- The user **defines the model settings** and the related structure: model scope, 
+  structure of variables, and list of mathematical expressions, including equalities,
+  inequalities and (eventually) objective function. 
+- The user proceeds by **generating a CVXlab Model object**, consisting in a *Python* 
   class instance embedding all the model settings and the methods useful to manage 
-  the model. At the same time, other items are generated, including the SQLite 
-  database file (to store model data), and the Excel files serving as blank templates 
-  for collecting exogenous data from the user. 
-- The user feeds data to SQLite database through blank Excel template files. 
-  Specifically, user defines the data input required to characterize exogenous 
+  the model. At the same time, other items are generated, including the **SQLite 
+  database file** (to store all model data), and the Excel files serving as blank 
+  templates for collecting exogenous data from the user. 
+- The user **feeds input data** to SQLite database through blank Excel template 
+  files. Specifically, user defines the data input required to characterize exogenous 
   model variables.
-- The numerical problem is generated, exogenous data fetched from the database, 
+- The **numerical problem is generated**, exogenous data fetched from the database, 
   and the problem is solved through CVXPY engine.
-- If problem is successfuly solved, results are finally exported to the database.
-  Due to the structure of the relational database, it can be easily imported into
-  Business Intelligence tools for data inspection, visualization and analysis 
-  (e.g. PowerBI).
+- If problem is successfuly solved, **results are finally exported** to the database.
+  Due to the structure of the relational database, it can be easily linked and 
+  inspected via Excel or SQL queries, or imported into Business Intelligence tools 
+  (such as *PowerBI* or *Tableau*) for more elaborated data visualization and analysis.
 
 
 .. toctree::

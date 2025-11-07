@@ -8,13 +8,13 @@ generating and solving optimization problems. This includes all the necessary
 steps to :ref:`generate a model from scratch <model_generation_from_scratch>`, 
 or to :ref:`generate it from existing settings/data <model_generation_from_existing>`. 
 At the end of the section, a set of :ref:`utilities <utilities>` is provided
-to facilitate model properties and data inspection, saving and loading of model 
-instances, refreshing model database.
+to generate/handle model directory, facilitate model properties and data inspections, 
+saving and loading of model instances, refreshing model database.
 
 Before diving into each single step, it is suggested to read all this page, which 
 provides a synthetic but comprehensive overview about the CVXlab modeling workflow.
 
-A Jupyter notebook is available as a tutorial of the process. See: :ref:`resources-tutorial`
+Tutorial with CVXlab applications are available in :ref:`tutorials` section.
 
 
 .. _model_generation_from_scratch:
@@ -38,84 +38,75 @@ Step by step description of the CVXlab modeling workflow:
 1. :ref:`conceptual-model-definition`: the whole CVXlab modeling process must be 
    grounded on a solid conceptualization and mathematical definition of the problem 
    to be solved. This step consists in defining the fundamental model 
-   structure pen-on-paper (i.e. definition of objective function, constraints, 
-   exogenous/endogenous variables). Once the problem is well defined, the CVXlab 
-   modeling process can be started.
+   structure pen-on-paper. The following items must be defined:
+
+   - :ref:`defining-sets`: the dimensions of the model, defining its scope.
+   - :ref:`definig-data-tables-variables`: *data tables* are defined as collection 
+     of model data identified by one or more sets. *Variables* are symbolic items 
+     pointing to all or a subsets of data entries in data tables.
+   - :ref:`definig-expressions-and-problems`: *problems* are collection of 
+     *expressions*, the latter defined as symbolic items constructed relying on 
+     defined *variables* and *symbolic operators*. More than one problem can be 
+     stated, each defined as a system of linear equalities or as a convex 
+     optimization problems. 
+
+   Once the problem is well defined, the CVXlab modeling process can start.
 
 2. :ref:`generation-of-model-directory`: a model directory is generated based on 
    a predefined template, and it contains all the necessary files to transpose 
    the conceptual model into a CVXlab model instance. Setup files can be generated 
-   as *.yml* or *.xlsx* formats, depending on user's preference. Optionally, a 
-   *Jupyter notebook* can be created to guide the user through the modeling process.
+   as *YAML* or *Excel* formats, depending on user's preference. 
+   Eventually, *Python template modules* can be included in the model directory to
+   extend CVXlab functionalities with user-defined symbolic operators 
+   (``user_defined_operators.py``) and user-defined constants data types 
+   (``user_defined_constants.py``).
 
    API: :py:func:`cvxlab.create_model_dir`
    
 3. :ref:`fill-model-setup-files`: the user translates the conceptual model into 
-   the setup file/s available in the model directory. This implies defining the 
-   following fundamental elements:
-   
-   - **Sets**
-      *Sets* represent the dimensions of the model, defining its scope. Each set is 
-      defined by a list of elements (*coordinates*, in the following), used to 
-      identify model variables. Each set (and the related coordinates) correponds 
-      to a table in the model *SQLite database* that will be generated.
-      Sets are defined in a dedicated *yaml* file (or in a tab of the *xlsx* 
-      settings file). Coordinates will be defined in separate Excel spreadsheet 
-      once the model instance is generated (see :ref:`Fill sets data (model 
-      coordinates) <fill-sets-data>`).
+   the setup files available in the model directory. The setup information can be
+   provided in either *YAML* format (as three separate files) or *Excel* format (one 
+   file with three tabs):
 
-   - **Data tables** and related **variables**
-      *Data tables* are collections of model data identified by a list of sets. 
-      They can be defined either as *exogenous* (independent variables, collecting 
-      input data), *endogenous* (dependent variables), or *constants* (fixed values). 
-      Each data table corresponds to a table in the model *SQLite database*. 
-      Since SQLite database are classified as *relational databases*, data tables
-      are automatically linked to the related sets tables by univocal relations. 
+   - **Structure of sets**: defined in ``structure_sets.yml`` or ``structure_sets`` tab.
+   - **Structure of data tables and variables**: defined in ``structure_variables.yml``
+     or ``structure_variables`` tab
+   - **Mathematical problem**: defined in ``problem.yml`` or ``problem`` tab.
 
-      *Variables* are symbolic items pointing to data in data tables: multiple 
-      variables can stem from a same data table, assuming different shapes and 
-      referring to different subsets of data tables values, depending on how 
-      variables are defined and related coordinates are filtered.
-      Both data tables and variables are defined in the same yaml file (or 
-      Excel tab).
-
-   - **Problems** and related **Expressions**
-      *Problems* are collections of *expressions*, the latter defined as symbolic
-      equations, inequalities or objective functions. Expressions are defined 
-      relying on model *variables*, mathematical *operators* and *user-defined 
-      functions*. Multiple problems can be defined in a same model, and 
-      could be solved in parallel as independent or integrated problems.
-      Problems and the related expressions are defined in a dedicated yaml file 
-      (or Excel tab).   
+   User-defined symbolic operators and constants data types can be finally 
+   implemented in dedicated Python modules templates eventually included in the 
+   model directory.
 
 4. :ref:`generate-model-class-instance`: the instance of the Model class is 
    generated through the *Model class constructor*, which translates the 
    information provided by setup file/s into a Python object. The model instance 
    includes all the necessary information and the APIs to generate and to solve 
    numerical problems, and to handle exogenous/endogeous model data.
-   
-   In case the model is generated from scratch, the model instance generation
-   automatically triggers the generation of the Excel file to be filled with
-   the sets coordinates (see :ref:`step 5 <fill-sets-data>`).
+   The model instance generation automatically triggers the generation of the 
+   Excel file ``sets.xlsx`` to be filled with the *sets coordinates* (see 
+   :ref:`step 5 <fill-sets-data>`).
+   During the Model class instantiation, a comprehensive validation of model
+   structure is performed to ensure that all model components are correctly and 
+   consistently defined.
 
    Constructor: :py:class:`cvxlab.Model`
  
-5. :ref:`fill-sets-data`: the user fills the sets Excel file with the related 
-   *coordiates* (i.e. the list of elements defining each set), the related filters
-   and aggregations (if any). Once this step is completed, all the necessary 
-   information defining the model structure is available, and the data structures
-   can be generated.
+5. :ref:`fill-sets-data`: the user fills the sets Excel file with the elements 
+   belonging to each set, defined as *coordinates*. The Excel file includes one 
+   tab per each set, where user can eventually specify other set attributes, such
+   as set *filters* and *aggregation* categories.
+   Once this step is completed, all the necessary information defining the model 
+   structure is available, and the data structures can be generated.
 
 6. :ref:`data-structures-init`: this step includes fetching sets coordinates to
    the model instance, performing a coherence check to ensure a correct definition
    of variables, and generating the necessary data structures, including:
 
-   - *Blank SQLite database*
-      a relational database with set tables and data tables, linked by univocal 
-      relations.
-   - *Blank Excel input data file/s*
-      one or more Excel file/s (depending on user's preference) with normalized 
-      exogenous data tables, to be filled by the user in the next step.
+   - **Blank SQLite database**: a relational database with *set tables* and *data 
+     tables*, linked by univocal relations.
+   - **Blank Excel input data file/s**: one or more Excel file/s (depending on user's 
+     preference) with *exogenous data tables* printed out as normalized data tables,
+     to be filled by the user (see :ref:`step 7 <fill-exogenous-data>`).
 
    APIs:
       - :py:func:`cvxlab.Model.load_model_coordinates`
@@ -130,22 +121,25 @@ Step by step description of the CVXlab modeling workflow:
    Once this step is completed, the numerical model can be generated and solved.
 
 8. :ref:`numerical-problem-init`: this step includes fetching exogenous data from
-   excel input data file/s to the model SQLite database, loading and validating 
-   symbolic problem/s from model settings, and generating the numerical problem/s
-   (based on *CVXPY* library).
+   excel input data file/s to the model SQLite database, loading symbolic problem/s 
+   from model settings, and generating the numerical problem/s (as *CVXPY* problem 
+   object).
+   During the problem generation step, a comprehensive validation of symbolic problem 
+   and model data is performed to ensure that the symbolic problem is consistently 
+   defined, and that all necessary data entries are correctly provided.
 
    APIs:
       - :py:func:`cvxlab.Model.load_exogenous_data_to_sqlite_database`
       - :py:func:`cvxlab.Model.initialize_problems`
 
 9. :ref:`numerical-problem-run`: in this step, the numerical problem/s are solved
-   based on user settings, including the adopted solver, the related verbosity level, 
-   and other settings.
+   based on user settings, including selection of the adopted solver, the related 
+   verbosity level, and other numerical settings.
 
    API: :py:func:`cvxlab.Model.run_model`
 
 10. :ref:`export-model-results`: in case numerical problem/s have successfully
-    solved, numerical results are exported to the endogenous data tables of the 
+    solved, numerical results are exported to endogenous data tables of the 
     SQLite database.
 
     API: :py:func:`cvxlab.Model.load_results_to_database`
@@ -191,7 +185,7 @@ Step by step description of the CVXlab modeling workflow:
 
    Constructor: :py:class:`cvxlab.Model`
 
-2. :ref:`fill-exogenous-data`: (optional) in this step, user may update exogenous 
+2. :ref:`fill-exogenous-data`: (**optional**) in this step, user may update exogenous 
    model data in the Excel file/s. This step is especially useful in case of 
    multiple consecutive model runs, where only exogenous data are changed.
    If needed, one or more blank input data file/s can be re-generated from the 
@@ -199,7 +193,7 @@ Step by step description of the CVXlab modeling workflow:
 
    API: :py:func:`cvxlab.Model.generate_input_data_files`
 
-3. :ref:`numerical-problem-init`: (optional) this step needs to be made in case
+3. :ref:`numerical-problem-init`: (**optional**) this step needs to be made in case
    of exogenous data have updated (see :ref:`Fill exogenous model data 
    <fill-exogenous-data>`). It fetches exogenous data from the Excel input data 
    files to the SQLite database, updating data in numerical problem/s variables.
