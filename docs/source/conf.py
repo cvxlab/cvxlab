@@ -25,6 +25,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",   # For Google or NumPy style
     "sphinx.ext.viewcode",   # Link to source code
+    "sphinx.ext.mathjax",    # Add this for math rendering
     "sphinxcontrib.mermaid",  # For mermaid diagrams
     'myst_nb',             # For Jupyter Notebook support
 ]
@@ -32,6 +33,7 @@ extensions = [
 templates_path = ['_templates']
 exclude_patterns = []
 nb_execution_mode = "off"
+autodoc_mock_imports = []  # Add problematic imports here if needed
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
