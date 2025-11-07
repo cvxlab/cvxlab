@@ -7,8 +7,15 @@ build:
 
 python:
   install:
-    - requirements: docs/requirements.txt
+    # Install your package with the docs extra to get all doc deps from pyproject
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
 
 sphinx:
   configuration: docs/source/conf.py
   fail_on_warning: false
+
+formats:
+  - pdf

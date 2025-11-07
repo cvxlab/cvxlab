@@ -6,17 +6,18 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-from cvxlab import __version__
-import os
-import sys
-sys.path.insert(0, os.path.abspath('../../cvxlab/'))
-
+from importlib.metadata import version as pkg_version
 
 project = 'CVXlab'
 copyright = '2025, Matteo V. Rocco'
 author = 'Matteo V. Rocco'
 github_url = "https://github.com/cvxlab/cvxlab"
-version = __version__
+
+# Avoid importing the package; read version from metadata
+try:
+    version = pkg_version("cvxlab")
+except Exception:
+    version = "development"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -32,8 +33,12 @@ extensions = [
 
 templates_path = ['_templates']
 exclude_patterns = []
+
+# Do not execute notebooks during doc build
 nb_execution_mode = "off"
-autodoc_mock_imports = []  # Add problematic imports here if needed
+
+# Mock optional/heavy deps that are not available on RTD
+autodoc_mock_imports = ["gurobipy"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
