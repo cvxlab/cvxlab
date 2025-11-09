@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cvxlab"
-version = "1.0.0"
+version = "1.0.0b1"
 description = "A Python-embedded, open-source modeling laboratory for convex numerical optimization problems"
 authors = [
     {name = "Matteo V. Rocco", email = "matteovincenzo.rocco@polimi.it"}
