@@ -1,4 +1,4 @@
-![CVXlab Logo](docs/images/logo_10-25/png/CVXlab_logo_260925-02.png)
+![CVXlab Logo](docs/source/_static/CVXlab_logo_dark.png)
 
 CVXlab is an open-source Python laboratory for modeling and solving convex optimization problems. 
 It extends [cvxpy](https://www.cvxpy.org/) with user-friendly interfaces, integrated data 
@@ -40,7 +40,7 @@ CVXlab allows you to define optimization problems using:
 The figure below provides a synthetic and simplified overview of the CVXlab modeling 
 process.
 
-![CVXlab workflow](cvxlab\docs\source\_static\CVXlab_nutshell.png)
+![CVXlab workflow](docs/source/_static/CVXlab_nutshell.png)
 
 In generating and handling a CVXlab model, the user must follow the five fundamental
 activities summarized below:
