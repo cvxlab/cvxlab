@@ -4,18 +4,9 @@ CVXlab is an open-source Python laboratory for modeling and solving convex optim
 It extends [cvxpy](https://www.cvxpy.org/) with user-friendly interfaces, integrated data 
 management and support for multiple, interconnected optimization models.
 
-## Features
-- **General-purpose model generator**: Model problems as you would mathematically, without restrictive solver forms.
-- **Almost no-code required**: Build models using Excel or YAML—no coding required.
-- **Centralized data management**: Centralized data input/output via SQLite database.
-- **Multi-Model Support**: Generate and solve multiple integrated or decomposed optimization problems.
-- **Powerful engine embedded**: Built on cvxpy, [CVXPY documentation](https://www.cvxpy.org/tutorial/intro/index.html).
-
 ## Table of Contents
-- [Features](#features)
 - [Installation](#installation)
-- [Quickstart](#quickstart)
-- [Examples](#examples)
+- [Quick Overview](#quick-overview)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [Community & Support](#community--support)
@@ -23,55 +14,74 @@ management and support for multiple, interconnected optimization models.
 - [Citing](#citing)
 
 ## Installation
-Install CVXlab from the project root:
+**From PyPI (once published):**
 ```bash
-pip install .
+pip install cvxlab
 ```
-Or install from source:
+**From source (for development):**
 ```bash
-git clone https://github.com/your-repo/cvxlab.git
+git clone https://github.com/cvxlab/cvxlab.git
 cd cvxlab
-pip install .
+pip install -e .[docs]
 ```
+See the [Installation Guide](https://cvxlab.readthedocs.io/en/latest/installation.html) 
+for detailed instructions.
 
-## Quickstart
-Here's a minimal example to get started:
-```python
-import cvxlab
+## Quick Overview
+CVXlab allows you to define optimization problems using:
+- **General-purpose model generator**: Model problems as you would mathematically, without restrictive solver forms.
+- **Almost no-code required**: Build models using Excel or YAML—no coding required.
+- **Centralized data management**: Centralized data input/output via SQLite database.
+- **Multi-Model Support**: Generate and solve multiple integrated or decomposed optimization problems.
+- **Powerful engine embedded**: Built on cvxpy package, leveraging its extensive solver support.
 
-# Define your optimization problem
-# ...existing code...
+**Typical workflow:**
 
-# Solve the problem
-# ...existing code...
-```
-See the [Usage Guide](usage.rst) for detailed instructions.
+The figure below provides a synthetic and simplified overview of the CVXlab modeling 
+process.
 
-## Examples
-Explore example scripts and notebooks:
-- [Example Script 1](examples/example_script1.py): Basic optimization workflow.
-- [Example Script 2](examples/example_script2.py): Advanced modeling features.
-- [Example Notebook 1](examples/example_notebook1.ipynb): Interactive problem setup.
-- [Example Notebook 2](examples/example_notebook2.ipynb): Data integration with Excel/SQLite.
+![CVXlab workflow](docs/source/_static/cvxlab_in_a_nutshell.png)
+
+In generating and handling a CVXlab model, the user must follow the five fundamental
+activities summarized below:
+
+- The user **defines the model settings** and the related structure: model scope, 
+  structure of variables, and list of mathematical expressions, including equalities,
+  inequalities and (eventually) objective function. This activity requires almost no
+  coding, as model definition can be performed via Excel files or YAML configuration 
+  files.
+- The user proceeds by **generating a CVXlab Model object**, consisting in a *Python* 
+  class instance embedding all the model settings and the methods useful to manage 
+  the model. At the same time, other items are generated, including the **SQLite 
+  database file** (to store all model data), and the Excel files serving as blank 
+  templates for collecting exogenous data from the user. 
+- The user **feeds input data** to SQLite database through blank Excel template 
+  files. Specifically, user defines the data input required to characterize exogenous 
+  model variables.
+- The **numerical problem is generated**, exogenous data fetched from the database, 
+  and the problem is solved through CVXPY engine.
+- If problem is successfuly solved, **results are finally exported** to the database.
+  Due to the structure of the relational database, it can be easily linked and 
+  inspected via Excel or SQL queries, or imported into Business Intelligence tools 
+  (such as *PowerBI* or *Tableau*) for more elaborated data visualization and analysis.
 
 ## Documentation
-Full documentation is available in the [docs](docs/) folder and [usage.rst](usage.rst).
+Full documentation is available at [cvxlab.readthedocs.io](https://cvxlab.readthedocs.io/en/latest/).
+You can also browse the source documentation in the [docs/source](docs/source) directory.
 
 ## Contributing
-We welcome contributions from the community! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions from the community! Please see [CONTRIBUTING.md](docs/source/contributing.md) 
+for guidelines.
 
 ## Community & Support
-- **Chat**: Join us on [Discord](https://discord.gg/4urRQeGBCr)
-- **Discussions**: [GitHub Discussions](https://github.com/your-repo/cvxlab/discussions)
-- **Issues**: [GitHub Issues](https://github.com/your-repo/cvxlab/issues)
-
-Please be respectful and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+Submit issues and ideas for improvements in GitHub [GitHub Issues](https://github.com/your-repo/cvxlab/issues)
 
 ## License
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
 
 ## Citing
-If you use CVXlab in academic work, please cite our papers. For industry use, we'd love to hear your feedback—reach out via Discord or email.
+If you use CVXlab in academic work, please cite our papers. For industry use, 
+we'd love to hear your feedback—reach out via email (matteovincenzo.rocco@polimi.it).
 
 
 
