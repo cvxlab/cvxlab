@@ -13,9 +13,17 @@ to update environment.yml based on current environment
 (terminal) conda env export --no-builds > environment.yml
 
 to install package locally for edits and developments
-- Build the package (from the package root):
-  (terminal) python setup.py sdist bdist_wheel
-- Install the package in editable mode:
-  (terminal) python -m pip install -e .
-- import the package and then work
+  - In case of previous local installation, remove the old version
+  (terminal) python -m pip uninstall cvxlab -y
+  - Install the package
+  (terminal) python -m pip install -e .[docs]
 
+to build source and wheel distributions for PyPI release:
+  - Create distribution files in the `dist/` directory.
+  (terminal) python -m pip install --upgrade build
+  (terminal) python -m build
+  - Upload to PyPI (requires account and authentication):
+  (terminal) python -m pip install --upgrade twine
+  (terminal) python -m twine upload dist/*
+  - test PyPI (recommended before official release):
+  (terminal) python -m twine upload --repository testpypi dist/*

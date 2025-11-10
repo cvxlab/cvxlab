@@ -5,6 +5,7 @@ Model class and a set of utility functions for managing model directories.
 The module also includes metadata about the package such as authorship and 
 licensing information.
 """
+from importlib.metadata import version, PackageNotFoundError
 
 from cvxlab.backend.model import Model
 from cvxlab.defaults import Defaults
@@ -14,7 +15,12 @@ from cvxlab.support.model_directory import (
     transfer_setup_info_xlsx,
     handle_model_instance
 )
-from .version import __version__
+
+
+try:
+    __version__ = version("cvxlab")
+except PackageNotFoundError:
+    __version__ = "Package not found"
 
 __authors__ = "'Matteo V. Rocco'"
 __collaborators__ = """

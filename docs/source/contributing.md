@@ -39,12 +39,12 @@ We welcome new feature suggestions! Please open an issue on our [GitHub Issues](
 2. **Create and activate the development environment:**
    ```sh
    conda env create -f environment.yml
-   conda activate cvxlab
+   conda activate cvxlab_env
    ```
 
 3. **Install the package in editable mode:**
    ```sh
-   python -m pip install -e .
+   python -m pip install -e .[docs]
    ```
 
 ---
@@ -54,20 +54,12 @@ We welcome new feature suggestions! Please open an issue on our [GitHub Issues](
 - When modify/improve the package, follow existing code style and conventions.
 - Add or update docstrings and documentation as needed.
 - Add new tests for new features or bug fixes.
-- Before submitting, run all tests (make sure the `cvxlab` conda environment is activated):
+- Before submitting, run all tests (make sure the `cvxlab_env` conda environment 
+   is activated):
   ```sh
-  conda activate cvxlab
+  conda activate cvxlab_env
   python -m pytest
   ```
-
----
-
-## Building the Package
-
-To build source and wheel distributions:
-```sh
-python setup.py sdist bdist_wheel
-```
 
 ---
 
