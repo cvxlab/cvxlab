@@ -27,7 +27,7 @@ class DataTable:
     - logger (Logger): Logger object for logging information, warnings, and errors.
     - name (str): Name of the data table.
     - description (Optional[str]): Metadata for the data table. Default is None.
-    - type (Optional[str | dict]): Type of allowed data defined in Constants class. 
+    - type (Optional[str | dict]): Type of allowed data defined in Defaults class. 
         Default is None.
     - integer (Optional[bool]): Flag indicating if the data table contains integer
         values. Default is None.

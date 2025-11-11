@@ -17,7 +17,7 @@ from cvxlab.backend.data_table import DataTable
 from cvxlab.backend.index import Index
 from cvxlab.backend.set_table import SetTable
 from cvxlab.backend.variable import Variable
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
 from cvxlab.support import util
@@ -97,7 +97,7 @@ class Database:
         Sets that are defined as copies of other sets (i.e., have a 'copy_from'
         attribute) are not included in the new Excel file.
         """
-        sets_file_name = Constants.ConfigFiles.SETS_FILE
+        sets_file_name = Defaults.ConfigFiles.SETS_FILE
 
         if Path(self.paths['sets_excel_file']).exists():
             if not self.settings['use_existing_data']:
@@ -166,12 +166,12 @@ class Database:
                 set_name = set_instance.name
                 table_name = set_instance.table_name
                 table_headers = set_instance.table_headers
-                table_id_header = Constants.Labels.ID_FIELD['id']
+                table_id_header = Defaults.Labels.ID_FIELD['id']
 
                 if table_headers is not None:
                     if table_id_header not in table_headers.values():
                         table_headers = {
-                            **Constants.Labels.ID_FIELD, **table_headers}
+                            **Defaults.Labels.ID_FIELD, **table_headers}
 
                     self.sqltools.create_table(table_name, table_headers)
 
@@ -202,7 +202,7 @@ class Database:
                     table_name = set_instance.table_name
                     dataframe = set_instance.data.copy()
                     table_headers = set_instance.table_headers
-                    table_id_header = Constants.Labels.ID_FIELD['id']
+                    table_id_header = Defaults.Labels.ID_FIELD['id']
                 else:
                     msg = f"Data of set '{set_instance.name}' are not defined."
                     self.logger.error(msg)
@@ -231,9 +231,9 @@ class Database:
         """
         self.logger.debug(
             "Generation of empty data tables in "
-            f"'{Constants.ConfigFiles.SQLITE_DATABASE_FILE}'.")
+            f"'{Defaults.ConfigFiles.SQLITE_DATABASE_FILE}'.")
 
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         with db_handler(self.sqltools):
             for table_key, table in self.index.data.items():
@@ -267,10 +267,10 @@ class Database:
         """
         self.logger.debug(
             "Adding sets information to SQLite data tables in "
-            f"{Constants.ConfigFiles.SQLITE_DATABASE_FILE}."
+            f"{Defaults.ConfigFiles.SQLITE_DATABASE_FILE}."
         )
 
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         with db_handler(self.sqltools):
             for table_key, table in self.index.data.items():
@@ -338,8 +338,8 @@ class Database:
 
                 self.sqltools.add_table_column(
                     table_name=table_key,
-                    column_name=Constants.Labels.VALUES_FIELD['values'][0],
-                    column_type=Constants.Labels.VALUES_FIELD['values'][1],
+                    column_name=Defaults.Labels.VALUES_FIELD['values'][0],
+                    column_type=Defaults.Labels.VALUES_FIELD['values'][1],
                 )
 
     def clear_database_tables(
@@ -363,14 +363,14 @@ class Database:
                 tables_to_clear = existing_tables
                 self.logger.info(
                     "Clearing all tables from SQLite database "
-                    f"{Constants.ConfigFiles.SQLITE_DATABASE_FILE}"
+                    f"{Defaults.ConfigFiles.SQLITE_DATABASE_FILE}"
                 )
 
             else:
                 tables_to_clear = list(table_names)
                 self.logger.info(
                     f"Clearing tables '{tables_to_clear}' from SQLite database "
-                    f"{Constants.ConfigFiles.SQLITE_DATABASE_FILE}"
+                    f"{Defaults.ConfigFiles.SQLITE_DATABASE_FILE}"
                 )
 
             for table_name in tables_to_clear:
@@ -396,8 +396,8 @@ class Database:
                 input files for. If empty, all exogenous data tables in the Index
                 are processed. Defaults to an empty list.
         """
-        file_extension = Constants.ConfigFiles.DATA_FILES_EXTENSION
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        file_extension = Defaults.ConfigFiles.DATA_FILES_EXTENSION
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         if not Path(self.paths['input_data_dir']).exists():
             self.files.create_dir(self.paths['input_data_dir'])
@@ -418,7 +418,7 @@ class Database:
                 if self.settings['multiple_input_files']:
                     output_file_name = table_key + file_extension
                 else:
-                    output_file_name = Constants.ConfigFiles.INPUT_DATA_FILE
+                    output_file_name = Defaults.ConfigFiles.INPUT_DATA_FILE
 
                 self.sqltools.table_to_excel(
                     excel_filename=output_file_name,
@@ -452,8 +452,8 @@ class Database:
             "Loading data from input file/s filled by the user "
             "to SQLite database.")
 
-        file_extension = Constants.ConfigFiles.DATA_FILES_EXTENSION
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        file_extension = Defaults.ConfigFiles.DATA_FILES_EXTENSION
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         if table_key_list == []:
             table_key_list = self.index.data.keys()
@@ -499,7 +499,7 @@ class Database:
         else:
             data = self.files.excel_to_dataframes_dict(
                 excel_file_dir_path=self.paths['input_data_dir'],
-                excel_file_name=Constants.ConfigFiles.INPUT_DATA_FILE,
+                excel_file_name=Defaults.ConfigFiles.INPUT_DATA_FILE,
             )
 
             with db_handler(self.sqltools):
@@ -544,8 +544,8 @@ class Database:
             "Filling blank data in SQLite data tables based on the 'blank_fill' "
             "attribute of each variable.")
 
-        blank_fill_key = Constants.Labels.BLANK_FILL_KEY
-        value_header = Constants.Labels.VALUES_FIELD['values'][0]
+        blank_fill_key = Defaults.Labels.BLANK_FILL_KEY
+        value_header = Defaults.Labels.VALUES_FIELD['values'][0]
 
         if table_key_list == []:
             table_key_list = self.index.data.keys()
@@ -612,7 +612,7 @@ class Database:
             force_overwrite (bool, optional): If True, forces the overwrite of
                 existing data. Defaults to False.
         """
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         with db_handler(self.sqltools):
             for table_key, table in self.index.data.items():
@@ -627,7 +627,7 @@ class Database:
                     self.sqltools.delete_table_column_data(
                         table_name=table_key,
                         force_operation=force_overwrite,
-                        column_name=Constants.Labels.VALUES_FIELD['values'][0],
+                        column_name=Defaults.Labels.VALUES_FIELD['values'][0],
                     )
 
     def __repr__(self):

@@ -10,6 +10,7 @@ from types import NoneType
 from typing import List, Dict, Any, Literal, Optional
 from pathlib import Path
 
+import importlib.util
 import os
 import shutil
 import json
@@ -18,7 +19,7 @@ import yaml
 import pandas as pd
 import numpy as np
 
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
 from cvxlab.support import util
@@ -120,7 +121,7 @@ class FileManager:
                 f"Folder '{dir_name}' does not exist. The folder cannot be erased.")
             return False
 
-    def load_file(
+    def load_structured_file(
             self,
             file_name: str,
             dir_path: Path,
@@ -156,6 +157,35 @@ class FileManager:
             self.logger.error(
                 f"Could not load file '{file_name}': {str(error)}")
             return {}
+
+    def load_functions_from_module(
+            self,
+            file_name: str,
+            dir_path: Path | str,
+    ) -> list[callable]:
+        """Load functions from a Python module.
+
+        Returns:
+            list[callable]: List of functions defined in the file.
+        """
+        file_path = Path(dir_path) / file_name
+
+        if not os.path.exists(file_path):
+            self.logger.error(f"File '{file_name}' does not exist.")
+            return []
+
+        spec = importlib.util.spec_from_file_location(
+            "module.name", file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        functions_list = [
+            getattr(module, attr) for attr in dir(module)
+            if callable(getattr(module, attr))
+        ]
+
+        self.logger.debug(f"Functions loaded from '{file_name}'.")
+        return functions_list
 
     def erase_file(
             self,
@@ -523,8 +553,8 @@ class FileManager:
         file_path = Path(excel_file_dir_path, excel_file_name)
 
         if set_values_type:
-            values_dtype = Constants.NumericalSettings.STD_VALUES_TYPE
-            values_name = Constants.Labels.VALUES_FIELD['values'][0]
+            values_dtype = Defaults.NumericalSettings.STD_VALUES_TYPE
+            values_name = Defaults.Labels.VALUES_FIELD['values'][0]
 
         if not os.path.exists(file_path):
             self.logger.error(f'{excel_file_name} does not exist.')
@@ -624,7 +654,7 @@ class FileManager:
             dataframe.replace('', None, inplace=True)
             # replace true/True/TRUE/false/False/FALSE with bool
             dataframe.replace(
-                Constants.DefaultStructures.ALLOWED_BOOL,
+                Defaults.DefaultStructures.ALLOWED_BOOL,
                 inplace=True
             )
 
@@ -655,7 +685,7 @@ class FileManager:
         Raises:
             SettingsError: If file or tab is empty or source not recognized.
         """
-        available_sources = Constants.ConfigFiles.AVAILABLE_SOURCES
+        available_sources = Defaults.ConfigFiles.AVAILABLE_SOURCES
         util.validate_selection(
             selection=source,
             valid_selections=available_sources
@@ -663,7 +693,7 @@ class FileManager:
 
         if source == 'yml':
             file_name = structure_key + '.yml'
-            data = self.load_file(file_name, dir_path)
+            data = self.load_structured_file(file_name, dir_path)
 
             if not data:
                 msg = f"File '{file_name}' is empty."
@@ -671,7 +701,7 @@ class FileManager:
                 raise exc.SettingsError(msg)
 
         elif source == 'xlsx':
-            file_name = Constants.ConfigFiles.SETUP_XLSX_FILE
+            file_name = Defaults.ConfigFiles.SETUP_XLSX_FILE
             raw_data = self.excel_tab_to_dataframe(
                 file_name, dir_path, structure_key)
 
@@ -680,9 +710,9 @@ class FileManager:
                 self.logger.error(msg)
                 raise exc.SettingsError(msg)
 
-            data_pivot_keys = Constants.DefaultStructures.XLSX_PIVOT_KEYS
+            data_pivot_keys = Defaults.DefaultStructures.XLSX_PIVOT_KEYS
             merge_dict = True if \
-                structure_key == Constants.ConfigFiles.SETUP_INFO[2] else False
+                structure_key == Defaults.ConfigFiles.SETUP_INFO[2] else False
 
             skip_process_str = True if structure_key == 'problem' else False
 
@@ -719,8 +749,8 @@ class FileManager:
             Dict[str, str]: Dictionary of problems found.
         """
         problems = {}
-        optional_label = Constants.DefaultStructures.OPTIONAL
-        any_label = Constants.DefaultStructures.ANY
+        optional_label = Defaults.DefaultStructures.OPTIONAL
+        any_label = Defaults.DefaultStructures.ANY
         all_optional_fields = False
 
         if all(

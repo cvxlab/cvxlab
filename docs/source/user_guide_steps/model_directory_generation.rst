@@ -15,8 +15,9 @@ in the case of :ref:`model generation from scratch <model_generation_from_scratc
   files, data input files, database, etc.).
 - It is possible to choose between YAML (*.yml*) or Excel (*.xlsx*) templates for 
   setup files, depending on user's workflow preferences.
-- A Jupyter notebook can be included to guide the user through the modeling process 
-  interactively.
+- Template files for user-defined symbolic operators and constants types can be 
+  optionally included to facilitate their definition and integration into the model 
+  without modifying the CVXlab repository.
 
 **API Reference**
 
@@ -32,7 +33,8 @@ in the case of :ref:`model generation from scratch <model_generation_from_scratc
         model_dir_name="my_model",
         main_dir_path="path/to/parent",
         template_file_type="yml",  # or "xlsx"
-        export_tutorial=True
+        include_user_operators_template=False,
+        include_user_constants_template=False,
     )
 
 **What's Generated**
@@ -41,4 +43,4 @@ in the case of :ref:`model generation from scratch <model_generation_from_scratc
 - Setup file/s in the chosen format:
     - case of YAML: *structure_sets.yml*, *structure_variables.yml*, *problem.yml*.
     - case of Excel: *model_settings.xlsx* (with the above information organized in three tabs).
-- Optionally, a Jupyter notebook to assist with the modeling process.
+- Optionally, template files for user-defined symbolic operators and constants types.

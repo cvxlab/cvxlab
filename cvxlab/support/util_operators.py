@@ -1,15 +1,14 @@
 """Module with allowed functions to be used as symbolic operators.
 
-This module provides various utility functions that are defined to support calculations 
-in symbolic problems, ranging from simple operations like transposition and diagonal
-extraction to more complex operations such as generating special matrices, 
+This module provides various built-in utility functions that are defined to support 
+calculations in symbolic problems, ranging from simple operations like transposition 
+and diagonal extraction to more complex operations such as generating special matrices, 
 reshaping arrays, or any special numerical manipulation that can be hardly defined
 based on symbolic expressions.
 
-To add a new operator, simply define a regular function, using the `@operator` 
-decorator to register the function with a specific name. This allows the function 
-to be easily referenced and used within the symbolic framework as any other regular
-operator.
+Functions are registered as operators in Constants class, and can be directly
+used in defining symbolic problem expressions simply by writing its name followed 
+by parentheses containing the required arguments (defined as problems variables).
 """
 from typing import Optional
 from scipy.sparse import issparse
@@ -20,7 +19,15 @@ _OPERATORS_REGISTRY = {}
 
 
 def operator(name: str):
-    def decorator(func):
+    """Decorator to register a symbolic operator function.
+
+    Args:
+        name (str): The name of the operator to register.
+
+    Returns:
+        callable: The decorated function.
+    """
+    def decorator(func: callable) -> callable:
         _OPERATORS_REGISTRY[name] = func
         return func
     return decorator
@@ -28,37 +35,92 @@ def operator(name: str):
 
 @operator('tran')
 def transposition(x):
-    """Transpose a matrix or vector."""
+    """Transpose a matrix or vector.
+
+    Args:
+        x (cp.Parameter | cp.Expression): The matrix or vector to transpose.
+
+    Returns:
+        cp.Parameter | cp.Expression: The transposed matrix or vector.
+    """
     return cp.transpose(x)
 
 
 @operator('diag')
 def diagonal(x):
-    """Extract the diagonal of a matrix or create a diagonal matrix from a vector."""
+    """Extract the diagonal of a matrix or create a diagonal matrix from a vector.
+
+    If x is a matrix, extracts its diagonal as a vector.
+    If x is a vector, creates a diagonal matrix with x on the diagonal.
+
+    Args:
+        x (cp.Parameter | cp.Expression): A matrix (to extract diagonal) or 
+            vector (to create diagonal matrix).
+
+    Returns:
+        cp.Parameter | cp.Expression: A vector containing the diagonal elements 
+            (if x is a matrix) or a diagonal matrix (if x is a vector).
+    """
     return cp.diag(x)
 
 
 @operator('sum')
 def summation(x, axis=None):
-    """Sum elements of a matrix or vector along a specified axis."""
+    """Sum elements of a matrix or vector along a specified axis.
+
+    Args:
+        x (cp.Parameter | cp.Expression): The matrix or vector to sum.
+        axis (Optional[int]): The axis along which to sum. If None, sums all 
+            elements. If 0, sums along columns. If 1, sums along rows.
+
+    Returns:
+        cp.Parameter | cp.Expression: The sum of elements along the specified 
+            axis, or a scalar if axis is None.
+    """
     return cp.sum(x, axis=axis)
 
 
 @operator('mult')
 def multiplication(x, y):
-    """Element-wise multiplication of two matrices or vectors."""
+    """Element-wise multiplication of two matrices or vectors.
+
+    Performs element-wise (Hadamard) multiplication between x and y.
+
+    Args:
+        x (cp.Parameter | cp.Expression): The first matrix or vector.
+        y (cp.Parameter | cp.Expression): The second matrix or vector.
+            Must have the same shape as x.
+
+    Returns:
+        cp.Parameter | cp.Expression: A matrix or vector containing the 
+            element-wise product of x and y.
+    """
     return cp.multiply(x, y)
 
 
 @operator('Minimize')
 def minimize(x):
-    """Create a minimization objective."""
+    """Create a minimization objective.
+
+    Args:
+        x (cp.Expression): The scalar expression to minimize.
+
+    Returns:
+        cp.Minimize: A cvxpy Minimize objective function.
+    """
     return cp.Minimize(x)
 
 
 @operator('Maximize')
 def maximize(x):
-    """Create a maximization objective."""
+    """Create a maximization objective.
+
+    Args:
+        x (cp.Expression): The scalar expression to maximize.
+
+    Returns:
+        cp.Maximize: A cvxpy Maximize objective function.
+    """
     return cp.Maximize(x)
 
 

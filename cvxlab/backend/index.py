@@ -17,7 +17,7 @@ import cvxpy as cp
 from cvxlab.backend.data_table import DataTable
 from cvxlab.backend.set_table import SetTable
 from cvxlab.backend.variable import Variable
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
 from cvxlab.support import util
@@ -50,7 +50,7 @@ class Index:
 
         This constructor initializes the Index with a logger, file manager, paths
         dictionary. It initializes sets and data attributes, loads and validates 
-        structures of such items based on default structures provided in Constants. 
+        structures of such items based on default structures provided in Defaults. 
         Once sets and data are loaded, it checks for coherence between them and 
         completes data tables with sets information. The method then generates variables 
         objects and fetches their coordinates information.
@@ -67,7 +67,7 @@ class Index:
         self.settings = settings
         self.paths = paths
 
-        structures = Constants.ConfigFiles.SETUP_INFO
+        structures = Defaults.ConfigFiles.SETUP_INFO
         self.sets = self.load_and_validate_structure(structures[0])
         self.data = self.load_and_validate_structure(structures[1])
 
@@ -94,7 +94,7 @@ class Index:
                 the required information is not available.
         """
         sets_split_problem = {}
-        name_header = Constants.Labels.NAME
+        name_header = Defaults.Labels.NAME
 
         for key, set_table in self.sets.items():
             set_table: SetTable
@@ -146,7 +146,7 @@ class Index:
         Returns:
             List[str]: List of exogenous data table identifiers.
         """
-        var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         result = []
         for key, data_table in self.data.items():
@@ -200,7 +200,7 @@ class Index:
 
         scenarios_coordinates = {}
         list_sets_split_problem = list(self.sets_split_problem_dict.values())
-        scenarios_coords_header = Constants.Labels.SCENARIO_COORDINATES
+        scenarios_coords_header = Defaults.Labels.SCENARIO_COORDINATES
 
         for set_key, set_header in self.sets_split_problem_dict.items():
             set_table: SetTable = self.sets[set_key]
@@ -237,7 +237,7 @@ class Index:
 
         This method loads and validates a specified data structure, which can be
         either sets or data tables, based on the provided key. It retrieves the
-        appropriate structure and validation schema from predefined constants,
+        appropriate structure and validation schema from predefined defaults,
         loads the data from the configured source, and validates each entry against
         the corresponding schema. If any entries fail validation, it logs the
         issues and raises a SettingsError. Upon successful validation, it transforms
@@ -247,7 +247,7 @@ class Index:
         Args:
             data_structure_key (str): Key indicating which data structure to load
                 and validate. Must be one of the predefined structure keys available
-                in Constants.ConfigFiles.SETUP_INFO.
+                in Defaults.ConfigFiles.SETUP_INFO.
 
         Raises:
             exc.SettingsError: If the passed data structure key is not recognized.
@@ -258,8 +258,8 @@ class Index:
                 data structure, with keys as identifiers and values as either
                 SetTable or DataTable objects.
         """
-        structures = Constants.DefaultStructures
-        config = Constants.ConfigFiles
+        structures = Defaults.DefaultStructures
+        config = Defaults.ConfigFiles
 
         source = self.settings['model_settings_from']
 
@@ -337,7 +337,7 @@ class Index:
 
         The following checks are performed looping over data tables:
 
-        - Data tables must be of the allowed type (defined in Constants class).
+        - Data tables must be of the allowed type (defined in Defaults class).
         - Exogenous data tables cannot be of 'integer' type.
         - Coordinates defining data tables must be valid (defined among sets).
         - All inter-problem sets must be embedded in endogenous data tables coordinates.
@@ -345,7 +345,7 @@ class Index:
         For each data table, variables are looped and the following checks performed:
 
         - Variable property 'value' can be only assigned for 'constant' type, and 
-            it must be of the allowed type (defined in Constant class).
+            it must be of the allowed type (defined in Defaults class).
         - Variable property 'blank_fill' can be only defined for exogenous variables.
         - Other variable properties can be defined only as related data table 
             coordinates.
@@ -360,15 +360,15 @@ class Index:
             exc.SettingsError: Raised with the list of all exceptions collected
                 during the coherence checks, identifying mistakes in model settings.
         """
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
-        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS.keys()
-        allowed_dims = list(Constants.SymbolicDefinitions.DIMENSIONS.values())
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
+        allowed_constants = Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS.keys()
+        allowed_dims = list(Defaults.SymbolicDefinitions.DIMENSIONS.values())
 
-        coordinates_key = Constants.Labels.COORDINATES_KEY
-        filters_key = Constants.Labels.FILTERS
-        variables_info_key = Constants.Labels.VARIABLES_INFO_KEY
-        value_key = Constants.Labels.VALUE_KEY
-        blank_fill_key = Constants.Labels.BLANK_FILL_KEY
+        coordinates_key = Defaults.Labels.COORDINATES_KEY
+        filters_key = Defaults.Labels.FILTERS
+        variables_info_key = Defaults.Labels.VARIABLES_INFO_KEY
+        value_key = Defaults.Labels.VALUE_KEY
+        blank_fill_key = Defaults.Labels.BLANK_FILL_KEY
 
         problems = {}
 
@@ -522,7 +522,7 @@ class Index:
 
         for table in self.data.values():
             table: DataTable
-            set_headers_key = Constants.Labels.NAME
+            set_headers_key = Defaults.Labels.NAME
 
             table.table_headers = {}
             for set_key in table.coordinates:
@@ -537,7 +537,7 @@ class Index:
 
             table.table_headers = util.add_item_to_dict(
                 dictionary=table.table_headers,
-                item=Constants.Labels.ID_FIELD,
+                item=Defaults.Labels.ID_FIELD,
                 position=0,
             )
             table.coordinates_headers = {
@@ -606,7 +606,7 @@ class Index:
         """
         self.logger.debug("Fetching 'coordinates_info' to Index.variables.")
 
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         for var_key, variable in self.variables.items():
             variable: Variable
@@ -631,7 +631,7 @@ class Index:
             for key, value in related_table_headers.items():
                 table_header = value[0]
 
-                if key in Constants.Labels.ID_FIELD:
+                if key in Defaults.Labels.ID_FIELD:
                     continue
                 if key == variable.shape_sets[0]:
                     rows[key] = table_header
@@ -782,7 +782,7 @@ class Index:
         sets_excel_data = self.files.excel_to_dataframes_dict(
             excel_file_name=excel_file_name,
             excel_file_dir_path=excel_file_dir_path,
-            empty_data_fill=Constants.SymbolicDefinitions.STD_TEXT_DATA_FILL,
+            empty_data_fill=Defaults.SymbolicDefinitions.STD_TEXT_DATA_FILL,
         )
 
         sets_excel_keys = sets_excel_data.keys()
@@ -915,8 +915,8 @@ class Index:
         self.logger.debug(
             "Filtering variables coordinates in Index.variables.")
 
-        filter_label = Constants.Labels.FILTERS
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        filter_label = Defaults.Labels.FILTERS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         # only rows, cols and intra-problem sets can be filtered
         categories_to_filter = [
@@ -1025,8 +1025,8 @@ class Index:
             pd.DataFrame: A DataFrame containing the requested variable data, or
                 None if any issues are encountered.
         """
-        variable_header = Constants.Labels.CVXPY_VAR
-        allowed_var_types = Constants.SymbolicDefinitions.VARIABLE_TYPES
+        variable_header = Defaults.Labels.CVXPY_VAR
+        allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
         if var_key not in self.variables:
             self.logger.warning(

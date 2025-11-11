@@ -10,10 +10,9 @@ convert SQL data to formats usable by optimization tools like cvxpy.
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import cvxpy as cp
-import numpy as np
 import pandas as pd
 
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
 from cvxlab.support import util
@@ -27,11 +26,11 @@ class Variable:
     - logger (Logger): Logger object for logging information, warnings, and errors.
     - symbol (Optional[str]): The symbolic name of the variable.
     - type (Optional[str]): The type of the variable (available types defined 
-        in Constants.SymbolicDefinitions.VARIABLE_TYPES).
+        in Defaults.SymbolicDefinitions.VARIABLE_TYPES).
     - rows (Dict[str, Any]): Information about the rows dimension of the variable.
     - cols (Dict[str, Any]): Information about the columns dimension of the variable.
     - value (Optional[str]): Value type of the variable, only defined in case 
-        of constants (e.g. identity matrix, ...).
+        of Defaults (e.g. identity matrix, ...).
     - blank_fill (Optional[float]): Value to fill in case of missing data. Only 
         defined for exogenous variables, reducing effort in inserting numerical 
         data by the user.
@@ -111,13 +110,13 @@ class Variable:
         in the variable instance attributes. This method is called upon initialization 
         of the Variable class.
         """
-        value_key = Constants.Labels.VALUE_KEY
-        blank_fill_key = Constants.Labels.BLANK_FILL_KEY
-        filter_key = Constants.Labels.FILTERS
-        set_key = Constants.Labels.SET
-        dim_key = Constants.Labels.DIM
-        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        value_key = Defaults.Labels.VALUE_KEY
+        blank_fill_key = Defaults.Labels.BLANK_FILL_KEY
+        filter_key = Defaults.Labels.FILTERS
+        set_key = Defaults.Labels.SET
+        dim_key = Defaults.Labels.DIM
+        allowed_constants = Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if self.var_info is None:
             return
@@ -160,7 +159,7 @@ class Variable:
                 rows and cols of the variable. In of a monodimensional variable,
                 the missing dimension is represented by 1.
         """
-        set_key = Constants.Labels.SET
+        set_key = Defaults.Labels.SET
 
         if self.rows is None and self.cols is None:
             return []
@@ -176,7 +175,7 @@ class Variable:
         Returns:
             List[Union[str, int]]: A list containing the intra-problem sets keys.
         """
-        intra_dim_key = Constants.SymbolicDefinitions.DIMENSIONS['INTRA']
+        intra_dim_key = Defaults.SymbolicDefinitions.DIMENSIONS['INTRA']
 
         if self.coordinates_info[intra_dim_key] is None:
             return []
@@ -195,7 +194,7 @@ class Variable:
         Returns:
             Tuple[int]: A tuple containing the size of each dimension.
         """
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if not self.coordinates:
             return ()
@@ -220,7 +219,7 @@ class Variable:
         Returns:
             List[str]: A list containing labels for each dimension of the variable.
         """
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if not self.coordinates_info:
             return []
@@ -241,7 +240,7 @@ class Variable:
         Returns:
             List[List[str]]: Lists of items for each dimension.
         """
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if not self.coordinates:
             return []
@@ -276,7 +275,7 @@ class Variable:
             Dict[str]: A dictionary containing dimension name as keys and 
                 corresponding set name as values.
         """
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if not self.coordinates_info:
             return []
@@ -331,7 +330,7 @@ class Variable:
         Returns:
             Dict[str, str]: Dictionary representing the hierarchy of sets parsing.
         """
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if not self.coordinates_info:
             self.logger.warning(
@@ -355,7 +354,7 @@ class Variable:
             Dict[str, str]: Dictionary with parsing hierarchy keys and the related
                 list of items as values.
         """
-        dimensions = Constants.SymbolicDefinitions.DIMENSIONS
+        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if not self.coordinates_info:
             self.logger.warning(
@@ -416,7 +415,7 @@ class Variable:
             return []
 
         all_coords_w_headers = {}
-        for category in Constants.SymbolicDefinitions.DIMENSIONS.values():
+        for category in Defaults.SymbolicDefinitions.DIMENSIONS.values():
             coords_info = self.coordinates_info.get(category, {})
             coords = self.coordinates.get(category, {})
 
@@ -458,7 +457,7 @@ class Variable:
                 the cxvpy variable header is missing.
             KeyError: If the passed row number is out of bounds.
         """
-        cvxpy_var_header = Constants.Labels.CVXPY_VAR
+        cvxpy_var_header = Defaults.Labels.CVXPY_VAR
 
         if self.data is None \
                 or not isinstance(self.data, pd.DataFrame) \
@@ -499,7 +498,7 @@ class Variable:
         Returns:
             pd.DataFrame: data reshaped and pivoted to be used as cvxpy values.
         """
-        values_header = Constants.Labels.VALUES_FIELD['values'][0]
+        values_header = Defaults.Labels.VALUES_FIELD['values'][0]
 
         index_label, columns_label = self.dims_labels
         index_items, columns_items = self.dims_items
@@ -541,83 +540,29 @@ class Variable:
         values. Depending on the value type, the method either creates a constant 
         of the specified type or raises an error if the value type is not supported.
 
-        Constants allowed:
-
-        - 'sum_vector': summation vector (vector of 1s).
-        - 'identity': identity matrix.
-        - 'set_length': scalar representing the length of a set.
-        - 'arange_0': vector/matrix with a range from 0 up to dimension size.
-        - 'arange_1': vector/matrix with a range from 1 up to dimension size.
-        - 'lower_triangular': lower triangular matrix of 1s (inc. diagonal).
-
-        In case a new user-defined constant needs to be added:
-
-        - Define the constant in the Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
-            dictionary, specifying the factory function and any required arguments.
-        - Implement the related condition in this method.
+        NOTICE THAT the constant creation receives as argument the variable shape 
+        size only. More complex constants may require additional arguments, which can be 
+        added in future developments.
 
         Args:
             value_type (str): The type of the constant to be created. User-defined 
-            constants defined in: Constants.SymbolicDefinitions.USER_DEFINED_CONSTANTS
+            constants are defined in util_constants module and registered in
+            Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS.
 
         Raises:
             exc.SettingsError: If the provided value type is not supported.
-            exc.ConceptualModelError: If the shape of the variable is not 
-                suitable for creating the constant.
         """
-        allowed_constants = Constants.SymbolicDefinitions.ALLOWED_CONSTANTS
+        allowed_constants = Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS
 
-        util.validate_selection(
-            valid_selections=allowed_constants,
-            selection=value_type,
-        )
+        factory_function = allowed_constants[value_type]
 
-        factory_function, args = allowed_constants[value_type]
-
-        if value_type == 'sum_vector':
-            if self.is_vector:
-                return factory_function(self.shape_size, **args)
-            else:
-                msg = 'Summation vector must be a vector (one dimension). ' \
-                    'Check variable shape.'
-
-        elif value_type == 'identity':
-            if self.is_vector:
-                return factory_function(max(self.shape_size), **args)
-            else:
-                msg = 'Identity matrix must be defined by a unique set '\
-                    'as either rows or cols. Check variable shape.'
-
-        elif value_type == 'set_length':
-            if self.is_vector:
-                result = factory_function(self.shape_size, **args)
-                result_array = np.array(result)
-                if result_array.ndim == 0:
-                    result_array = result_array.reshape(-1, 1)
-                return result_array
-            else:
-                msg = 'One unique dimension can be set as row-col for the ' \
-                    'set_length variable .'
-
-        elif value_type in ['arange_0', 'arange_1']:
-            return factory_function(self.shape_size, **args)
-
-        elif value_type == 'lower_triangular':
-            if self.is_vector:
-                return factory_function(self.shape_size, **args)
-            else:
-                msg = 'Lower triangular matrix must be defined by a unique set '\
-                    'as either rows or cols. Check variable shape.'
-
-        else:
-            msg = f"Variable 'value': '{value_type}' not supported. " \
+        if value_type not in allowed_constants:
+            msg = f"Constant definition | type: '{value_type}' not supported. " \
                 f"Supported value types: {allowed_constants.keys()}"
             self.logger.error(msg)
             raise exc.SettingsError(msg)
 
-        if msg:
-            self.logger.error(msg)
-            raise exc.ConceptualModelError(msg)
+        return factory_function(self.shape_size)
 
     def __repr__(self) -> str:
         """Provide a string representation of the Variable object."""

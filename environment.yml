@@ -1,4 +1,4 @@
-name: cvxlab
+name: cvxlab_env
 channels:
   - defaults
 dependencies:

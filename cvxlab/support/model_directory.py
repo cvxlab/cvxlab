@@ -12,17 +12,21 @@ from pathlib import Path
 from typing import Literal
 
 from cvxlab.backend.model import Model
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.log_exc.logger import Logger
 from cvxlab.support import util
 from cvxlab.support.file_manager import FileManager
+
+
+files = FileManager(Logger())
 
 
 def create_model_dir(
     model_dir_name: str,
     main_dir_path: str,
     force_overwrite: bool = False,
-    export_tutorial: bool = False,
+    include_user_operators_template: bool = False,
+    include_user_constants_template: bool = False,
     template_file_type: Literal['yml', 'xlsx'] = 'yml',
 ) -> None:
     """Create a model directory with template configuration files.
@@ -31,7 +35,8 @@ def create_model_dir(
     the given main directory path. It can generate template configuration files
     in either YAML or Excel format. If the directory already exists, it can be
     overwritten based on user confirmation or the force_overwrite flag. Optionally,
-    a tutorial file can be copied into the new model directory.
+    supplementary files can be copied into the new model directory (user defined 
+    operators/constants functions template).  
 
     Args:
         model_dir_name (str): The name of the model directory to create.
@@ -39,8 +44,12 @@ def create_model_dir(
             directory will be created.
         force_overwrite (bool, optional): If True, overwrite existing directory
             without confirmation. Defaults to False.
-        export_tutorial (bool, optional): If True, copy a tutorial file into
-            the new model directory. Defaults to False.
+        include_user_operators_template (bool, optional): If True, copy a
+            user-defined operators template file into the new model directory.
+            Defaults to False.
+        include_user_constants_template (bool, optional): If True, copy a
+            user-defined constants template file into the new model directory.
+            Defaults to False.
         template_file_type (Literal['yml', 'xlsx'], optional): The type of
             template configuration file to generate ('yml' or 'xlsx').
             Defaults to 'yml'.
@@ -48,13 +57,17 @@ def create_model_dir(
     Raises:
         ValueError: If the template file type is unsupported.
     """
-    files = FileManager(Logger())
+    structures = Defaults.DefaultStructures
+    config_files = Defaults.ConfigFiles
+
     model_dir_path = Path(main_dir_path) / model_dir_name
 
-    files.logger.info(f"Generating model '{model_dir_name}' directory.")
+    files.logger.info(
+        f"Generating model '{model_dir_name}' directory with basic "
+        f"{template_file_type} configuration files.")
 
     util.validate_selection(
-        valid_selections=Constants.ConfigFiles.AVAILABLE_SOURCES,
+        valid_selections=config_files.AVAILABLE_SOURCES,
         selection=template_file_type)
 
     if model_dir_path.exists():
@@ -66,8 +79,7 @@ def create_model_dir(
     files.create_dir(model_dir_path, force_overwrite)
 
     if template_file_type == 'yml':
-        structure_name = Constants.ConfigFiles.SETUP_INFO
-        structures = Constants.DefaultStructures
+        structure_name = config_files.SETUP_INFO
 
         structure_mapping = {
             structure_name[0]: structures.SET_STRUCTURE,
@@ -84,8 +96,8 @@ def create_model_dir(
             )
 
     elif template_file_type == 'xlsx':
-        structure_mapping = Constants.DefaultStructures.XLSX_TEMPLATE_COLUMNS
-        template_file_name = Constants.ConfigFiles.SETUP_XLSX_FILE
+        structure_mapping = Defaults.DefaultStructures.XLSX_TEMPLATE_COLUMNS
+        template_file_name = config_files.SETUP_XLSX_FILE
 
         files.dict_to_excel_headers(
             dict_name=structure_mapping,
@@ -98,16 +110,11 @@ def create_model_dir(
         files.logger.error(msg)
         raise ValueError
 
-    if export_tutorial:
-        file_name = Constants.ConfigFiles.TUTORIAL_FILE_NAME
-        file_path = Constants.ConfigFiles.TUTORIALS_FILE_PATH
-        files.copy_file_to_destination(
-            path_source=file_path,
-            path_destination=model_dir_path,
-            file_name=file_name,
-            file_new_name=file_name,
-            force_overwrite=True,
-        )
+    copy_utility_files(
+        path_destination=model_dir_path,
+        include_custom_operators_template=include_user_operators_template,
+        include_custom_constants_template=include_user_constants_template,
+    )
 
 
 def _generate_yaml_template(
@@ -142,8 +149,8 @@ def _generate_yaml_template(
             indent: int,
     ) -> list[str]:
 
-        optional_key = Constants.DefaultStructures.OPTIONAL
-        any_key = Constants.DefaultStructures.ANY
+        optional_key = Defaults.DefaultStructures.OPTIONAL
+        any_key = Defaults.DefaultStructures.ANY
         yaml_lines = []
         indent_str = '    ' * indent
 
@@ -189,6 +196,52 @@ def _generate_yaml_template(
         raise IOError(f"Error writing to file '{file_name}': {e}") from e
 
 
+def copy_utility_files(
+    path_destination: Path,
+    include_custom_operators_template: bool = False,
+    include_custom_constants_template: bool = False,
+) -> None:
+    """Copy utility files to the model directory.
+
+    This function copy utility files such as templates for user-defined custom 
+    operators and constants to a defined path, based on the provided flags.
+
+    Args:
+        path_destination (Path): The path to the model directory where the files
+            will be included.
+        include_custom_operators_template (bool, optional): If True, include
+            the template for user-defined custom operators to the model
+            directory. Defaults to False.
+        include_custom_constants_template (bool, optional): If True, include
+            the template for user-defined custom constants to the model
+            directory. Defaults to False.
+    """
+    files_config = {
+        'custom_operators_template': {
+            'included': include_custom_operators_template,
+            'source_path': Defaults.ConfigFiles.TEMPLATES_DIR_PATH,
+            'file_name': Defaults.ConfigFiles.CUSTOM_OPERATORS_FILE_NAME,
+        },
+        'custom_constants_template': {
+            'included': include_custom_constants_template,
+            'source_path': Defaults.ConfigFiles.TEMPLATES_DIR_PATH,
+            'file_name': Defaults.ConfigFiles.CUSTOM_CONSTANTS_FILE_NAME,
+        },
+    }
+
+    for _, config in files_config.items():
+        if config['included']:
+            files.copy_file_to_destination(
+                path_source=config['source_path'],
+                path_destination=path_destination,
+                file_name=config['file_name'],
+            )
+            files.logger.info(
+                f"Exported '{config['file_name']}' "
+                f"to model directory."
+            )
+
+
 def transfer_setup_info_xlsx(
         source_file_name: str,
         source_dir_path: str | Path,
@@ -222,8 +275,8 @@ def transfer_setup_info_xlsx(
     files = FileManager(Logger())
 
     source_file_path = Path(source_dir_path, source_file_name)
-    settings_file_name = Constants.ConfigFiles.SETUP_XLSX_FILE
-    sets_file_name = Constants.ConfigFiles.SETS_FILE
+    settings_file_name = Defaults.ConfigFiles.SETUP_XLSX_FILE
+    sets_file_name = Defaults.ConfigFiles.SETS_FILE
 
     target_files = {
         'settings': ['settings'],
@@ -236,7 +289,7 @@ def transfer_setup_info_xlsx(
             'destination_file_name': settings_file_name,
             'destination_file_path': Path(destination_dir_path, settings_file_name),
             'cols_to_drop': ['notes', 'skip'],
-            'tabs_to_update': list(Constants.ConfigFiles.SETUP_INFO.values()),
+            'tabs_to_update': list(Defaults.ConfigFiles.SETUP_INFO.values()),
         },
         'sets': {
             'destination_file_name': sets_file_name,
@@ -274,7 +327,7 @@ def transfer_setup_info_xlsx(
             xlsx_file = pd.ExcelFile(source_file_path)
             tabs_to_update = [
                 tab for tab in xlsx_file.sheet_names
-                if tab.startswith(Constants.Labels.SET_TABLE_NAME_PREFIX)
+                if tab.startswith(Defaults.Labels.SET_TABLE_NAME_PREFIX)
             ]
 
         # confirmation
@@ -388,7 +441,7 @@ def _save_model_instance(
     model_dir_path = instance.paths['model_dir']
     model_name = instance.settings['model_name']
 
-    instances_dir = Constants.ConfigFiles.INSTANCES_DIR
+    instances_dir = Defaults.ConfigFiles.INSTANCES_DIR
     instances_save_path = Path(model_dir_path) / instances_dir
     instance_file_path = instances_save_path / file_name
 

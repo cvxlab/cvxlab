@@ -15,7 +15,7 @@ import pandas as pd
 
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
-from cvxlab.constants import Constants
+from cvxlab.defaults import Defaults
 from cvxlab.support import util
 
 
@@ -174,7 +174,7 @@ class SQLManager:
             raise exc.OperationalError(msg)
 
         if not batch_size:
-            batch_size = Constants.NumericalSettings.SQL_BATCH_SIZE
+            batch_size = Defaults.NumericalSettings.SQL_BATCH_SIZE
 
         try:
             if many and batch_size is not None:
@@ -547,7 +547,7 @@ class SQLManager:
 
         table_df = self.table_to_dataframe(table_name)
         primary_key_field = self.get_primary_column_name(table_name)
-        values_field = Constants.Labels.VALUES_FIELD['values'][0]
+        values_field = Defaults.Labels.VALUES_FIELD['values'][0]
         cols_common = [
             col for col in table_df.columns
             if col not in [primary_key_field, values_field]
@@ -608,8 +608,8 @@ class SQLManager:
             self.logger.warning(msg)
             return
 
-        id_field = Constants.Labels.ID_FIELD['id'][0]
-        values_field = Constants.Labels.VALUES_FIELD['values'][0]
+        id_field = Defaults.Labels.ID_FIELD['id'][0]
+        values_field = Defaults.Labels.VALUES_FIELD['values'][0]
         table_existing_entries = self.count_table_data_entries(table_name)
         df_existing = self.table_to_dataframe(table_name)
 
@@ -787,7 +787,7 @@ class SQLManager:
             df = pd.read_sql_query(query, self.connection)
 
             if blank_value_field:
-                values_column = Constants.Labels.VALUES_FIELD['values'][0]
+                values_column = Defaults.Labels.VALUES_FIELD['values'][0]
                 if values_column in df.columns:
                     df[values_column] = None
 
@@ -1074,7 +1074,7 @@ class SQLManager:
 
             # 3. Compare table contents (except "values" column)
             tables_wrong_coordinates = []
-            values_header = Constants.Labels.VALUES_FIELD['values'][0]
+            values_header = Defaults.Labels.VALUES_FIELD['values'][0]
 
             for table in current_tables:
                 self.cursor.execute(f"PRAGMA table_info({table})")
@@ -1140,7 +1140,7 @@ class SQLManager:
                 ]
 
                 rounding_digits = \
-                    Constants.NumericalSettings.ROUNDING_DIGITS_RELATIVE_DIFFERENCE_DB
+                    Defaults.NumericalSettings.ROUNDING_DIGITS_RELATIVE_DIFFERENCE_DB
 
                 if any([
                     rd > tolerance_percentage

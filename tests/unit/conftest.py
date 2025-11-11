@@ -1,3 +1,4 @@
+"""Module providing utility functions for unit tests."""
 import cvxpy
 import pytest
 import pandas as pd
@@ -12,9 +13,20 @@ def assert_equality(
         msg: str,
         tolerance: Optional[float] = None
 ) -> None:
-    """Helper to assert equality for various types, with optional absolute tolerance.
-    """
+    """Assert equality between result and expected.
 
+    This utility function checks for equality between two values,
+    handling various data types including pandas DataFrames, Series,
+    numpy arrays, and cvxpy Expressions. It also supports an optional
+    absolute tolerance for numerical comparisons.
+
+    Args:
+        result (Any): The result value to check.
+        expected (Any): The expected value to compare against.
+        msg (str): The message to display on assertion failure.
+        tolerance (Optional[float]): If provided, uses tolerant equality
+            based on the specified absolute tolerance.
+    """
     if isinstance(result, cvxpy.Expression):
         result = result.value
 
@@ -58,25 +70,35 @@ def run_test_cases(
         ]
     ],
     tolerance: Optional[float] = None,
+    unpack_tuple_args: bool = True,
     **common_kwargs,
 ) -> None:
-    """
-    General-purpose test runner for any function signature.
+    """Run tests for any function signature.
 
-    Parameters
-    ----------
-    func : Callable
-        The function to test.
-    test_cases : Sequence[tuple]
-        List of test cases in one of the following forms:
-            ((args...), expected_output, expected_exception)
-            ((args...), expected_output, expected_exception, {kwarg: val, ...})
-    tolerance : Optional[float]
-         If a float is passed, use tolerant equality based on the passed 
-            tolerancefor numpy arrays, Series, and DataFrames. (default is None).
-    **common_kwargs
-        Common keyword arguments passed to all test cases (overridden by 
-            test-specific kwargs).
+    This function runs a series of test cases against a given function,
+    checking for expected outputs or exceptions. It supports passing common
+    keyword arguments to all test cases, with the option to override them
+    on a per-case basis. Additionally, it can handle tolerant equality checks
+    for numpy arrays, pandas Series, and DataFrames.
+
+    Args:
+        func (Callable): The function to test.
+        test_cases (Sequence[tuple]):
+            A list of test cases, each defined as a tuple in one of the following forms:
+                ((args...), expected_output, expected_exception)
+                ((args...), expected_output, expected_exception, {kwarg: val, ...})
+        tolerance (Optional[float]):
+            If provided, uses tolerant equality based on the specified tolerance
+            for numpy arrays, Series, and DataFrames. Default is None.
+        unpack_tuple_args (bool):
+            If True, unpacks the first element of each test case tuple as positional
+            arguments to the function. If False, passes it as a single argument.
+        **common_kwargs:
+            Common keyword arguments to pass to all test cases, which can be overridden
+            by test-specific kwargs.
+
+    Raises:
+        ValueError: If test_cases is empty or improperly formatted.
     """
     if not test_cases:
         raise ValueError("No test cases provided")
@@ -95,7 +117,7 @@ def run_test_cases(
             raise ValueError("Each test case must have 3 or 4 elements")
 
         # if input_val is a tuple, treat as positional args
-        if isinstance(input_val, tuple):
+        if isinstance(input_val, tuple) and unpack_tuple_args:
             call_args = input_val
             def call_func(): return func(*call_args, **kwargs)
         else:

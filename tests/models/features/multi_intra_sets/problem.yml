@@ -1,7 +1,0 @@
-# SYMBOLIC PROBLEM
-
-expressions:
-    - U_h == mult(dp, tran(u)) @ diag(X)
-
-
-

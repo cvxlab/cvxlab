@@ -9,13 +9,14 @@ including tutorials and example models.
 
 .. _resources-tutorial:
 
-Tutorials
----------
+Download tutorials
+------------------
 
-A comprehensive Jupyter notebook is available as a tutorial of the CVXlab 
-modeling process: `CVXlab API Usage Guide <../tutorials/API_usage_guide.ipynb>`_
+Full tutorial directories can be downloaded here:
 
+- :download:`Tutorial: Simple Production Optimization <_static/tutorial_simple.zip>`
 
+You can also view the rendered tutorials in the :ref:`tutorials` section.
 
 
 .. _models_gallery:
@@ -24,3 +25,4 @@ Models gallery
 --------------
 
 A collection of example models implemented using CVXlab can be found below.
+
