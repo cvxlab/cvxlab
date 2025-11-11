@@ -17,7 +17,7 @@ github_url = "https://github.com/cvxlab/cvxlab"
 try:
     version = pkg_version("cvxlab")
 except Exception:
-    version = "development"
+    version = "nd"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

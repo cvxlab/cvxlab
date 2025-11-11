@@ -74,7 +74,7 @@ We welcome contributions from the community! Please see [CONTRIBUTING.md](docs/s
 for guidelines.
 
 ## Community & Support
-Submit issues and ideas for improvements in GitHub [GitHub Issues](https://github.com/your-repo/cvxlab/issues)
+Submit issues and ideas for improvements in GitHub [GitHub Issues](https://github.com/cvxlab/cvxlab/issues)
 
 ## License
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
