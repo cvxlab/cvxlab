@@ -28,8 +28,14 @@ extensions = [
     "sphinx.ext.viewcode",   # Link to source code
     "sphinx.ext.mathjax",    # Add this for math rendering
     "sphinxcontrib.mermaid",  # For mermaid diagrams
+    # 'myst_parser',           # For Markdown files (.md)
     'myst_nb',             # For Jupyter Notebook support
 ]
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 templates_path = ['_templates']
 exclude_patterns = []

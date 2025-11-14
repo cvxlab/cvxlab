@@ -1,6 +1,13 @@
 CVXlab documentation
 ====================
 
+.. warning::
+   **Beta Release Notice**
+   
+   CVXlab is currently in beta (|version|). The API is subject to change before 
+   the stable 1.0.0 release. Documentation is under active development. We welcome 
+   feedback and bug reports via `GitHub Issues <https://github.com/cvxlab/cvxlab/issues>`_.
+
 **CVXlab - Open-source Python laboratory for convex algebraic modeling**
 
 **Version:** |version|
@@ -94,8 +101,9 @@ activities summarized below:
    installation
    user_guide
    tutorials
-   resources
    api_reference
+   resources
+   changelog.md
    contributing.md
 
 

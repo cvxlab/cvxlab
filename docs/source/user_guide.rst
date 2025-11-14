@@ -3,6 +3,10 @@
 User Guide
 ==========
 
+.. note::
+   This user guide is based on CVXlab beta version (|version|). Some features 
+   and workflows may evolve in future releases.
+
 This section provides a comprehensive guide to using CVXlab for conceptualizing,
 generating and solving optimization problems. This includes all the necessary 
 steps to :ref:`generate a model from scratch <model_generation_from_scratch>`, 

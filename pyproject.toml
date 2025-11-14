@@ -44,7 +44,8 @@ docs = [
     "pydata-sphinx-theme",
     "sphinx-autodoc-typehints",
     "sphinxcontrib-mermaid",
-    "myst-nb",
+    # "myst-parser>=2.0.0",
+    "myst-nb>=1.0.0",
 ]
 solvers = [
     "gurobipy>=9.5.0",
