@@ -1,6 +1,7 @@
 ![CVXlab Logo](docs/source/_static/CVXlab_logo_dark.png)
 
-[![PyPI version](link)](link)
+[![PyPI version](https://badge.fury.io/py/cvxlab.svg)](https://badge.fury.io/py/cvxlab)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/cvxlab)](https://pypi.org/project/cvxlab/)
 [![Documentation Status](https://cvxlab.readthedocs.io/en/latest/index.html#)](https://cvxlab.readthedocs.io/en/latest/index.html#)
 
 > **Beta Release** - CVXlab is currently in beta (v1.0.0b1). The API may change 
