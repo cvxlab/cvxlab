@@ -1,5 +1,12 @@
 ![CVXlab Logo](docs/source/_static/CVXlab_logo_dark.png)
 
+[![PyPI version](https://badge.fury.io/py/cvxlab.svg)](https://badge.fury.io/py/cvxlab)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/cvxlab)](https://pypi.org/project/cvxlab/)
+[![Documentation Status](https://cvxlab.readthedocs.io/en/latest/index.html#)](https://cvxlab.readthedocs.io/en/latest/index.html#)
+
+> **Beta Release** - CVXlab is currently in beta (v1.0.0b1). The API may change 
+> before the stable 1.0.0 release. Documentation is under active development.
+
 CVXlab is an open-source Python laboratory for modeling and solving convex optimization problems. 
 It extends [cvxpy](https://www.cvxpy.org/) with user-friendly interfaces, integrated data 
 management and support for multiple, interconnected optimization models.
@@ -8,6 +15,7 @@ management and support for multiple, interconnected optimization models.
 - [Installation](#installation)
 - [Quick Overview](#quick-overview)
 - [Documentation](#documentation)
+- [Changelog](#changelog)
 - [Contributing](#contributing)
 - [Community & Support](#community--support)
 - [License](#license)
@@ -69,8 +77,11 @@ activities summarized below:
 Full documentation is available at [cvxlab.readthedocs.io](https://cvxlab.readthedocs.io/en/latest/).
 You can also browse the source documentation in the [docs/source](docs/source) directory.
 
+## Changelog
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
+
 ## Contributing
-We welcome contributions from the community! Please see [CONTRIBUTING.md](docs/source/contributing.md) 
+We welcome contributions from the community! Please see [CONTRIBUTING.md](CONTRIBUTING.md) 
 for guidelines.
 
 ## Community & Support
