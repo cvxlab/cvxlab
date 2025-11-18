@@ -651,12 +651,11 @@ class FileManager:
         # case of native types from excel
         if not convert_native_types:
             # replace empty strings with None
-            dataframe.replace('', None, inplace=True)
+            dataframe = dataframe.replace('', None).infer_objects(copy=False)
             # replace true/True/TRUE/false/False/FALSE with bool
-            dataframe.replace(
-                Defaults.DefaultStructures.ALLOWED_BOOL,
-                inplace=True
-            )
+            dataframe = dataframe.replace(
+                Defaults.DefaultStructures.ALLOWED_BOOL
+            ).infer_objects(copy=False)
 
         # replace NaN with None
         dataframe = dataframe.astype(object).where(pd.notna(dataframe), None)
