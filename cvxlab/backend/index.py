@@ -71,6 +71,7 @@ class Index:
         self.sets = self.load_and_validate_structure(structures[0])
         self.data = self.load_and_validate_structure(structures[1])
 
+        self.check_sets_coherence()
         self.check_data_coherence()
         self.data_tables_completion()
 
@@ -326,6 +327,77 @@ class Index:
 
         return validated_structure
 
+    def check_sets_coherence(self) -> None:
+        """Check coherence among set tables.
+
+        This method performs coherence checks among the set tables loaded in the Index.
+        All anomalies are collected in a dictionary with keys identifying the location
+        of the anomaly, and value as the related description. Errors are raised and
+        logged at the end of the method. Further checks may be developed.
+
+        The following checks are performed looping over set tables:
+
+        - In case of copied set tables (copy_from attribute), the source table
+            must be a valid set table.
+        - Copied set table split_problem attribute must match source set table.
+        - Copied set table structure must match source set table structure.
+        - Copied set table aggregations must match source set table aggregations.
+
+        Raises:
+            exc.SettingsError: Raised with the list of all exceptions collected
+                during the coherence checks, identifying mistakes in model settings.
+        """
+        problems = {}
+
+        for set_key, set_table in self.sets.items():
+            set_table: SetTable
+
+            # in case of copied set tables (copy_from attribute)
+            if set_table.copy_from:
+                set_table_source_key = set_table.copy_from
+
+                # source table must be a valid set table
+                if set_table_source_key not in self.sets:
+                    problems[set_key] = f"Source set table '{set_table_source_key}' " \
+                        "to be copied not found in defined sets."
+
+                else:
+                    set_table_source: SetTable = self.sets[set_table_source_key]
+
+                    # copied set table split_problem attribute must match source set table
+                    if set_table.split_problem != set_table_source.split_problem:
+                        problems[set_key] = f"'split_problem' attribute of copied set " \
+                            f"table do not match those of source set table " \
+                            f"'{set_table_source_key}'."
+
+                    # if filters are defined, they must be for source and destination sets
+                    if set_table.table_filters and not set_table_source.table_filters:
+                        problems[set_key] = "Filters must be defined for both " \
+                            f"copied set table and source set table '{set_table_source_key}'."
+
+                    # if aggregations are defined, they must be for source and destination sets
+                    if set_table.table_aggregations and not set_table_source.table_aggregations:
+                        problems[set_key] = "Aggregations must be defined for both " \
+                            f"copied set table and source set table '{set_table_source_key}'."
+
+        if problems:
+            if self.settings['detailed_validation']:
+                for key, error_log in problems.items():
+                    self.logger.error(
+                        f"Set tables coherence check | {key} | {error_log}")
+            else:
+                self.logger.error(
+                    f"Set tables coherence error | Sets tables | Entries: "
+                    f"{list(problems.keys())}")
+
+            msg = "Sets tables coherence check not successful. " \
+                "Check setup files."
+            if not self.settings['detailed_validation']:
+                msg += "Set 'detailed_validation=True' for more information."
+
+            self.logger.error(msg)
+            raise exc.SettingsError(msg)
+
     def check_data_coherence(self) -> None:
         """Check coherence between sets and data tables.
 
@@ -365,6 +437,7 @@ class Index:
         allowed_dims = list(Defaults.SymbolicDefinitions.DIMENSIONS.values())
 
         coordinates_key = Defaults.Labels.COORDINATES_KEY
+        dim_key = Defaults.Labels.DIM
         filters_key = Defaults.Labels.FILTERS
         variables_info_key = Defaults.Labels.VARIABLES_INFO_KEY
         value_key = Defaults.Labels.VALUE_KEY
@@ -438,7 +511,8 @@ class Index:
 
                         if property_value and property_value not in allowed_constants:
                             problems[f"{path}.{value_key}"] = \
-                                f"Constant value type '{property_value}' not allowed."
+                                f"Constant value type '{property_value}' not allowed. " \
+                                f"Allowed types: {list(allowed_constants)}."
 
                     # blank_fill field can only be assigned to exogenous variables
                     elif property_key == blank_fill_key:
@@ -458,11 +532,11 @@ class Index:
                             and isinstance(property_value, dict):
 
                         # check if dim is allowed
-                        if 'dim' in property_value:
-                            if property_value['dim'] not in allowed_dims:
-                                problems[f"{path}.{property_key}.dim"] = \
+                        if dim_key in property_value:
+                            if property_value[dim_key] not in allowed_dims:
+                                problems[f"{path}.{property_key}.{dim_key}"] = \
                                     f"Coordinate '{property_key}': " \
-                                    f"dimension '{property_value['dim']}' not allowed."
+                                    f"dimension '{property_value[dim_key]}' not allowed."
 
                         # check if filters are allowed
                         if filters_key in property_value:
