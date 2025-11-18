@@ -122,6 +122,11 @@ If you have write access to the main repository, work directly on feature branch
    git push origin feature/my-feature
    ```
 8. **Open a pull request** on GitHub targeting the `dev` branch
+9. (Optional) **Update environment.yml** if dependencies change:
+   ```sh
+   conda env update -f environment.yml --prune
+   conda env export --no-builds > environment.yml
+   ```
 
 (development-guidelines)=
 ## Development Guidelines
