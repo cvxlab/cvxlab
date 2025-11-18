@@ -72,6 +72,41 @@ def test_find_dict_depth():
     run_test_cases(find_dict_depth, test_cases)
 
 
+def test_fetch_dict_primary_key():
+    """
+    Test the fetch_dict_primary_key function.
+
+    This function tests various scenarios:
+    - Finding a single matching primary key
+    """
+    dict_single = {
+        'key1': {'dim': 'rows'},
+        'key2': {'dim': 'cols'},
+    }
+    dict_multiple = {
+        'key1': {'dim': 'rows'},
+        'key2': {'dim': 'cols'},
+        'key3': {'dim': 'rows'},
+    }
+    dict_not_nested = {
+        'key1': 'not_a_dict',
+    }
+    not_a_dict = 'not_a_dict'
+
+    test_cases = [
+        ((dict_single, 'dim', 'rows'), ['key1'], None),
+        ((dict_single, 'dim', 'cols'), ['key2'], None),
+        ((dict_single, 'dim', 'depth'), [], None),
+        ((dict_multiple, 'dim', 'rows'), ['key1', 'key3'], None),
+        ((dict_multiple, 'dim', 'cols'), ['key2'], None),
+        ((dict_multiple, 'dim', 'depth'), [], None),
+        ((dict_not_nested, 'dim', 'rows'), [], None),
+        ((not_a_dict, 'dim', 'rows'), None, TypeError),
+    ]
+
+    run_test_cases(fetch_dict_primary_key, test_cases)
+
+
 def test_pivot_dict():
     """
     Test the function 'pivot_dict'.

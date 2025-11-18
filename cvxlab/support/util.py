@@ -572,11 +572,12 @@ def fetch_dict_primary_key(
         dictionary: Dict[str, Any],
         second_level_key: str | int,
         second_level_value: Any,
-) -> Optional[str | int]:
-    """Fetch dictionary primary key by second-level key-value pair.
+) -> List[str | int]:
+    """Fetch dictionary primary keys by second-level key-value pair.
 
-    This function fetches the primary key from a dictionary based on a second-level 
-    key-value pair. If the second-level key-value pair is not found, returns None.
+    This function fetches all primary keys from a dictionary based on a second-level 
+    key-value pair. If the second-level key-value pair is not found, returns an 
+    empty list.
 
     Args:
         dictionary (Dict[str, Any]): The dictionary to search.
@@ -584,8 +585,8 @@ def fetch_dict_primary_key(
         second_level_value (Any): The value to search for in the second level.
 
     Returns:
-        Optional[str | int]: The primary key of the dictionary where the second-level 
-            key-value pair is found, or None if not found.
+        List[str | int]: A list of primary keys where the second-level key-value 
+            pair is found. Returns an empty list if not found.
 
     Raises: 
         TypeError: If dictionary is not a dictionary.
@@ -593,11 +594,13 @@ def fetch_dict_primary_key(
     if not isinstance(dictionary, dict):
         raise TypeError("Passed dictionary must be a dictionary.")
 
+    matching_keys = []
     for primary_key, value in dictionary.items():
         if isinstance(value, dict) and \
                 value.get(second_level_key) == second_level_value:
-            return primary_key
-    return None
+            matching_keys.append(primary_key)
+
+    return matching_keys
 
 
 def filter_dataframe(
