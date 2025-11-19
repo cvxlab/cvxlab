@@ -65,19 +65,21 @@ def diagonal(x):
 
 
 @operator('sum')
-def summation(x, axis=None):
+def summation(x, axis=None, keepdims=True):
     """Sum elements of a matrix or vector along a specified axis.
 
     Args:
         x (cp.Parameter | cp.Expression): The matrix or vector to sum.
         axis (Optional[int]): The axis along which to sum. If None, sums all 
             elements. If 0, sums along columns. If 1, sums along rows.
+        keepdims (bool): Whether to keep the reduced dimensions in the result.
+            default is True.
 
     Returns:
         cp.Parameter | cp.Expression: The sum of elements along the specified 
             axis, or a scalar if axis is None.
     """
-    return cp.sum(x, axis=axis)
+    return cp.sum(x, axis=axis, keepdims=keepdims)
 
 
 @operator('mult')
