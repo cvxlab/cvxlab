@@ -7,9 +7,10 @@ such as generating special matrices (positive semidefinite matrices).
 Functions are registered as constants in Defaults class, and actual constants data
 are generated when generating variables (see backend.Variable.define_constant() method).
 """
+from ast import List
 import numpy as np
 
-from typing import Iterable, Tuple
+from typing import Iterable, List
 from cvxlab.log_exc import exceptions as exc
 
 _CONSTANTS_REGISTRY = {}
@@ -31,25 +32,25 @@ def constant(name: str) -> callable:
 
 
 @constant('sum_vector')
-def sum_vector(dimension: Tuple[int]) -> np.ndarray:
+def sum_vector(dimension: List[int]) -> np.ndarray:
     """Define a vector of ones for matrix summation operations.
 
     Args:
-        dimension (Tuple[int]): The dimension of the vector (rows, cols).
+        dimension (List[int]): The dimension of the vector (rows, cols).
 
     Returns:
         np.ndarray: A vector of ones with the specified dimension.
 
     Raises:
-        exc.SettingsError: If passed dimension is not a tuple containing integers,
+        exc.SettingsError: If passed dimension is not a list containing integers,
             or if it does not represent a vector (i.e., at least one element 
             must be equal to 1).
     """
-    if not isinstance(dimension, Tuple) or not \
+    if not isinstance(dimension, List) or not \
             all(isinstance(i, int) for i in dimension):
         raise exc.SettingsError(
             "Constant definition | Summation vector constant accepts as argument"
-            "only a tuple of integers.")
+            "only a list of integers.")
 
     if len(dimension) != 2 or not any(i == 1 for i in dimension):
         raise exc.SettingsError(
@@ -60,58 +61,58 @@ def sum_vector(dimension: Tuple[int]) -> np.ndarray:
 
 
 @constant('identity')
-def identity_matrix(dimension: Tuple[int]) -> np.array:
+def identity_matrix(dimension: List[int]) -> np.array:
     """Generate a (square) identity matrix of the specified dimension.
 
     Args:
-        dimension (Tuple[int]): The dimension of the matrix row/col.
+        dimension (List[int]): The dimension of the matrix row/col.
 
     Returns:
         np.ndarray: A square identity matrix of the specified dimension.
 
     Raises:
-        exc.SettingsError: If passed dimension is not a tuple containing integers,
+        exc.SettingsError: If passed dimension is not a list containing integers,
             or if it does not represent a vector (i.e., at least one element 
             must be equal to 1).
     """
-    if not isinstance(dimension, Tuple) or not \
+    if not isinstance(dimension, List) or not \
             all(isinstance(i, int) for i in dimension):
         raise exc.SettingsError(
             "Constant definition | Identity matrix constant accepts as argument"
-            "only a tuple of integers.")
+            "only a list of integers.")
 
     if len(dimension) != 2 or not any(i == 1 for i in dimension):
         raise exc.SettingsError(
-            "Constant definition | Identity matrix accetps as argument a tuple "
+            "Constant definition | Identity matrix accetps as argument a list "
             "representing a vector only (one dimension). Check variable shape.")
 
     return np.eye(max(dimension))
 
 
 @constant('set_length')
-def set_length(dimension: Tuple[int]) -> np.array:
+def set_length(dimension: List[int]) -> np.array:
     """Define the length of a set as a constant.
 
     Args:
-        dimension (Tuple[int]): The dimension of the vector (rows, cols).
+        dimension (List[int]): The dimension of the vector (rows, cols).
 
     Returns:
         np.ndarray: A 1x1 array (scalar) containing the length of the set.
 
     Raises:
-        exc.SettingsError: If passed dimension is not a tuple containing integers,
+        exc.SettingsError: If passed dimension is not a list containing integers,
             or if it does not represent a vector (i.e., at least one element 
             must be equal to 1).
     """
-    if not isinstance(dimension, Tuple) or not \
+    if not isinstance(dimension, List) or not \
             all(isinstance(i, int) for i in dimension):
         raise exc.SettingsError(
             "Constant definition | Set lenght constant accepts as argument"
-            "only a tuple of integers.")
+            "only a list of integers.")
 
     if len(dimension) != 2 or not any(i == 1 for i in dimension):
         raise exc.SettingsError(
-            "Constant definition | Set lenght constant accetps as argument a tuple "
+            "Constant definition | Set lenght constant accetps as argument a list "
             "representing a vector only (one dimension). Check variable shape.")
 
     dimension_size = np.array(np.max(dimension))
@@ -121,7 +122,7 @@ def set_length(dimension: Tuple[int]) -> np.array:
     return dimension_size
 
 
-def arange(dimension: Tuple[int], start_from: int, order: str = 'F') -> np.array:
+def arange(dimension: List[int], start_from: int, order: str = 'F') -> np.array:
     """Define a reshaped range array.
 
     Generate a reshaped array with values ranging from 'start_from' to 
@@ -139,7 +140,7 @@ def arange(dimension: Tuple[int], start_from: int, order: str = 'F') -> np.array
             to 'start_from + total_elements'.
 
     Raises:
-        exc.SettingsError: If passed dimension is not a tuple containing integers.
+        exc.SettingsError: If passed dimension is not a list containing integers.
         ValueError: If 'start_from' is not an integer.
         ValueError: If 'order' is not a string or not in ['C', 'F'].
     """
@@ -147,7 +148,7 @@ def arange(dimension: Tuple[int], start_from: int, order: str = 'F') -> np.array
             not all(isinstance(i, int) for i in dimension):
         raise exc.SettingsError(
             "Constant definition | Range constant accepts as argument only a "
-            "tuple of integers.")
+            "list of integers.")
 
     if not isinstance(start_from, int):
         raise ValueError("'start_from' must be an integer.")
@@ -166,46 +167,46 @@ def arange(dimension: Tuple[int], start_from: int, order: str = 'F') -> np.array
 
 
 @constant('arange_0')
-def arange_0(dimension: Tuple[int]) -> np.ndarray:
+def arange_0(dimension: List[int]) -> np.ndarray:
     """Define a reshaped range array starting from zero."""
     return arange(dimension=dimension, start_from=0)
 
 
 @constant('arange_1')
-def arange_0(dimension: Tuple[int]) -> np.ndarray:
+def arange_0(dimension: List[int]) -> np.ndarray:
     """Define a reshaped range array starting from zero."""
     return arange(dimension=dimension, start_from=1)
 
 
 @constant('lower_triangular')
-def lower_triangular_matrix(dimension: Tuple[int]) -> np.array:
+def lower_triangular_matrix(dimension: List[int]) -> np.array:
     """Define a lower triangular matrix.
 
     Generate a square matrix with ones in the lower triangular region
     (including the diagonal) and zeros elsewhere.
 
     Args:
-        dimension (Tuple[int]): The dimension of the matrix row/col.
+        dimension (List[int]): The dimension of the matrix row/col.
 
     Returns:
         np.ndarray: A square matrix with ones in the lower triangular region 
             and zeros elsewhere.
 
     Raises:
-        exc.SettingsError: If passed dimension is not a tuple containing integers,
+        exc.SettingsError: If passed dimension is not a list containing integers,
             or if it does not represent a vector (i.e., at least one element 
             must be equal to 1).
     """
-    if not isinstance(dimension, Tuple) or not \
+    if not isinstance(dimension, List) or not \
             all(isinstance(i, int) for i in dimension):
         raise exc.SettingsError(
             "Constant definition | Lower triangular matrix accepts as argument"
-            "only a tuple of integers.")
+            "only a list of integers.")
 
     if len(dimension) != 2 or not any(i == 1 for i in dimension):
         raise exc.SettingsError(
             "Constant definition | Lower triangular matrix accetps as argument "
-            "a tuple representing a vector only (one dimension). Check variable shape.")
+            "a list representing a vector only (one dimension). Check variable shape.")
 
     size = max(dimension)
     matrix = np.tril(np.ones((size, size)))
