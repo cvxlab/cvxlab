@@ -107,6 +107,40 @@ def test_fetch_dict_primary_key():
     run_test_cases(fetch_dict_primary_key, test_cases)
 
 
+def test_dict_values_cartesian_product():
+    """Test the 'dict_values_cartesian_product' method.
+
+    Test cases:
+        - tests valid dictionaries 
+        - tests an empty dictionary
+        - tests a non-dictionary input
+    """
+    test_cases = [
+        ({0: {'a', 'b', 'c', 'd'}}, 4, None),
+        ({0: {'a', 'b'}, 1: {1, 2}}, 4, None),
+        ({0: {'a', 'b', 'c'}, 1: {1, 2}}, 6, None),
+        ({0: {'a', 'b', 'c'}, 1: {1, 2}, 3: {'d', 'e'}}, 12, None),
+        ({0: {'a', 'b', 'c'}, 1: {1, 2}, 3: {}}, 0, None),
+        ({}, 0, None),
+        ('not_a_dict', None, TypeError),
+    ]
+
+    run_test_cases(dict_values_cartesian_product, test_cases)
+
+
+def test_flattening_list():
+
+    nested_list = [1, [2, 3, [4]], 'a', ['b', ['c']], (5, 6)]
+
+    test_cases = [
+        ([[1, 2], [3]], [1, 2, 3], None),
+        (nested_list, [1, 2, 3, 4, 'a', 'b', 'c', 5, 6], None),
+        ('not_a_list', None, TypeError),
+    ]
+
+    run_test_cases(flattening_list, test_cases)
+
+
 def test_pivot_dict():
     """
     Test the function 'pivot_dict'.

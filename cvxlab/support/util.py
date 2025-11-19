@@ -248,6 +248,63 @@ def dict_cartesian_product(
     ]
 
 
+def dict_values_cartesian_product(
+        data_dict: Dict[Any, List[Any]],
+) -> int:
+    """Return Cartesian product of dictionary values.
+
+    This function returns an integer representing the number of combination of 
+    items included in all values of a dictionary.
+
+    Args:
+        data_dict (Dict[Any, List[Any]]): The dictionary to be used for the 
+            cartesian product. The keys are any hashable type, and the values 
+            are lists of elements to be combined.
+
+    Returns:
+        int: An integer representing the number of combinations of the input values.
+
+    Raises:
+        TypeError: If 'data_dict' is not a dictionary.
+    """
+    if not isinstance(data_dict, dict):
+        raise TypeError(
+            "Argument 'data_dict' must be a dictionary. "
+            f"{type(data_dict).__name__} was passed instead."
+        )
+
+    if not data_dict:
+        return 0
+
+    combinations = it.product(*data_dict.values())
+    return len(list(combinations))
+
+
+def flattening_list(nested_list: List[Any]) -> List[Any]:
+    """Flatten a (possibly nested) list into a flat list.
+
+    Treats only list/tuple as flattenable. Strings, bytes, other iterables kept atomic.
+    Args:
+        nested_list (List[Any]): List containing elements and/or nested lists.
+    Returns:
+        List[Any]: Flat list of all atomic elements.
+    """
+    if not isinstance(nested_list, list):
+        raise TypeError("Argument must be a list.")
+
+    flat: List[Any] = []
+    stack = list(reversed(nested_list))
+
+    while stack:
+        item = stack.pop()
+        if isinstance(item, (list, tuple)):
+            stack.extend(reversed(item))
+        else:
+            flat.append(item)
+
+    return flat
+
+
 def unpivot_dict_to_dataframe(
         data_dict: Dict[str, List[str]],
         key_order: Optional[List[str]] = None,
