@@ -508,9 +508,13 @@ class Problem:
                     for dim in [0, 1]:
                         if isinstance(variable.shape_sets[dim], int):
                             pass
-                        elif isinstance(variable.shape_sets[dim], str):
-                            dim_header = variable.dims_labels[dim]
-                            var_filter[dim_header] = variable.dims_items[dim]
+                        elif isinstance(variable.shape_sets[dim], list):
+
+                            for dim_header, dim_items in zip(
+                                variable.dims_labels[dim],
+                                variable.dims_items[dim],
+                            ):
+                                var_filter[dim_header] = dim_items
 
                 elif header in [headers['filter'], headers['sub_problem_key']]:
                     pass
@@ -792,7 +796,9 @@ class Problem:
                 for var_key, variable in vars_in_expression.items():
                     variable: Variable
                     intra_problem_sets.update(variable.intra_sets or [])
-                    shape_set_map[var_key] = set(variable.shape_sets or [])
+                    shape_set_map[var_key] = set(
+                        util.flattening_list(variable.shape_sets)
+                    )
 
                 for var_key, dim_sets in shape_set_map.items():
                     overlapping_sets = intra_problem_sets & dim_sets

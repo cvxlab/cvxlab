@@ -682,6 +682,18 @@ class Index:
 
         dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
+        def _key_matches_shape(
+                key: str,
+                shape: List[str] | str | int
+        ) -> bool:
+            """Check if a key matches a given shape."""
+            if isinstance(shape, list):
+                return key in shape
+            elif isinstance(shape, str):
+                return key == shape
+            else:  # shape is 1 (int)
+                return False
+
         for var_key, variable in self.variables.items():
             variable: Variable
 
@@ -707,11 +719,15 @@ class Index:
 
                 if key in Defaults.Labels.ID_FIELD:
                     continue
-                if key == variable.shape_sets[0]:
+
+                rows_shape = variable.shape_sets[0]
+                cols_shape = variable.shape_sets[1]
+
+                if _key_matches_shape(key, rows_shape):
                     rows[key] = table_header
-                if key == variable.shape_sets[1]:
+                elif _key_matches_shape(key, cols_shape):
                     cols[key] = table_header
-                if key not in variable.shape_sets:
+                else:
                     if key not in self.sets_split_problem_dict:
                         intra[key] = table_header
                     else:
