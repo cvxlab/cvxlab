@@ -576,11 +576,8 @@ class Model:
         problem_count = '1' if sub_problems == 1 else f'{sub_problems}'
 
         self.logger.info(
-            f"Model run summary: "
-            f"\n\tNumber of problems: {problem_count} "
-            f"\n\tSolution mode: '{solution_type}' "
-            f"\n\tScenarios number: {problem_scenarios} "
-            f"\n\tSolver: '{solver}'\n")
+            f"Model run | Solution mode: {solution_type}' | Solver: '{solver}' | "
+            f"Problems: {problem_count} | Scenarios: {problem_scenarios}")
 
         if verbose:
             self.logger.info("="*30)
@@ -602,10 +599,14 @@ class Model:
                 **kwargs,
             )
 
-        self.logger.info("="*30)
-        self.logger.info("Numerical problems status report:")
+        msg = "Numerical problems status report:"
+        self.logger.info("="*len(msg))
+        self.logger.info(msg)
+
         for info, status in self.core.problem.problem_status.items():
-            self.logger.info(f"{info}: {status}")
+            self.logger.info(
+                f"{info}: {status}" if info else f"{status}"
+            )
 
     def load_results_to_database(
         self,

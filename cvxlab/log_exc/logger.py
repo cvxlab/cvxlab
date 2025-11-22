@@ -3,11 +3,14 @@
 Provides the Logger class for consistent, colorized logging across the package.
 Supports configurable formats, log levels, child loggers, and timing context managers.
 """
-
 import logging
 import time
+import subprocess
+import tempfile
+import os
 
 from contextlib import contextmanager
+from datetime import datetime
 from typing import Literal
 
 
@@ -216,14 +219,138 @@ class Logger:
             if log_format:
                 self.logger.handlers[0].setFormatter(original_formatter)
 
+    @contextmanager
+    def convergence_monitor(
+            self,
+            output_dir: str,
+            scenario_name: str = "N/A",
+            tolerance: float = 0.001,
+    ):
+        """Context manager for convergence monitoring in a separate terminal.
+
+        Creates a temporary file and opens a new terminal window to monitor
+        convergence data in real-time.
+
+        Args:
+            output_dir (str): Directory for temporary convergence file.
+            scenario_name (str): Name/coordinates of the scenario being solved.
+            tolerance (float): Numerical tolerance threshold (as decimal).
+
+        Yields:
+            dict: Dictionary with 'log' method for writing convergence data.
+        """
+        # Create log file
+        log_filename = f"convergence_{scenario_name}.log"
+        convergence_file_path = os.path.join(output_dir, log_filename)
+
+        if os.path.exists(convergence_file_path):
+            os.remove(convergence_file_path)
+
+        messages = []
+
+        header_lines = [
+            "="*79,
+            f"CONVERGENCE MONITORING - Scenario: {scenario_name}",
+            f"Tolerance: {tolerance*100:.3f}%",
+            "="*79,
+            ""
+        ]
+
+        with open(convergence_file_path, 'w') as f:
+            for line in header_lines:
+                f.write(line + "\n")
+            f.flush()
+
+        # Build PowerShell command
+        ps_command = (
+            f'while ($true) {{ '
+            f'Clear-Host; '
+            f'Get-Content "{convergence_file_path}"; '
+            f'Start-Sleep -Seconds 1 '
+            f'}}'
+        )
+
+        # Open terminal
+        terminal_process = None
+        try:
+            terminal_process = subprocess.Popen(
+                ['powershell', '-NoExit', '-Command', ps_command],
+                creationflags=subprocess.CREATE_NEW_CONSOLE
+            )
+        except Exception as e:
+            self.logger.warning(
+                f"Could not open convergence monitoring terminal: {e}")
+
+        # Logger function
+        def convergence_log(message: str):
+            """Write message to convergence monitoring file and store it."""
+            messages.append(message)
+
+            with open(convergence_file_path, 'a') as f:
+                f.write(message + "\n")
+                f.flush()
+
+        try:
+            yield {'log': convergence_log, 'file': convergence_file_path, 'messages': messages}
+        finally:
+            # Write completion message
+            footer_lines = [
+                "",
+                "="*79,
+                "MONITORING COMPLETE",
+            ]
+
+            with open(convergence_file_path, 'a') as f:
+                for line in footer_lines:
+                    f.write(line + "\n")
+                f.flush()
+
 
 if __name__ == '__main__':
+
+    import tempfile
+
     logger = Logger(log_level='INFO', log_format='minimal')
+    logger.info("Starting convergence monitor test...")
 
-    try:
-        with logger.log_timing("Outer block"):
-            with logger.log_timing("Inner block"):
-                raise RuntimeError("Simulated failure")
+    # Use temporary directory
+    test_dir = tempfile.gettempdir()
 
-    except RuntimeError as e:
-        logger.error(f"Caught exception: {e}")
+    with logger.convergence_monitor(
+        output_dir=test_dir,
+        scenario_name="test_scenario",
+        tolerance=0.001,
+    ) as conv_monitor:
+
+        conv_log = conv_monitor['log']
+
+        # Simulate convergence iterations
+        tables = ['table_1', 'table_2', 'table_3']
+
+        # Write header
+        header = "Iteration  " + "  ".join(f"{t:>8}" for t in tables)
+        conv_log(header)
+        conv_log("-" * len(header))
+
+        # Simulate iterations with decreasing errors
+        for iteration in range(1, 6):
+            time.sleep(0.5)  # Simulate computation
+
+            # Generate decreasing errors
+            errors = [0.5 / (iteration + i) for i, _ in enumerate(tables)]
+            values_str = "  ".join(
+                f"{e*100:>7.3f}{'*' if e > 0.001 else ' '}"
+                for e in errors
+            )
+
+            conv_log(f"Iter_{iteration:>2}    {values_str}")
+
+            # Check convergence
+            if all(e < 0.001 for e in errors):
+                conv_log(f"Convergence reached")
+                break
+
+    logger.info("Test completed. Check the monitoring terminal.")
+
+    for msg in conv_monitor['messages']:
+        logger.info(msg)

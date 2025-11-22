@@ -297,7 +297,7 @@ class Core:
         with self.logger.log_timing(
             message=f"Fetching data from '{self.settings['sqlite_database_file']}' "
                 "to cvxpy exogenous variables...",
-            level='info',
+            level='debug',
         ):
             filter_header = Defaults.Labels.FILTER_DICT_KEY
             cvxpy_var_header = Defaults.Labels.CVXPY_VAR
@@ -443,6 +443,7 @@ class Core:
 
                             # pivoting and reshaping data to fit variables
                             pivoted_data = variable.reshaping_sqlite_table_data(
+                                var_key=var_key,
                                 data=raw_data,
                             )
 
@@ -811,6 +812,7 @@ class Core:
             solver_verbose: bool,
             numerical_tolerance: Optional[float] = None,
             maximum_iterations: Optional[int] = None,
+            log_iterations_numerical_summary: bool = False,
             **kwargs: Any,
     ) -> None:
         """Solve integrated numerical problems iteratively.
@@ -892,126 +894,146 @@ class Core:
                     scenarios_header
                 ]
 
-                self.logger.info("=================================")
                 if scenario_coords:
+                    scenario_label = '-'.join(map(str, scenario_coords))
                     self.logger.info(
-                        f"Solving integrated problems for scenario {scenario_coords}"
-                    )
+                        f"Solving integrated problems | Scenario {scenario_coords}")
                 else:
                     self.logger.info("Solving integrated problems")
 
                 iter_count = 0
 
-                while True:
-                    try:
-                        iter_count += 1
-                        self.logger.info(
-                            f"Iteration count: {iter_count} | "
-                            f"iterations limit: {maximum_iterations}")
+                with self.logger.convergence_monitor(
+                    output_dir=sqlite_db_path,
+                    scenario_name=scenario_label if scenario_coords else "default",
+                    tolerance=numerical_tolerance,
+                    save_log_file=False,
+                ) as conv_monitor:
 
-                        if iter_count > maximum_iterations:
-                            self.logger.warning(
-                                "Maximum number of iterations hit before reaching "
-                                f"convergence (tolerance: {numerical_tolerance*100}%).")
-                            break
+                    conv_log = conv_monitor['log']
+                    header = "Iteration " + \
+                        "  ".join(f"{t:>10}" for t in tables_to_check)
+                    conv_log(header)
+                    conv_log("-" * len(header))
 
-                        if iter_count > 1:
+                    while True:
+                        try:
+                            iter_count += 1
                             self.logger.info(
-                                "Updating exogenous variables data from "
-                                "previous iteration.")
+                                f"Iteration count: {iter_count} | "
+                                f"iterations limit: {maximum_iterations}")
 
-                            self.data_to_cvxpy_exogenous_vars(
-                                scenarios_idx=scenario_idx)
+                            if iter_count > maximum_iterations:
+                                self.logger.warning(
+                                    "Maximum number of iterations hit before reaching "
+                                    f"convergence (tolerance: {numerical_tolerance*100}%).")
+                                break
 
-                        self.files.copy_file_to_destination(
-                            path_destination=sqlite_db_path,
-                            path_source=sqlite_db_path,
-                            file_name=sqlite_db_file_name,
-                            file_new_name=sqlite_db_file_name_previous,
-                            force_overwrite=True,
-                        )
+                            if iter_count > 1:
+                                self.logger.info(
+                                    "Updating exogenous variables data from "
+                                    "previous iteration.")
 
-                        for sub_problem, problem_df \
-                                in self.problem.numerical_problems.items():
+                                self.data_to_cvxpy_exogenous_vars(
+                                    scenarios_idx=scenario_idx)
 
-                            self.problem.solve_problem_dataframe(
-                                problem_name=sub_problem,
-                                problem_dataframe=problem_df,
-                                scenarios_idx=scenario_idx,
-                                solver=solver,
-                                solver_verbose=solver_verbose,
-                                **kwargs
+                            self.files.copy_file_to_destination(
+                                path_destination=sqlite_db_path,
+                                path_source=sqlite_db_path,
+                                file_name=sqlite_db_file_name,
+                                file_new_name=sqlite_db_file_name_previous,
+                                force_overwrite=True,
                             )
 
-                            status = problem_df.loc[
-                                scenario_idx,
-                                problem_status_header
-                            ]
+                            for sub_problem, problem_df \
+                                    in self.problem.numerical_problems.items():
 
-                            problems_status.at[scenario_idx, sub_problem] = \
-                                status
-
-                        if not all(
-                            problems_status.loc[scenario_idx] == 'optimal'
-                        ):
-                            self.logger.warning(
-                                "One or more sub-problems infeasible for scenario "
-                                f"{scenario_coords}."
-                            )
-                            break
-
-                        self.logger.info(
-                            "Problems solved successfully. Exporting data to "
-                            "SQLite database.")
-
-                        self.cvxpy_endogenous_data_to_database(
-                            scenarios_idx=scenario_idx,
-                            force_overwrite=True,
-                            suppress_warnings=True,
-                        )
-
-                        if iter_count == 1:
-                            continue
-
-                        # relative error must be computed for scenarios_idx only
-                        # funziona lo stesso, perchè se il problema è infeasible i
-                        # risultati non vengono esportati (break qui sopra) e il
-                        # database rimane sempre uguale
-                        with db_handler(self.sqltools):
-                            relative_difference = \
-                                self.sqltools.get_tables_values_relative_difference(
-                                    other_db_dir_path=sqlite_db_path,
-                                    other_db_name=sqlite_db_file_name_previous,
-                                    tables_names=tables_to_check,
+                                self.problem.solve_problem_dataframe(
+                                    problem_name=sub_problem,
+                                    problem_dataframe=problem_df,
+                                    scenarios_idx=scenario_idx,
+                                    solver=solver,
+                                    solver_verbose=solver_verbose,
+                                    **kwargs
                                 )
 
-                        relative_difference_above = {
-                            table: value
-                            for table, value in relative_difference.items()
-                            if value > numerical_tolerance
-                        }
+                                status = problem_df.loc[
+                                    scenario_idx,
+                                    problem_status_header
+                                ]
 
-                        if relative_difference_above:
+                                problems_status.at[scenario_idx, sub_problem] = \
+                                    status
+
+                            if not all(
+                                problems_status.loc[scenario_idx] == 'optimal'
+                            ):
+                                self.logger.warning(
+                                    "One or more sub-problems infeasible for scenario "
+                                    f"{scenario_coords}."
+                                )
+                                break
+
                             self.logger.info(
-                                "Data tables with highest relative difference above "
-                                f"treshold ({numerical_tolerance} %):"
+                                "Problems solved successfully. Exporting data to "
+                                "SQLite database.")
+
+                            self.cvxpy_endogenous_data_to_database(
+                                scenarios_idx=scenario_idx,
+                                force_overwrite=True,
+                                suppress_warnings=True,
                             )
-                            for table, value in relative_difference_above.items():
-                                self.logger.info(
-                                    f"Data table '{table}': {round(value, 5)}")
-                        else:
-                            self.logger.info(
-                                f"Numerical convergence reached in {iter_count} "
-                                f"iterations | Scenario {scenario_coords}.")
-                            break
 
-                    finally:
-                        self.files.erase_file(
-                            dir_path=sqlite_db_path,
-                            file_name=sqlite_db_file_name_previous,
-                            force_erase=True,
-                            confirm=False,
-                        )
+                            if iter_count == 1:
+                                continue
+
+                            # relative error must be computed for scenarios_idx only
+                            # funziona lo stesso, perchè se il problema è infeasible i
+                            # risultati non vengono esportati (break qui sopra) e il
+                            # database rimane sempre uguale
+                            with db_handler(self.sqltools):
+                                relative_difference = \
+                                    self.sqltools.get_tables_values_relative_difference(
+                                        other_db_dir_path=sqlite_db_path,
+                                        other_db_name=sqlite_db_file_name_previous,
+                                        tables_names=tables_to_check,
+                                    )
+
+                            values_str = "  ".join(
+                                f"{relative_difference.get(table, 0.0)*100:>9.3f}{'*' if relative_difference.get(table, 0.0) > numerical_tolerance else ' '}"
+                                for table in tables_to_check
+                            )
+                            conv_log(f"Iter_{iter_count:>2}    {values_str}")
+
+                            relative_difference_above = {
+                                table: value
+                                for table, value in relative_difference.items()
+                                if value > numerical_tolerance
+                            }
+
+                            if relative_difference_above:
+                                self.logger.info(
+                                    "Numerical convergence NOT reached")
+                            else:
+                                self.logger.info(
+                                    f"Numerical convergence reached | "
+                                    f"Scenario {scenario_coords} | "
+                                    f"Iterations: {iter_count} ")
+                                break
+
+                        finally:
+                            self.files.erase_file(
+                                dir_path=sqlite_db_path,
+                                file_name=sqlite_db_file_name_previous,
+                                force_erase=True,
+                                confirm=False,
+                            )
+
+                # Log convergence summary
+                if log_iterations_numerical_summary:
+                    self.logger.info("Convergence monitoring summary:")
+                    for msg in conv_monitor['messages']:
+                        self.logger.info(msg)
 
         finally:
             # after iterations are concluded for all scenarios
