@@ -95,8 +95,6 @@ class SQLManager:
             try:
                 self.connection = sqlite3.connect(f'{self.database_sql_path}')
                 self.cursor = self.connection.cursor()
-                self.logger.debug(
-                    f"Connection to '{self.database_name}' opened.")
             except sqlite3.Error as error:
                 msg = f"Error opening connection to '{self.database_name}'."
                 self.logger.error(msg)
@@ -120,8 +118,6 @@ class SQLManager:
             try:
                 self.connection.close()
                 self.connection = None
-                self.logger.debug(
-                    f"Connection to '{self.database_name}' closed.")
             except sqlite3.Error as error:
                 msg = f"Error closing connection to '{self.database_name}'."
                 self.logger.error(msg)
@@ -650,7 +646,7 @@ class SQLManager:
         # convert all entries to strings except for id and values field
         for col in dataframe.columns:
             if col not in (id_field, values_field):
-                dataframe.loc[:, col] = dataframe[col].astype(str)
+                dataframe[col] = dataframe[col].astype(str)
 
         # case of no entries in existing table or case of 'overwrite' action
         if table_existing_entries == 0 or action == 'overwrite':
