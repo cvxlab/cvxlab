@@ -121,15 +121,18 @@ class Variable:
         if self.var_info is None:
             return
 
+        # get constant value if defined
         constant_value = self.var_info.get(value_key, None)
         if constant_value and constant_value in allowed_constants:
             self.value = constant_value
 
+        # get blank fill value if defined
         blank_fill_value = self.var_info.get(blank_fill_key, None)
         if blank_fill_value is not None and \
                 isinstance(blank_fill_value, (int, float)):
             self.blank_fill = blank_fill_value
 
+        # get rows and cols information
         for dimension in [dimensions['ROWS'], dimensions['COLS']]:
             shape_set = util.fetch_dict_primary_key(
                 dictionary=self.var_info,
@@ -482,7 +485,11 @@ class Variable:
 
         return None
 
-    def reshaping_sqlite_table_data(self, data: pd.DataFrame) -> pd.DataFrame:
+    def reshaping_sqlite_table_data(
+            self,
+            data: pd.DataFrame,
+            var_key: str | None = None,
+    ) -> pd.DataFrame:
         """Reshape SQLite table data to match cvxpy variable shape.
 
         This method takes a Dataframe with data fetched from SQLite database variable
@@ -491,7 +498,8 @@ class Variable:
 
         Args:
             data (pd.DataFrame): data filtered from the SQLite variable table,
-            related to a unique cvxpy variable.
+                related to a unique cvxpy variable.
+            var_key (Optional[str]): The variable key for logging purposes.
 
         Returns:
             pd.DataFrame: data reshaped and pivoted to be used as cvxpy values.
@@ -535,6 +543,16 @@ class Variable:
             index=target_index,
             columns=target_columns,
         )
+
+        if pivoted_data.isna().any().any():
+            msg = (
+                "Reshaping variable data failed | "
+                f"Variable '{var_key}' | NaN values after pivot/reindex."
+                if var_key else
+                "Reshaping variable data failed | NaN values after pivot/reindex."
+            )
+            self.logger.error(msg)
+            raise exc.OperationalError(msg)
 
         return pivoted_data
 
