@@ -525,15 +525,19 @@ class Variable:
             if not target_labels or not target_items:
                 return None
 
-            # Multi-level
+            # Multi-level (enforcing str type for all levels)
             if len(target_labels) > 1:
                 levels = [list(lvl) for lvl in target_items]
-                return pd.MultiIndex.from_product(levels, names=target_labels)
+                idx = pd.MultiIndex.from_product(levels, names=target_labels)
+                idx = idx.set_levels([lvl.map(str) for lvl in idx.levels])
+                return idx
 
-            # Single-level
+            # Single-level (enforcing str type)
             target_label = target_labels[0]
             target_items = target_items[0]
-            return pd.Index(target_items, name=target_label)
+            idx = pd.Index(target_items, name=target_label)
+            idx = idx.map(str)
+            return idx
 
         target_index = _build_axis(index_label, index_items)
         target_columns = _build_axis(columns_label, columns_items)
