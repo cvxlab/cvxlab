@@ -812,7 +812,7 @@ class Core:
             solver_verbose: bool,
             numerical_tolerance: Optional[float] = None,
             maximum_iterations: Optional[int] = None,
-            log_iterations_numerical_summary: bool = False,
+            convergence_monitoring: bool = True,
             **kwargs: Any,
     ) -> None:
         """Solve integrated numerical problems iteratively.
@@ -902,19 +902,16 @@ class Core:
                     self.logger.info("Solving integrated problems")
 
                 iter_count = 0
+                all_errors = {table: [] for table in tables_to_check}
 
                 with self.logger.convergence_monitor(
                     output_dir=sqlite_db_path,
                     scenario_name=scenario_label if scenario_coords else "default",
+                    activate_terminal=convergence_monitoring,
                     tolerance=numerical_tolerance,
-                    save_log_file=False,
                 ) as conv_monitor:
 
                     conv_log = conv_monitor['log']
-                    header = "Iteration " + \
-                        "  ".join(f"{t:>10}" for t in tables_to_check)
-                    conv_log(header)
-                    conv_log("-" * len(header))
 
                     while True:
                         try:
@@ -999,12 +996,19 @@ class Core:
                                         tables_names=tables_to_check,
                                     )
 
-                            values_str = "  ".join(
-                                f"{relative_difference.get(table, 0.0)*100:>9.3f}{'*' if relative_difference.get(table, 0.0) > numerical_tolerance else ' '}"
-                                for table in tables_to_check
-                            )
-                            conv_log(f"Iter_{iter_count:>2}    {values_str}")
+                            # Defining messages for convergence monitoring
+                            for table in tables_to_check:
+                                error = relative_difference.get(table, 0.0)
+                                all_errors[table].append(error)
 
+                            lines = self._format_convergence_table(
+                                tables_to_check=tables_to_check,
+                                all_errors=all_errors,
+                                iter_count=iter_count,
+                                numerical_tolerance=numerical_tolerance,
+                            )
+
+                            # Check convergence
                             relative_difference_above = {
                                 table: value
                                 for table, value in relative_difference.items()
@@ -1014,7 +1018,12 @@ class Core:
                             if relative_difference_above:
                                 self.logger.info(
                                     "Numerical convergence NOT reached")
+                                conv_log("\n".join(lines))
                             else:
+                                lines.append("")
+                                lines.append("Convergence reached!")
+                                conv_log("\n".join(lines))
+
                                 self.logger.info(
                                     f"Numerical convergence reached | "
                                     f"Scenario {scenario_coords} | "
@@ -1028,12 +1037,6 @@ class Core:
                                 force_erase=True,
                                 confirm=False,
                             )
-
-                # Log convergence summary
-                if log_iterations_numerical_summary:
-                    self.logger.info("Convergence monitoring summary:")
-                    for msg in conv_monitor['messages']:
-                        self.logger.info(msg)
 
         finally:
             # after iterations are concluded for all scenarios
@@ -1051,6 +1054,46 @@ class Core:
                 name_old=sqlite_db_file_name_bkp,
                 name_new=sqlite_db_file_name,
             )
+
+    def _format_convergence_table(
+            self,
+            tables_to_check: List[str],
+            all_errors: Dict[str, List[float]],
+            iter_count: int,
+            numerical_tolerance: float,
+    ) -> List[str]:
+        """Format convergence monitoring table with errors for each iteration.
+
+        Args:
+            tables_to_check: List of table names to monitor.
+            all_errors: Dictionary mapping table names to list of errors.
+            iter_count: Current iteration count.
+            numerical_tolerance: Convergence tolerance threshold.
+
+        Returns:
+            List of formatted strings for table display.
+        """
+        lines = []
+
+        # Calculate dynamic column width
+        max_table_name_len = max(len(table) for table in tables_to_check)
+        table_col_width = max(max_table_name_len + 2, 12)
+
+        # Header row with iteration numbers (starting from 2)
+        header = f"{'Table':<{table_col_width}}" + \
+            "".join(f"Iter_{j:>2}  " for j in range(2, iter_count + 1))
+        lines.append(header)
+        lines.append("-" * len(header))
+
+        # Data rows for each table
+        for table in tables_to_check:
+            values_str = "".join(
+                f"{e*100:>7.3f}{'*' if e > numerical_tolerance else ' '} "
+                for e in all_errors[table]
+            )
+            lines.append(f"{table:<{table_col_width}}{values_str}")
+
+        return lines
 
     def __repr__(self):
         """Return a string representation of the Core instance."""
