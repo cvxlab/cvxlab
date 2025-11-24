@@ -489,9 +489,13 @@ class Database:
                             )
                         )
 
+                        data_to_table = util.normalize_dataframe(
+                            df=data[table_key]
+                        )
+
                         self.sqltools.dataframe_to_table(
                             table_name=table_key,
-                            dataframe=data[table_key],
+                            dataframe=data_to_table,
                             force_overwrite=force_overwrite,
                             action='update',
                         )
@@ -504,9 +508,12 @@ class Database:
 
             with db_handler(self.sqltools):
                 for table_key, table in data.items():
+                    table: pd.DataFrame
 
                     if table_key not in table_key_list:
                         continue
+
+                    table = util.normalize_dataframe(df=table)
 
                     self.sqltools.dataframe_to_table(
                         table_name=table_key,
