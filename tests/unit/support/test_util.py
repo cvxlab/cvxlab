@@ -141,6 +141,18 @@ def test_flattening_list():
     run_test_cases(flattening_list, test_cases)
 
 
+def test_normalized_dataframe():
+
+    dataframe = pd.DataFrame()
+    numeric_dtype = float
+
+    test_cases = [
+        ((dataframe, )),
+    ]
+
+    run_test_cases(normalize_dataframe, test_cases)
+
+
 def test_pivot_dict():
     """
     Test the function 'pivot_dict'.

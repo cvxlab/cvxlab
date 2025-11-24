@@ -305,6 +305,108 @@ def flattening_list(nested_list: List[Any]) -> List[Any]:
     return flat
 
 
+def normalize_dataframe(
+        df: pd.DataFrame,
+        exclude_columns: Optional[List[str]] = None,
+        numeric_columns: Optional[str] = None,
+        numeric_dtype: Optional[type] = None,
+        replace_nans: bool = True,
+        nan_fill_value: Optional[Any] = None,
+) -> pd.DataFrame:
+    """Normalize a DataFrame with optional casting and missing-value handling.
+
+    Processing steps (in order):
+      1. Copy the input DataFrame to avoid mutating the original.
+      2. Validate exclude_columns; build target_cols = all columns except exclusions.
+      3. If numeric_columns is provided, cast those columns (except excluded ones) to numeric_dtype.
+      4. If replace_nans is True, replace a set of Na-like sentinels in target_cols with Python None.
+      5. If nan_fill_value is not None, fill remaining None/NaN entries globally with that value.
+
+    Na-like sentinels replaced when replace_nans is True:
+      pd.NA, np.nan, float('nan'), 'nan', 'NaN', 'NA', 'na', 'N/A', 'null'
+
+    Args:
+        df (pd.DataFrame): Input DataFrame to normalize.
+        exclude_columns (List[str] | None): Columns to skip for Na-like replacement
+            and numeric casting. Default None.
+        numeric_columns (str | List[str] | None): Column name(s) to cast to numeric_dtype.
+            (Current signature accepts str; pass a list if multiple needed.)
+        numeric_dtype (type | None): Target dtype for columns in numeric_columns.
+            Required if numeric_columns is provided.
+        replace_nans (bool): If True, perform Na-like sentinel replacement in non-excluded columns.
+        nan_fill_value (Any | None): Value used with DataFrame.fillna after replacement.
+            If None, no fill is performed.
+
+    Returns:
+        pd.DataFrame: A new normalized DataFrame.
+
+    Raises:
+        TypeError: If df is not a pandas DataFrame.
+        ValueError: If exclude_columns or numeric_columns contain invalid names,
+            if numeric_columns is provided without numeric_dtype,
+            or if casting fails for any specified column.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(
+            "Argument 'df' must be a pandas DataFrame. "
+            f"{type(df).__name__} was passed instead."
+        )
+
+    df = df.copy()
+
+    # Validate exclude_columns
+    if exclude_columns is None:
+        exclude_columns = []
+    else:
+        if not items_in_list(exclude_columns, df.columns):
+            raise ValueError(
+                f"One or more columns in '{exclude_columns}' not found "
+                "in DataFrame.")
+
+    target_cols = [col for col in df.columns if col not in exclude_columns]
+
+    # Step 1: Convert numeric columns to specified dtype
+    if numeric_columns is not None:
+        if not items_in_list(numeric_columns, df.columns):
+            raise ValueError(
+                f"One or more columns in '{numeric_columns}' not found "
+                "in DataFrame.")
+
+        if not numeric_dtype:
+            raise ValueError(
+                "When 'numeric_columns' is specified, "
+                "'numeric_dtype' must also be provided.")
+
+        try:
+            df.update({
+                col: df[col].astype(numeric_dtype)
+                for col in numeric_columns
+                if col not in exclude_columns
+            })
+        except Exception as e:
+            raise ValueError(
+                "Error converting specified numeric columns to "
+                f"'{numeric_dtype}': {e}"
+            ) from e
+
+    # Step 2: Replace all NaN/Na variants with None
+    if replace_nans:
+        nan_variants = {
+            key: None for key in
+            [
+                pd.NA, np.nan, float('nan'),
+                'nan', 'NaN', 'NA', 'na', 'N/A', 'null'
+            ]
+        }
+        df[target_cols] = df[target_cols].replace(nan_variants)
+
+    # Step 3: Fill None/NaN with specific value
+    if nan_fill_value is not None:
+        df.fillna(nan_fill_value, inplace=True)
+
+    return df
+
+
 def unpivot_dict_to_dataframe(
         data_dict: Dict[str, List[str]],
         key_order: Optional[List[str]] = None,
@@ -419,7 +521,7 @@ def check_dataframes_equality(
         skip_columns: Optional[List[str]] = None,
         cols_order_matters: bool = False,
         rows_order_matters: bool = False,
-        homogeneous_num_types: bool = True,
+        homogeneous_num_types: bool = False,
 ) -> bool:
     """Check dataframes equality.
 
