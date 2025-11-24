@@ -71,6 +71,7 @@ class Index:
         self.sets = self.load_and_validate_structure(structures[0])
         self.data = self.load_and_validate_structure(structures[1])
 
+        self.check_data_tables_variables_naming_coherence()
         self.check_sets_coherence()
         self.check_data_coherence()
         self.data_tables_completion()
@@ -197,8 +198,6 @@ class Index:
             Optional[pd.DataFrame]: A DataFrame with scenarios information if 
                 available, otherwise None.
         """
-        self.logger.debug("Fetching scenario/s information to Index.")
-
         scenarios_coordinates = {}
         list_sets_split_problem = list(self.sets_split_problem_dict.values())
         scenarios_coords_header = Defaults.Labels.SCENARIO_COORDINATES
@@ -371,9 +370,11 @@ class Index:
                             f"'{set_table_source_key}'."
 
                     # if filters are defined, they must be for source and destination sets
-                    if set_table.table_filters and not set_table_source.table_filters:
-                        problems[set_key] = "Filters must be defined for both " \
-                            f"copied set table and source set table '{set_table_source_key}'."
+                    if set_table_source.table_filters and not set_table.table_filters:
+                        problems[set_key] = f"Filters of set table '{set_key}' " \
+                            f"must be defined and equal to filters of the " \
+                            f"source set table '{set_table_source_key}'. " \
+                            "Check filters in settings files."
 
                     # if aggregations are defined, they must be for source and destination sets
                     if set_table.table_aggregations and not set_table_source.table_aggregations:
@@ -394,6 +395,71 @@ class Index:
                 "Check setup files."
             if not self.settings['detailed_validation']:
                 msg += "Set 'detailed_validation=True' for more information."
+
+            self.logger.error(msg)
+            raise exc.SettingsError(msg)
+
+    def check_data_tables_variables_naming_coherence(self) -> None:
+        """Check naming coherence for data tables and variables.
+
+        This method performs naming coherence checks to ensure that:
+        - All data table names are unique (case insensitive).
+        - All variable names are unique (case sensitive).
+
+        The method collects all anomalies in a dictionary with keys identifying 
+        the location of the anomaly, and values as the related description. 
+        Errors are raised and logged at the end of the method.
+
+        Raises:
+            exc.SettingsError: Raised with the list of all exceptions collected
+                during the naming coherence checks, identifying mistakes in model settings.
+        """
+        self.logger.debug(
+            "Checking data tables and variables naming coherence.")
+
+        problems = {}
+
+        # Check that all data table names are unique (case insensitive)
+        table_names_lower = {}
+        for table_key in self.data.keys():
+            table_name_lower = table_key.lower()
+            if table_name_lower in table_names_lower:
+                problems['data_tables_naming'] = \
+                    f"Duplicate data table names (case insensitive): " \
+                    f"'{table_names_lower[table_name_lower]}' and '{table_key}'. " \
+                    f"Table names must be unique regardless of case."
+                break
+            table_names_lower[table_name_lower] = table_key
+
+        # Check that all variable names are unique (case sensitive)
+        all_variable_names = []
+        for data_table in self.data.values():
+            all_variable_names.extend(data_table.variables_info.keys())
+
+        duplicate_vars = [
+            var for var in set(all_variable_names)
+            if all_variable_names.count(var) > 1
+        ]
+
+        if duplicate_vars:
+            problems['variables_naming'] = \
+                f"Duplicate variable names found: {duplicate_vars}. " \
+                f"Variable names must be unique across all data tables."
+
+        if problems:
+            if self.settings['detailed_validation']:
+                for key, error_log in problems.items():
+                    self.logger.error(
+                        f"Naming coherence check | {key} | {error_log}")
+            else:
+                self.logger.error(
+                    f"Naming coherence error | Data tables, Variables | Entries: "
+                    f"{list(problems.keys())}")
+
+            msg = "Data tables and variables naming coherence check not successful. " \
+                "Check setup files."
+            if not self.settings['detailed_validation']:
+                msg += " Set 'detailed_validation=True' for more information."
 
             self.logger.error(msg)
             raise exc.SettingsError(msg)
@@ -872,7 +938,6 @@ class Index:
         sets_excel_data = self.files.excel_to_dataframes_dict(
             excel_file_name=excel_file_name,
             excel_file_dir_path=excel_file_dir_path,
-            empty_data_fill=Defaults.SymbolicDefinitions.STD_TEXT_DATA_FILL,
         )
 
         sets_excel_keys = sets_excel_data.keys()
