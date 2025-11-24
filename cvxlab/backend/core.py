@@ -659,6 +659,7 @@ class Core:
             solver: str,
             solver_verbose: bool,
             integrated_problems: bool,
+            convergence_monitoring: bool,
             force_overwrite: bool,
             maximum_iterations: Optional[int] = None,
             numerical_tolerance: Optional[float] = None,
@@ -717,6 +718,7 @@ class Core:
                 solver=solver,
                 solver_verbose=solver_verbose,
                 numerical_tolerance=numerical_tolerance,
+                convergence_monitoring=convergence_monitoring,
                 maximum_iterations=maximum_iterations,
                 **kwargs,
             )

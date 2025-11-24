@@ -11,4 +11,8 @@ methods:
 # Model-specific method overrides
 model_overrides:
     model_simple:
-        run_model: {force_overwrite: True, integrated_problems: True}
+        run_model: {
+            force_overwrite: True, 
+            integrated_problems: True,
+            convergence_monitoring: False,
+        }
