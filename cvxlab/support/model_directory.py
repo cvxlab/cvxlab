@@ -345,11 +345,12 @@ def transfer_setup_info_xlsx(
             files.logger.info(
                 f"Updating '{tab}' tab in '{destination_file_name}' file.")
 
-            df = files.excel_tab_to_dataframe(
+            df_dict = files.excel_to_dataframes_dict(
                 excel_file_name=source_file_name,
                 excel_file_dir_path=source_dir_path,
-                tab_name=tab,
+                sheet_names=[tab],
             )
+            df = df_dict[tab]
 
             if 'skip' in cols_to_drop and 'skip' in df.columns:
                 df = df[df['skip'].isna()]
