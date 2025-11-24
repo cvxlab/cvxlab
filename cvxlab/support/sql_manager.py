@@ -1252,8 +1252,7 @@ class SQLManager:
             return max_relative_difference
 
         finally:
-            del other_db_connection
-            del other_db_cursor
+            other_db_connection.close()
 
     def __repr__(self):
         """Return a string representation of the SQLManager instance."""
