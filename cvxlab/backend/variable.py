@@ -581,15 +581,23 @@ class Variable:
         """
         allowed_constants = Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS
 
-        factory_function = allowed_constants[value_type]
-
         if value_type not in allowed_constants:
             msg = f"Constant definition | type: '{value_type}' not supported. " \
                 f"Supported value types: {allowed_constants.keys()}"
             self.logger.error(msg)
             raise exc.SettingsError(msg)
 
-        return factory_function(self.shape_size)
+        factory_function = allowed_constants[value_type]
+
+        try:
+            return factory_function(self.shape_size)
+        except Exception as e:
+            msg = (
+                f"Constant generation failed | Variable: '{self.symbol}' | "
+                f"Type: '{value_type}' | Error: {type(e).__name__}: {str(e)}"
+            )
+            self.logger.error(msg)
+            raise exc.OperationalError(msg) from e
 
     def __repr__(self) -> str:
         """Provide a string representation of the Variable object."""
