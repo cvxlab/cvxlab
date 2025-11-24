@@ -161,7 +161,7 @@ def arange(dimension: List[int], start_from: int, order: str = 'F') -> np.array:
 
     total_elements = np.prod(dimension)
     values = np.arange(start_from, start_from+total_elements)
-    reshaped_array = np.reshape(a=values, newshape=dimension, order=order)
+    reshaped_array = values.reshape(dimension, order=order)
 
     return reshaped_array
 
