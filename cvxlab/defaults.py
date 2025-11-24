@@ -268,7 +268,7 @@ class Defaults:
                 'variables_info': {
                     ANY: {
                         'value': (OPTIONAL, str),
-                        'blank_fill': (OPTIONAL, float),
+                        'blank_fill': (OPTIONAL, Union[int, float]),
                         ANY: (OPTIONAL, {
                             'dim': (OPTIONAL, str),
                             'filters': (OPTIONAL, dict),
