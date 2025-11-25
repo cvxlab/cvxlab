@@ -13,14 +13,27 @@ import pandas as pd
 
 from collections.abc import Iterable
 from copy import deepcopy
-from typing import Dict, List, Any, Literal, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple
 
 from cvxlab.support import util_text
 
 
+def get_user_confirmation(message: str) -> bool:
+    """Prompt the user to confirm an action via command line input.
+
+    Args:
+        message (str): The message to display to the user.
+
+    Returns:
+        bool: True if the user confirms the action, False otherwise.
+    """
+    response = input(f"{message} (y/[n]): ").lower()
+    return response == 'y'
+
+
 def validate_selection(
-        valid_selections: Iterable[str],
-        selection: str,
+        valid_selections: Iterable[str | int],
+        selection: str | int,
         ignore_case: bool = False,
 ) -> None:
     """Validate a selected item against a list of valid selections.
@@ -30,18 +43,26 @@ def validate_selection(
     comparison.
 
     Args:
-        valid_selections (List[str]): A list containing all valid selections.
-        selection (str): The selection to validate.
+        valid_selections (List[str | int]): A list containing all valid selections.
+        selection (str | int): The selection to validate.
         ignore_case (bool): If True, ignores the case of the selection. 
             Works only with string selections. Default is False.
 
     Raises:
-        ValueError: If no valid selections are available.
-        ValueError: If ignore_case is True but the selections are not strings.
-        ValueError: If the selection is not found within the list of valid selections.
+        TypeError: If the selection is not of type string or int.
+        ValueError: 
+            If no valid selections are available.
+            If ignore_case is True but the selections are not strings.
+            If the selection is not found within the list of valid selections.
     """
     if not valid_selections:
         raise ValueError("No valid selections are available.")
+
+    if not isinstance(selection, str | int):
+        raise TypeError(
+            "Selection must be of type string or int. "
+            f"Passed type: {type(selection).__name__}; "
+        )
 
     if ignore_case:
         if all(isinstance(item, str) for item in valid_selections):
@@ -58,54 +79,54 @@ def validate_selection(
 
 
 def items_in_list(
-        items: List,
-        control_list: Iterable,
+        items: Any,
+        control_list: Any,
 ) -> bool:
-    """Check if all items in a list are present in a control list.
+    """Check if all items are present in a control collection.
+
+    Supports list, tuple, dict (uses its keys) as items and control_list.
+    Strings / bytes are not accepted (treated as atomic, raise TypeError).
 
     Args:
-        items (List): The list of items to check.
-        control_list (Iterable): The iterable to check against.
+        items: Collection whose (elements | keys) to test.
+        control_list: Collection providing membership domain.
 
     Returns:
-        bool: True if all items are present in the list to check, False otherwise.
+        bool: True if every item is in control_list, False otherwise.
 
     Raises:
-        TypeError: If either 'items' or 'list_to_check' is not iterable.
-        ValueError: If 'list_to_check' is empty.
+        TypeError: If inputs are of unsupported types.
+        ValueError: If control_list is empty.
     """
-    if not isinstance(items, list):
+    # Normalize items
+    if isinstance(items, dict):
+        normalized_items = list(items.keys())
+    elif isinstance(items, (list, tuple)):
+        normalized_items = list(items)
+    else:
         raise TypeError(
-            "'items' must be of type list. Passed "
-            f"type: {type(items).__name__}; "
-        )
-    if not isinstance(control_list, Iterable):
-        raise TypeError(
-            "'list_to_check' must be iterable. Passed "
-            f"type: {type(control_list).__name__}; "
+            "'items' must be list, tuple, or dict. "
+            f"Passed type: {type(items).__name__}."
         )
 
-    control_set = set(control_list)
-    if not control_set:
-        raise ValueError("The control_list must not be empty.")
+    # Normalize control_list
+    if isinstance(control_list, dict):
+        normalized_control = set(control_list.keys())
+    elif isinstance(control_list, (list, tuple)):
+        normalized_control = set(control_list)
+    else:
+        raise TypeError(
+            "'control_list' must be list, tuple, or dict. "
+            f"Passed type: {type(control_list).__name__}."
+        )
 
-    if not items:
+    if not normalized_control:
         return False
 
-    return all(item in control_list for item in items)
+    if not normalized_items:
+        return False
 
-
-def get_user_confirmation(message: str) -> bool:
-    """Prompt the user to confirm an action via command line input.
-
-    Args:
-        message (str): The message to display to the user.
-
-    Returns:
-        bool: True if the user confirms the action, False otherwise.
-    """
-    response = input(f"{message} (y/[n]): ").lower()
-    return response == 'y'
+    return all(item in normalized_control for item in normalized_items)
 
 
 def find_dict_depth(item: dict) -> int:
@@ -305,108 +326,6 @@ def flattening_list(nested_list: List[Any]) -> List[Any]:
     return flat
 
 
-def normalize_dataframe(
-        df: pd.DataFrame,
-        exclude_columns: Optional[List[str]] = None,
-        numeric_columns: Optional[str] = None,
-        numeric_dtype: Optional[type] = None,
-        replace_nans: bool = True,
-        nan_fill_value: Optional[Any] = None,
-) -> pd.DataFrame:
-    """Normalize a DataFrame with optional casting and missing-value handling.
-
-    Processing steps (in order):
-      1. Copy the input DataFrame to avoid mutating the original.
-      2. Validate exclude_columns; build target_cols = all columns except exclusions.
-      3. If numeric_columns is provided, cast those columns (except excluded ones) to numeric_dtype.
-      4. If replace_nans is True, replace a set of Na-like sentinels in target_cols with Python None.
-      5. If nan_fill_value is not None, fill remaining None/NaN entries globally with that value.
-
-    Na-like sentinels replaced when replace_nans is True:
-      pd.NA, np.nan, float('nan'), 'nan', 'NaN', 'NA', 'na', 'N/A', 'null'
-
-    Args:
-        df (pd.DataFrame): Input DataFrame to normalize.
-        exclude_columns (List[str] | None): Columns to skip for Na-like replacement
-            and numeric casting. Default None.
-        numeric_columns (str | List[str] | None): Column name(s) to cast to numeric_dtype.
-            (Current signature accepts str; pass a list if multiple needed.)
-        numeric_dtype (type | None): Target dtype for columns in numeric_columns.
-            Required if numeric_columns is provided.
-        replace_nans (bool): If True, perform Na-like sentinel replacement in non-excluded columns.
-        nan_fill_value (Any | None): Value used with DataFrame.fillna after replacement.
-            If None, no fill is performed.
-
-    Returns:
-        pd.DataFrame: A new normalized DataFrame.
-
-    Raises:
-        TypeError: If df is not a pandas DataFrame.
-        ValueError: If exclude_columns or numeric_columns contain invalid names,
-            if numeric_columns is provided without numeric_dtype,
-            or if casting fails for any specified column.
-    """
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError(
-            "Argument 'df' must be a pandas DataFrame. "
-            f"{type(df).__name__} was passed instead."
-        )
-
-    df = df.copy()
-
-    # Validate exclude_columns
-    if exclude_columns is None:
-        exclude_columns = []
-    else:
-        if not items_in_list(exclude_columns, df.columns):
-            raise ValueError(
-                f"One or more columns in '{exclude_columns}' not found "
-                "in DataFrame.")
-
-    target_cols = [col for col in df.columns if col not in exclude_columns]
-
-    # Step 1: Convert numeric columns to specified dtype
-    if numeric_columns is not None:
-        if not items_in_list(numeric_columns, df.columns):
-            raise ValueError(
-                f"One or more columns in '{numeric_columns}' not found "
-                "in DataFrame.")
-
-        if not numeric_dtype:
-            raise ValueError(
-                "When 'numeric_columns' is specified, "
-                "'numeric_dtype' must also be provided.")
-
-        try:
-            df.update({
-                col: df[col].astype(numeric_dtype)
-                for col in numeric_columns
-                if col not in exclude_columns
-            })
-        except Exception as e:
-            raise ValueError(
-                "Error converting specified numeric columns to "
-                f"'{numeric_dtype}': {e}"
-            ) from e
-
-    # Step 2: Replace all NaN/Na variants with None
-    if replace_nans:
-        nan_variants = {
-            key: None for key in
-            [
-                pd.NA, np.nan, float('nan'),
-                'nan', 'NaN', 'NA', 'na', 'N/A', 'null'
-            ]
-        }
-        df[target_cols] = df[target_cols].replace(nan_variants)
-
-    # Step 3: Fill None/NaN with specific value
-    if nan_fill_value is not None:
-        df.fillna(nan_fill_value, inplace=True)
-
-    return df
-
-
 def unpivot_dict_to_dataframe(
         data_dict: Dict[str, List[str]],
         key_order: Optional[List[str]] = None,
@@ -436,6 +355,9 @@ def unpivot_dict_to_dataframe(
             "Argument 'data_dict' must be a dictionary. "
             f"{type(data_dict).__name__} was passed instead."
         )
+
+    if not data_dict:
+        return pd.DataFrame()
 
     if key_order is not None and not isinstance(key_order, list):
         raise TypeError(
@@ -1219,6 +1141,15 @@ def is_sparse(array: np.ndarray, threshold: float) -> bool:
     Returns:
         bool: True if the array is sparse, False otherwise.
     """
+    if not isinstance(array, np.ndarray):
+        raise TypeError(
+            "Argument 'array' must be a numpy ndarray. "
+            f"{type(array).__name__} was passed instead."
+        )
+
+    if not (0 <= threshold <= 1):
+        raise ValueError("Argument 'threshold' must be between 0 and 1.")
+
     total_elements = array.size
     zero_elements = np.count_nonzero(array == 0)
     proportion_zero = zero_elements / total_elements
@@ -1229,3 +1160,105 @@ def is_sparse(array: np.ndarray, threshold: float) -> bool:
         return True
     else:
         return False
+
+
+def normalize_dataframe(
+        df: pd.DataFrame,
+        exclude_columns: Optional[List[str]] = None,
+        numeric_columns: Optional[List[str]] = None,
+        numeric_dtype: Optional[type] = None,
+        replace_nans: bool = True,
+        nan_fill_value: Optional[Any] = None,
+) -> pd.DataFrame:
+    """Normalize a DataFrame with optional casting and missing-value handling.
+
+    Processing steps (in order):
+      1. Copy the input DataFrame to avoid mutating the original.
+      2. Validate exclude_columns; build target_cols = all columns except exclusions.
+      3. If numeric_columns is provided, cast those columns (except excluded ones) to numeric_dtype.
+      4. If replace_nans is True, replace a set of Na-like sentinels in target_cols with Python None.
+      5. If nan_fill_value is not None, fill remaining None/NaN entries globally with that value.
+
+    Na-like sentinels replaced when replace_nans is True:
+      pd.NA, np.nan, float('nan'), 'nan', 'NaN', 'NA', 'na', 'N/A', 'null'
+
+    Args:
+        df (pd.DataFrame): Input DataFrame to normalize.
+        exclude_columns (List[str] | None): Columns to skip for Na-like replacement
+            and numeric casting. Default None.
+        numeric_columns (str | List[str] | None): Column name(s) to cast to numeric_dtype.
+            (Current signature accepts str; pass a list if multiple needed.)
+        numeric_dtype (type | None): Target dtype for columns in numeric_columns.
+            Required if numeric_columns is provided.
+        replace_nans (bool): If True, perform Na-like sentinel replacement in non-excluded columns.
+        nan_fill_value (Any | None): Value used with DataFrame.fillna after replacement.
+            If None, no fill is performed.
+
+    Returns:
+        pd.DataFrame: A new normalized DataFrame.
+
+    Raises:
+        TypeError: If df is not a pandas DataFrame.
+        ValueError: If exclude_columns or numeric_columns contain invalid names,
+            if numeric_columns is provided without numeric_dtype,
+            or if casting fails for any specified column.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(
+            "Argument 'df' must be a pandas DataFrame. "
+            f"{type(df).__name__} was passed instead."
+        )
+
+    df = df.copy()
+
+    # Validate exclude_columns
+    if exclude_columns is None:
+        exclude_columns = []
+    else:
+        if not items_in_list(exclude_columns, df.columns):
+            raise ValueError(
+                f"One or more columns in '{exclude_columns}' not found "
+                "in DataFrame.")
+
+    target_cols = [col for col in df.columns if col not in exclude_columns]
+
+    # Step 1: Convert numeric columns to specified dtype
+    if numeric_columns is not None:
+        if not items_in_list(numeric_columns, df.columns):
+            raise ValueError(
+                f"One or more columns in '{numeric_columns}' not found "
+                "in DataFrame.")
+
+        if not numeric_dtype:
+            raise ValueError(
+                "When 'numeric_columns' is specified, "
+                "'numeric_dtype' must also be provided.")
+
+        try:
+            df.update({
+                col: df[col].astype(numeric_dtype)
+                for col in numeric_columns
+                if col not in exclude_columns
+            })
+        except Exception as e:
+            raise ValueError(
+                "Error converting specified numeric columns to "
+                f"'{numeric_dtype}': {e}"
+            ) from e
+
+    # Step 2: Replace all NaN/Na variants with None
+    if replace_nans:
+        nan_variants = {
+            key: None for key in
+            [
+                pd.NA, np.nan, float('nan'),
+                'nan', 'NaN', 'NA', 'na', 'N/A', 'null'
+            ]
+        }
+        df[target_cols] = df[target_cols].replace(nan_variants)
+
+    # Step 3: Fill None/NaN with specific value
+    if nan_fill_value is not None:
+        df.fillna(nan_fill_value, inplace=True)
+
+    return df
