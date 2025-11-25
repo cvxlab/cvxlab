@@ -509,6 +509,7 @@ class Model:
         integrated_problems: bool = False,
         convergence_monitoring: bool = True,
         solver: Optional[str] = None,
+        solver_settings: Optional[dict[str, Any]] = None,
         numerical_tolerance: Optional[float] = None,
         maximum_iterations: Optional[int] = None,
         **kwargs: Any,
@@ -559,6 +560,11 @@ class Model:
             self.logger.error(msg)
             raise exc.SettingsError(msg)
 
+        if solver_settings:
+            solver_settings = {**solver_settings, **kwargs}
+        else:
+            solver_settings = kwargs
+
         if sub_problems == 0:
             msg = "Numerical problem not found. Initialize problem first."
             self.logger.error(msg)
@@ -598,7 +604,7 @@ class Model:
                 maximum_iterations=maximum_iterations,
                 canon_backend=cp.SCIPY_CANON_BACKEND,
                 ignore_dpp=True,
-                **kwargs,
+                **solver_settings,
             )
 
         msg = "Numerical problems status report:"
