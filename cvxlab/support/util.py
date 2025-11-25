@@ -554,33 +554,25 @@ def add_column_to_dataframe(
         column_header: str,
         column_values: Any = None,
         column_position: Optional[int] = None,
-) -> bool:
-    """Add a column to a DataFrame.
+) -> pd.DataFrame:
+    """Add a column to a DataFrame at a specified position.
 
-    This function inserts a new column into the provided DataFrame at the specified 
-    position or at the end if no position is specified, only if the column does 
-    not already exist.
+    Creates a copy of the input DataFrame and adds a new column at the specified
+    position. If the column already exists, returns the original DataFrame unchanged.
 
     Args:
-        dataframe (pd.DataFrame): The pandas DataFrame to which the column 
-            will be added.
-        column_header (str): The name/header of the new column.
-        column_values (Any, optional): The values to be assigned to the new 
-            column. If not provided, the column will be populated with 
-            NaN values.
-        column_position (int, optional): The index position where the new 
-            column will be inserted. If not provided, the column will be 
-            inserted at the end. Default to None.
+        dataframe (pd.DataFrame): The DataFrame to which the column will be added.
+        column_header (str): The name of the column to add.
+        column_values (Any, optional): Values for the new column. Defaults to None.
+        column_position (int | None, optional): Position (0-indexed) where the column
+            should be inserted. If None, appends to the end. Defaults to None.
 
     Returns:
-        bool: True if the column was added, False if the column already exists.
+        pd.DataFrame: A new DataFrame with the added column.
 
     Raises:
-        TypeError: If column_header is not string or dataframe is not a Pandas
-            DataFrame.
-        ValueError: If the column_position is greater than the current number 
-            of columns or if the column_header is empty, or if the legth of the
-            passed column does not match the number of rows of the DataFrame.
+        TypeError: If dataframe is not a pandas DataFrame or column_header is not a string.
+        ValueError: If column_position is out of valid range.
     """
     if not isinstance(column_header, str):
         raise TypeError("Passed column header must be of type string.")
@@ -590,21 +582,31 @@ def add_column_to_dataframe(
             "Passed dataframe argument must be a Pandas DataFrame.")
 
     if column_header in dataframe.columns:
-        return False
+        return dataframe
 
-    if column_position is not None and column_position > len(dataframe):
-        raise ValueError(
-            "Passed column_position is greater than the number of columns "
-            "of the dataframe.")
+    dataframe = dataframe.copy()
+
+    # in case of empty dataframe, add a dummy row to allow column insertion
+    if dataframe.empty and len(dataframe) == 0:
+        dataframe = pd.DataFrame(index=[0])
 
     if column_position is None:
         column_position = len(dataframe.columns)
 
-    if column_values and \
-            len(column_values) != dataframe.shape[0]:
+    if not (0 <= column_position <= len(dataframe.columns)):
         raise ValueError(
-            "Passed column_values length must match the number or rows"
-            "of the DataFrame.")
+            "Passed column_position is greater than the number of columns "
+            "of the dataframe.")
+
+    if column_values is not None:
+        if not isinstance(column_values, (list, np.ndarray, pd.Series)):
+            column_values = [column_values] * len(dataframe)
+
+        if len(column_values) != len(dataframe):
+            raise ValueError(
+                f"Length of 'column_values' ({len(column_values)}) does not match "
+                f"DataFrame length ({len(dataframe)})."
+            )
 
     dataframe.insert(
         loc=column_position,
@@ -612,7 +614,7 @@ def add_column_to_dataframe(
         value=column_values,
     )
 
-    return True
+    return dataframe
 
 
 def substitute_dict_keys(

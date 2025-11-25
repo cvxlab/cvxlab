@@ -487,7 +487,7 @@ class Problem:
         )
 
         for header in headers.values():
-            util.add_column_to_dataframe(
+            var_data = util.add_column_to_dataframe(
                 dataframe=var_data,
                 column_header=header,
                 column_values=None,
@@ -1057,7 +1057,7 @@ class Problem:
         problems_df = self.index.scenarios_info.copy()
 
         for item in headers.values():
-            util.add_column_to_dataframe(
+            problems_df = util.add_column_to_dataframe(
                 dataframe=problems_df,
                 column_header=item,
                 column_values=None,
@@ -1212,7 +1212,7 @@ class Problem:
                         variable_data[cvxpy_var_header].values[0]
                 else:
                     msg = "Unable to identify a unique cvxpy variable for " \
-                        f"{var_key} based on the current problem filter."
+                        f"'{var_key}' based on the current problem filter."
                     self.logger.error(msg)
                     raise exc.ConceptualModelError(msg)
 

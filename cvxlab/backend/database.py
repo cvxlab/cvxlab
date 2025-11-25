@@ -210,7 +210,7 @@ class Database:
 
                 if table_headers is not None:
                     if table_id_header not in table_headers.values():
-                        util.add_column_to_dataframe(
+                        dataframe = util.add_column_to_dataframe(
                             dataframe=dataframe,
                             column_header=table_id_header[0],
                             column_values=None,
@@ -324,7 +324,7 @@ class Database:
                     self.logger.error(msg)
                     raise exc.OperationalError(msg)
 
-                util.add_column_to_dataframe(
+                unpivoted_coords_df = util.add_column_to_dataframe(
                     dataframe=unpivoted_coords_df,
                     column_header=table.table_headers['id'][0],
                     column_values=None,

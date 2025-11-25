@@ -212,7 +212,7 @@ class Index:
             key_order=list_sets_split_problem,
         )
 
-        util.add_column_to_dataframe(
+        scenarios_df = util.add_column_to_dataframe(
             dataframe=scenarios_df,
             column_header=scenarios_coords_header,
             column_values=None,

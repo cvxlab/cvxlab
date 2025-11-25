@@ -664,7 +664,7 @@ class SQLManager:
                     return
 
             if id_field not in dataframe.columns:
-                util.add_column_to_dataframe(
+                dataframe = util.add_column_to_dataframe(
                     dataframe=dataframe,
                     column_header=id_field,
                     column_values=range(len(dataframe)),

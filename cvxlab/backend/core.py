@@ -519,10 +519,12 @@ class Core:
                         ignore_index=True
                     )
 
-                if not util.add_column_to_dataframe(
+                data_table_dataframe = util.add_column_to_dataframe(
                     dataframe=data_table_dataframe,
                     column_header=values_headers,
-                ):
+                )
+
+                if values_headers not in data_table_dataframe.columns:
                     if self.settings['log_level'] == 'debug' or \
                             not suppress_warnings:
                         self.logger.warning(
