@@ -87,6 +87,8 @@ def run_test_cases(
             A list of test cases, each defined as a tuple in one of the following forms:
                 ((args...), expected_output, expected_exception)
                 ((args...), expected_output, expected_exception, {kwarg: val, ...})
+                notice that args is a tuple of positional arguments, while kwargs
+                is a dictionary of keyword arguments.
         tolerance (Optional[float]):
             If provided, uses tolerant equality based on the specified tolerance
             for numpy arrays, Series, and DataFrames. Default is None.
@@ -116,7 +118,7 @@ def run_test_cases(
         else:
             raise ValueError("Each test case must have 3 or 4 elements")
 
-        # if input_val is a tuple, treat as positional args
+        # if input_val is a tuple, treat as positional args (in case func has multiple args)
         if isinstance(input_val, tuple) and unpack_tuple_args:
             call_args = input_val
             def call_func(): return func(*call_args, **kwargs)
