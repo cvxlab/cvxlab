@@ -227,6 +227,7 @@ class Logger:
             tolerance: float,
             scenario_name: str = "N/A",
             activate_terminal: bool = True,
+            refresh_interval: float = 2.0,
     ):
         """Context manager for convergence monitoring in a separate terminal.
 
@@ -239,6 +240,8 @@ class Logger:
             scenario_name (str): Name/coordinates of the scenario being solved.
             activate_terminal (bool): If True, opens monitoring terminal; if False, 
                 only writes to file.
+            refresh_interval (float): Seconds between terminal refreshes (default: 2.0s).
+
 
         Yields:
             dict: Dictionary with 'log' method for writing convergence data.
@@ -259,20 +262,15 @@ class Logger:
             ""
         ]
 
-        # Logger function
-        def convergence_log(message: str):
-            """Rewrite file with header + current message only."""
-            with open(convergence_file_path, 'w') as f:
-                # Write header
-                for line in header_lines:
-                    f.write(line + "\n")
-
-                # Write only the latest message
-                f.write(message + "\n")
-                f.flush()
-
         terminal_process = None
-        if activate_terminal:
+        terminal_opened = False
+
+        def open_terminal():
+            """Open a new terminal window to monitor the convergence log file."""
+            nonlocal terminal_process, terminal_opened
+
+            if terminal_opened or not activate_terminal:
+                return
 
             try:
                 system = platform.system()
@@ -282,7 +280,7 @@ class Logger:
                         f'while ($true) {{ '
                         f'Clear-Host; '
                         f'Get-Content "{convergence_file_path}"; '
-                        f'Start-Sleep -Seconds 1 '
+                        f'Start-Sleep -Seconds {refresh_interval} '
                         f'}}'
                     )
                     terminal_process = subprocess.Popen(
@@ -291,10 +289,9 @@ class Logger:
                     )
 
                 elif system == 'Darwin':  # macOS
-                    # Create AppleScript to open Terminal and run monitoring command
                     script = f'''
                         tell application "Terminal"
-                            do script "while true; do clear; cat '{convergence_file_path}'; sleep 1; done"
+                            do script "while true; do clear; cat '{convergence_file_path}'; sleep {refresh_interval}; done"
                             activate
                         end tell
                     '''
@@ -313,18 +310,37 @@ class Logger:
                         f"Logging to file only: {convergence_file_path}"
                     )
 
+                terminal_opened = True
+
             except Exception as e:
                 self.logger.warning(
                     f"Could not open convergence monitoring terminal: {e}. "
                     f"Logging to file: {convergence_file_path}"
                 )
-        else:
+
+        def convergence_log(message: str):
+            """Rewrite file with header + current message only."""
+            with open(convergence_file_path, 'w') as f:
+                # Write header
+                for line in header_lines:
+                    f.write(line + "\n")
+
+                # Write only the latest message
+                f.write(message + "\n")
+                f.flush()
+
+            # Open terminal on first log entry
+            if not terminal_opened:
+                open_terminal()
+
+        if not activate_terminal:
             self.logger.debug(
                 "Convergence monitoring: terminal disabled, logging to "
                 f"{convergence_file_path}")
 
         try:
             yield {'log': convergence_log, 'file': convergence_file_path}
+
         finally:
             # Do nothing - keep the last logged message as-is
             pass
