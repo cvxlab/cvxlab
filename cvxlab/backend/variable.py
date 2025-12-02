@@ -8,6 +8,7 @@ that may include dimensions, mapping of related tables, and operations that
 convert SQL data to formats usable by optimization tools like cvxpy.
 """
 from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing_extensions import Literal
 
 import cvxpy as cp
 import pandas as pd
@@ -485,16 +486,46 @@ class Variable:
 
         return None
 
-    def reshaping_sqlite_table_data(
+    @staticmethod
+    def build_axis(
+        target_labels: List[str] | None,
+        target_items: List[List[str]] | None,
+    ) -> pd.Index | pd.MultiIndex | None:
+        """Build a pandas Index or MultiIndex from labels/items.
+
+        Args:
+            target_labels: List of dimension labels (single or multiple) or None.
+            target_items: List of lists of items matching labels, or None.
+
+        Returns:
+            pd.Index | pd.MultiIndex | None: Constructed index; None if insufficient data.
+        """
+        if not target_labels or not target_items:
+            return None
+
+        # Multi-level
+        if len(target_labels) > 1:
+            levels = [list(lvl) for lvl in target_items]
+            idx = pd.MultiIndex.from_product(levels, names=target_labels)
+            # enforce str type on each level
+            idx = idx.set_levels([lvl.map(str) for lvl in idx.levels])
+            return idx
+
+        # Single level
+        items = target_items[0]
+        idx = pd.Index(items, name=target_labels[0])
+        return idx.map(str)
+
+    def reshaping_normalized_table_data(
             self,
             data: pd.DataFrame,
             var_key: str | None = None,
     ) -> pd.DataFrame:
-        """Reshape SQLite table data to match cvxpy variable shape.
+        """Reshape normalized table data to match cvxpy variable shape.
 
         This method takes a Dataframe with data fetched from SQLite database variable
-        table, and elaborate it to get the shape required by the cvxpy variable 
-        (two-dimensions matrix).
+        table as a normalized table, and elaborate it to get the shape required by 
+        the cvxpy variable (two-dimensions matrix).
 
         Args:
             data (pd.DataFrame): data filtered from the SQLite variable table,
@@ -509,10 +540,11 @@ class Variable:
         index_label, columns_label = self.dims_labels
         index_items, columns_items = self.dims_items
 
-        # case of a scalar with no rows/cols labels (scalars)
+        # Case of a scalar with no rows/cols labels (scalars)
         if all(item is None for item in self.dims_labels):
             index_label = ''
 
+        # Pivot the data to reshape it according to variable dimensions
         pivoted_data = data.pivot_table(
             index=index_label,
             columns=columns_label,
@@ -520,27 +552,9 @@ class Variable:
             aggfunc='first'
         )
 
-        # Build MultiIndex or Index for rows and columns
-        def _build_axis(target_labels, target_items):
-            if not target_labels or not target_items:
-                return None
-
-            # Multi-level (enforcing str type for all levels)
-            if len(target_labels) > 1:
-                levels = [list(lvl) for lvl in target_items]
-                idx = pd.MultiIndex.from_product(levels, names=target_labels)
-                idx = idx.set_levels([lvl.map(str) for lvl in idx.levels])
-                return idx
-
-            # Single-level (enforcing str type)
-            target_label = target_labels[0]
-            target_items = target_items[0]
-            idx = pd.Index(target_items, name=target_label)
-            idx = idx.map(str)
-            return idx
-
-        target_index = _build_axis(index_label, index_items)
-        target_columns = _build_axis(columns_label, columns_items)
+        # Build target index and columns
+        target_index = self.build_axis(index_label, index_items)
+        target_columns = self.build_axis(columns_label, columns_items)
 
         # Reindex to ensure the correct order of the data
         pivoted_data = pivoted_data.reindex(
