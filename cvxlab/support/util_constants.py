@@ -62,31 +62,29 @@ def sum_vector(dimension: List[int]) -> np.ndarray:
 
 @constant('identity')
 def identity_matrix(dimension: List[int]) -> np.array:
-    """Generate a (square) identity matrix of the specified dimension.
+    """Generate a square identity matrix of size n x n.
 
     Args:
-        dimension (List[int]): The dimension of the matrix row/col.
+        dimension (List[int]): A list [n, n] with two equal positive integers.
 
     Returns:
-        np.ndarray: A square identity matrix of the specified dimension.
+        np.ndarray: An n x n identity matrix.
 
     Raises:
-        exc.SettingsError: If passed dimension is not a list containing integers,
-            or if it does not represent a vector (i.e., at least one element 
-            must be equal to 1).
+        exc.SettingsError: If 'dimension' is not [n, n] with equal positive ints.
     """
-    if not isinstance(dimension, List) or not \
-            all(isinstance(i, int) for i in dimension):
+    if not isinstance(dimension, list) or len(dimension) != 2 \
+            or not all(isinstance(i, int) for i in dimension):
         raise exc.SettingsError(
-            "Constant definition | Identity matrix constant accepts as argument"
-            "only a list of integers.")
+            "Constant definition | Identity matrix expects a list of two integers "
+            "[n, n].")
 
-    if len(dimension) != 2 or not any(i == 1 for i in dimension):
+    if dimension[0] != dimension[1]:
         raise exc.SettingsError(
-            "Constant definition | Identity matrix accetps as argument a list "
-            "representing a vector only (one dimension). Check variable shape.")
+            "Constant definition | Identity matrix requires two equal positive "
+            f"integers [n, n]. Passed dimension: {dimension}")
 
-    return np.eye(max(dimension))
+    return np.eye(dimension[0])
 
 
 @constant('set_length')
