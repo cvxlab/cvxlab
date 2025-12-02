@@ -35,6 +35,7 @@ def test_items_in_list():
     """Test the 'items_in_list' method."""
     test_cases = [
         (([2, 3], [1, 2, 3, 4, 5]), True, None),
+        (({2, 3}, {1, 2, 3, 4, 5}), True, None),
         (((2, 3), [1, 2, 3, 4, 5]), True, None),
         ((['a', 'd'], ['a', 'b', 'c']), False, None),
         (([4, 5], (1, 2, 3)), False, None),

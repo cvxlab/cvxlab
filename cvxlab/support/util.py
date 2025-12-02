@@ -101,22 +101,24 @@ def items_in_list(
     # Normalize items
     if isinstance(items, dict):
         normalized_items = list(items.keys())
-    elif isinstance(items, (list, tuple)):
-        normalized_items = list(items)
+    elif isinstance(items, Iterable) and \
+            not isinstance(items, (str, bytes)):
+        normalized_items = set(items)
     else:
         raise TypeError(
-            "'items' must be list, tuple, or dict. "
+            "'items' must be a non-string Iterable or dict. "
             f"Passed type: {type(items).__name__}."
         )
 
     # Normalize control_list
     if isinstance(control_list, dict):
         normalized_control = set(control_list.keys())
-    elif isinstance(control_list, (list, tuple)):
+    elif isinstance(control_list, Iterable) and \
+            not isinstance(control_list, (str, bytes)):
         normalized_control = set(control_list)
     else:
         raise TypeError(
-            "'control_list' must be list, tuple, or dict. "
+            "'control_list' must be a non-string Iterable or dict. "
             f"Passed type: {type(control_list).__name__}."
         )
 
