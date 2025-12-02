@@ -819,32 +819,42 @@ class Model:
     def variable(
             self,
             name: str,
-            problem_key: Optional[str | int] = None,
             scenario_key: Optional[int] = None,
+            intra_problem_key: Optional[int] = None,
+            if_hybrid_var: Literal['endogenous', 'exogenous'] = 'endogenous',
     ) -> Optional[pd.DataFrame]:
         """Fetch variable data.
 
-        This method fetches data for a specific variable. In case the model is 
-        defined by multiple numerical problmes and for multiple scenarios (linear 
-        combination of inter-problem sets), the related keys must be passed to
-        univocally identify the values of the variable.
-        Useful for inspecting variables data during model generation and debugging.
+        This method retrieves the data for a specified variable based on optional 
+        inter-problem and intra-problem sets cardinality, supporting the data 
+        inspection process after a model has run, but before data has exported to the 
+        database. This is particularly useful in case multiple runs of the model, 
+        to facilitate the control of the numerical data from the user.
+        In case a variable is defined as both endogeous and exogenous, depending on 
+        the numerical problem, the user can specify the one to inspect (default 
+        as the endogenous one).
+        If the variable is specified for multiple inter- and intra-problem sets,
+        scenario_key defines the cardinality of inter-problem sets, while 
+        intra_problem_key defines the cardinality of intra-problem sets.
 
         Args:
-            name (str): The name of the variable.
-            problem_key (Optional[str | int], optional): The symbolic problem key. 
-                Defaults to None.
-            scenario_key (Optional[int], optional): The scenario index, corresponding
-                to a problem identified by the linear combination of inter-problem
-                sets. Defaults to None.
+            name (str): The key of the variable in the variables dictionary.
+            scenario_key (Optional[int]): Defines the cardinality of inter-problem 
+                sets. Default to None.
+            intra_problem_key (Optional[int]): Defines the cardinality of intra-problem
+                sets. Default to None.
+            if_hybrid_var (Literal['endogenous', 'exogenous']): Defines the type 
+                of variable data to inspect in case variable type depends on the 
+                problem.
 
         Returns:
             Optional[pd.DataFrame]: The data for the specified variable.
         """
         return self.core.index.fetch_variable_data(
             var_key=name,
-            problem_key=problem_key,
             scenario_key=scenario_key,
+            intra_problem_key=intra_problem_key,
+            if_hybrid_var=if_hybrid_var,
         )
 
     def set(self, name: str) -> Optional[pd.DataFrame]:

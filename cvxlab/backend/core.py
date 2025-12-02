@@ -442,7 +442,7 @@ class Core:
                                 raise exc.MissingDataError(msg)
 
                             # pivoting and reshaping data to fit variables
-                            pivoted_data = variable.reshaping_sqlite_table_data(
+                            pivoted_data = variable.reshaping_normalized_table_data(
                                 var_key=var_key,
                                 data=raw_data,
                             )

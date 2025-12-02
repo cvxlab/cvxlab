@@ -9,7 +9,7 @@ operational characteristics related to these entities.
 """
 from pathlib import Path
 from scipy.sparse import issparse
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 import pandas as pd
 import cvxpy as cp
@@ -1158,23 +1158,33 @@ class Index:
     def fetch_variable_data(
             self,
             var_key: str,
-            problem_key: Optional[int | str] = None,
             scenario_key: Optional[int] = None,
+            intra_problem_key: Optional[int] = None,
+            if_hybrid_var: Literal['endogenous', 'exogenous'] = 'endogenous',
     ) -> Optional[pd.DataFrame]:
         """Fetch variable data from Index.
 
         This method retrieves the data for a specified variable based on optional 
-        problem and scenario indices. Scenarios are defined by the linear combination
-        of inter-problem sets. 
+        inter-problem and intra-problem sets cardinality, supporting the data 
+        inspection process after a model has run, but before data has exported to the 
+        database. This is particularly useful in case multiple runs of the model, 
+        to facilitate the control of the numerical data from the user.
+        In case a variable is defined as both endogeous and exogenous, depending on 
+        the numerical problem, the user can specify the one to inspect (default 
+        as the endogenous one).
+        If the variable is specified for multiple inter- and intra-problem sets,
+        scenario_key defines the cardinality of inter-problem sets, while 
+        intra_problem_key defines the cardinality of intra-problem sets.
 
         Args:
             var_key (str): The key of the variable in the variables dictionary.
-            problem_key (Optional[int | str]): Key specifying which problem's data
-                to access if data is dictionary-based (i.e. if multiple numerical 
-                problems are defined). Defaults to None.
-            scenario_key (Optional[int]): Index specifying the which one among
-                the linear combination of inter-problem sets 
-                (i.e., sub-problems) to access. Defaults to None.
+            scenario_key (Optional[int]): Defines the cardinality of inter-problem 
+                sets. Default to None.
+            intra_problem_key (Optional[int]): Defines the cardinality of intra-problem
+                sets. Default to None.
+            if_hybrid_var (Literal['endogenous', 'exogenous']): Defines the type 
+                of variable data to inspect in case variable type depends on the 
+                problem.
 
         Returns:
             pd.DataFrame: A DataFrame containing the requested variable data, or
@@ -1182,6 +1192,7 @@ class Index:
         """
         variable_header = Defaults.Labels.CVXPY_VAR
         allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
+        sub_problem_key_label = Defaults.Labels.SUB_PROBLEM_KEY
 
         if var_key not in self.variables:
             self.logger.warning(
@@ -1192,6 +1203,16 @@ class Index:
 
         variable: Variable = self.variables[var_key]
 
+        df_index = variable.build_axis(
+            target_labels=variable.dims_labels[0],
+            target_items=variable.dims_items[0],
+        )
+
+        df_columns = variable.build_axis(
+            target_labels=variable.dims_labels[1],
+            target_items=variable.dims_items[1],
+        )
+
         if variable.type == allowed_var_types['CONSTANT']:
             data: cp.Constant = variable.data
             if variable.value == 'set_length':
@@ -1199,8 +1220,8 @@ class Index:
             else:
                 values_dataframe = pd.DataFrame(
                     data=data.value,
-                    index=variable.dims_items[0],
-                    columns=variable.dims_items[1],
+                    index=df_index,
+                    columns=df_columns,
                 )
 
         if variable.data is None:
@@ -1208,70 +1229,93 @@ class Index:
                 f"Data not initialized for variable '{var_key}'.")
             return
 
+        # Identifying variable data
         if isinstance(variable.data, dict):
-            if problem_key is None:
-                self.logger.warning(
-                    f"Variable '{var_key}' is defined for multiple problems. "
-                    "A symbolic problem index must be specified.")
-                return
-
-            if problem_key not in variable.data.keys():
-                self.logger.warning(
-                    f"Problem index must be included in {list(variable.data.keys())}.")
-                return
-
-            if len(variable.data) == 1 and problem_key is None:
-                problem_key = 0
-
+            problem_key = util.find_dict_keys_corresponding_to_value(
+                dictionary=variable.type,
+                target_value=if_hybrid_var,
+            )
+            problem_key = problem_key[0] if problem_key else None
             variable_data = variable.data[problem_key]
-
         else:
-            if problem_key is not None:
-                self.logger.warning(
-                    f"Variable '{var_key}' is not defined for multiple problems. "
-                    "Problem index must be None.")
-                return
-
             variable_data = variable.data
 
-        if isinstance(variable_data, pd.DataFrame):
-            if variable_data.empty:
-                self.logger.warning(f"Variable '{var_key}' data is empty.")
+        # Filtering eventual sub-problem data (inter-problem sets cardinality)
+        scenario_series = pd.to_numeric(
+            variable_data[sub_problem_key_label], errors='coerce').dropna()
+        scenario_key_list = set(scenario_series.astype(int).tolist())
+
+        # If scenarios are present, enforce selection and filter
+        if scenario_key_list:
+            if scenario_key is None:
+                self.logger.warning(
+                    f"'scenario_key' not specified for variable '{var_key}'. "
+                    f"Available scenarios keys: {scenario_key_list}."
+                )
                 return
 
-            if len(variable_data) > 1:
-                if scenario_key is None:
-                    self.logger.warning(
-                        f"Variable '{var_key}' is defined for multiple "
-                        "sub-problems. A sub-problem index must be specified "
-                        f"from 0 to {len(variable_data) - 1}.")
-                    return
+            if scenario_key not in scenario_key_list:
+                self.logger.warning(
+                    f"Scenario '{scenario_key}' not found for variable '{var_key}'. "
+                    f"Available scenarios keys: {scenario_key_list}."
+                )
+                return
 
-                if scenario_key < 0 or scenario_key >= len(variable_data):
-                    self.logger.warning(
-                        f"Sub-problem index must be between 0 and {len(variable_data)-1}.")
-                    return
+            variable_data = variable_data.loc[
+                variable_data[sub_problem_key_label].eq(scenario_key)
+            ]
 
-            if len(variable_data) == 1:
-                if scenario_key is None:
-                    scenario_key = 0
-                elif scenario_key != 0:
-                    self.logger.warning(
-                        f"A unique sub-problem is defined for variable '{var_key}'. "
-                        "Set sub-problem index to 0 or None")
-                    return
-
-            variable_series = variable_data.loc[scenario_key]
-            variable_values = variable_series[variable_header].value
-
-            if issparse(variable_values):
-                variable_values = variable_values.toarray()
-
-            values_dataframe = pd.DataFrame(
-                data=variable_values,
-                index=variable.dims_items[0],
-                columns=variable.dims_items[1],
+        elif scenario_key is not None:
+            self.logger.warning(
+                f"'scenario_key' specified for variable '{var_key}', "
+                "but variable has no inter-problem sets defined."
             )
+            return
+
+        if variable_data.empty:
+            self.logger.warning(
+                f"Variable '{var_key}' data is empty after filtering.")
+            return
+
+        # If multiple intra-problem sets are defined, filter accordingly
+        if len(variable_data) > 1:
+
+            if intra_problem_key is None:
+                self.logger.warning(
+                    f"'intra_problem_key' not specified for variable '{var_key}'. "
+                    f"Select from 0 to {len(variable_data) - 1}."
+                )
+                return
+
+            if not (0 <= int(intra_problem_key) < len(variable_data)):
+                self.logger.warning(
+                    f"'intra_problem_key' out of bounds for variable '{var_key}'. "
+                    f"Valid range: 0 to {len(variable_data) - 1}."
+                )
+                return
+
+            variable_series = variable_data.iloc[int(intra_problem_key)]
+
+        else:
+            if intra_problem_key is not None:
+                self.logger.warning(
+                    f"'intra_problem_key' specified for variable '{var_key}', "
+                    "but variable has no intra-problem sets defined."
+                )
+                return
+
+            variable_series = variable_data.iloc[0]
+
+        # Building DataFrame with variable values
+        variable_values = variable_series[variable_header].value
+        if issparse(variable_values):
+            variable_values = variable_values.toarray()
+
+        values_dataframe = pd.DataFrame(
+            data=variable_values,
+            index=df_index,
+            columns=df_columns,
+        )
 
         return values_dataframe
 
