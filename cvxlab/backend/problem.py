@@ -1468,9 +1468,7 @@ class Problem:
             problem_dataframe: pd.DataFrame,
             problem_name: Optional[str] = None,
             scenarios_idx: Optional[List[int] | int] = None,
-            solver_verbose: Optional[bool] = True,
-            solver: Optional[str] = None,
-            **kwargs: Any,
+            **solver_settings: Any,
     ) -> None:
         """Solve numerical problems defined in problem DataFrame.
 
@@ -1494,7 +1492,7 @@ class Problem:
                 will choose a solver automatically. Defaults to None.
             **kwargs (Any): Additional arguments to pass to the solver.
         """
-        if solver_verbose == False:
+        if solver_settings['verbose'] == False:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
             warnings.filterwarnings(
@@ -1535,8 +1533,7 @@ class Problem:
 
             self.logger.info(msg)
 
-            cvxpy_problem.solve(
-                solver=solver, verbose=solver_verbose, **kwargs)
+            cvxpy_problem.solve(**solver_settings)
 
             self.logger.info(f"Problem status: '{cvxpy_problem.status}'")
 

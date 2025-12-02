@@ -383,11 +383,8 @@ class Defaults:
             homogenize numerical values provided by user in input data files.
         - ALLOWED_TEXT_TYPE: 
             Type of allowed text values.
-        - ALLOWED_SOLVERS: 
-            List of installed solvers available for use. Same solvers as in 
-            cvxpy.installed_solvers().
-        - DEFAULT_SOLVER: 
-            Default solver to be used if not specified by the user.
+        - ALLOWED_SOLVERS:
+            List of allowed solvers installed in the current CVXPY version.
         - TOLERANCE_TESTS_RESULTS_CHECK: 
             Tolerance for checking results of tests. It is a relative difference 
             (0.02 means 2% of maximum allowed difference between the resulting 
@@ -414,6 +411,9 @@ class Defaults:
             Batch size for SQL operations. It is used to limit the number of rows 
             processed in a single SQL operation to avoid memory issues and speed 
             up database operations.
+        - CVXPY_DEFAULT_SETTINGS:
+            Default settings for CVXPY solver. It includes the default solver, 
+            canon backend, and whether to ignore DPP.
 
         """
 
@@ -422,18 +422,17 @@ class Defaults:
             int, float, np.dtype('float64'), np.dtype('int64'))
         ALLOWED_TEXT_TYPE = str
         ALLOWED_SOLVERS = cp.installed_solvers()
-        DEFAULT_SOLVER = 'SCIPY'
         TOLERANCE_TESTS_RESULTS_CHECK = 0.02
         TOLERANCE_MODEL_COUPLING_CONVERGENCE = 0.01
         MAXIMUM_ITERATIONS_MODEL_COUPLING = 20
         ROUNDING_DIGITS_RELATIVE_DIFFERENCE_DB = 5
         SPARSE_MATRIX_ZEROS_THRESHOLD = 0.3
         SQL_BATCH_SIZE = 1000
-
-    class TextNotes:
-        """Text notes and messages for user. Still under development."""
-
-        GENERIC_NOTE = ("")
+        CVXPY_DEFAULT_SETTINGS = {
+            'solver': 'SCIPY',
+            'canon_backend': cp.SCIPY_CANON_BACKEND,
+            'ignore_dpp': True,
+        }
 
     _SUBGROUPS = [
         ConfigFiles,
@@ -441,7 +440,6 @@ class Defaults:
         DefaultStructures,
         SymbolicDefinitions,
         NumericalSettings,
-        TextNotes,
     ]
 
     @classmethod

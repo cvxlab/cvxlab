@@ -504,11 +504,11 @@ class Model:
 
     def run_model(
         self,
-        verbose: bool = False,
         force_overwrite: bool = False,
         integrated_problems: bool = False,
         convergence_monitoring: bool = True,
         solver: Optional[str] = None,
+        solver_verbose: bool = False,
         solver_settings: Optional[dict[str, Any]] = None,
         numerical_tolerance: Optional[float] = None,
         maximum_iterations: Optional[int] = None,
@@ -523,47 +523,61 @@ class Model:
         Finally, it logs a summary of the problems status.
 
         Args:
-            verbose (bool, optional): If True, logs verbose output related to 
-                numerical solver operation during the model run. Defaults to False.
             force_overwrite (bool, optional): If True, overwrites existing results. 
                 Defaults to False.
             integrated_problems (bool, optional): If True, solve problems iteratively 
                 using a block Gauss-Seidel (alternating optimization) scheme, where 
                 updated endogenous variables are exchanged until convergence. 
                 Defaults to False.
+            convergence_monitoring (bool, optional): If True, enables convergence
+                monitoring during the solving of integrated problems. Defaults to True.
             solver (str, optional): The solver to use for solving numerical 
                 problems. Defaults to None, in which case the default solver 
-                specified in 'Defaults.NumericalSettings.DEFAULT_SOLVER' is used.
+                specified in 'Defaults.NumericalSettings.CVXPY_DEFAULT_SETTINGS' is used.
+            solver_verbose (bool, optional): If True, logs verbose output related to 
+                numerical solver operation during the model run. Defaults to False.
+            solver_settings (dict[str, Any], optional): Additional settings
+                for the solver passed as key-value pairs. Defaults to None.
             numerical_tolerance (float, optional): The numerical tolerance for 
                 solving integrated problems. In case it is not defined, this is set
                 as 'Defaults.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE'.
             maximum_iterations (int, optional): The maximum number of iterations 
                 for solving integrated problems. In case it is not defined, this is
                 set as 'Defaults.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING'.
-            **kwargs: Additional keyword arguments to be passed to the solver.
+            **kwargs: Additional keyword arguments to be passed to the solver. Useful 
+                for setting solver-specific options.
 
         Raises:
             exc.SettingsError: In case solver is not supported by current cvxpy version.
             exc.SettingsError: If no numerical problems are found, or if integrated
                 problems are requested but only one problem is found.
         """
+        cvxpy_defaults = Defaults.NumericalSettings.CVXPY_DEFAULT_SETTINGS
+        cvxpy_allowed_solvers = Defaults.NumericalSettings.ALLOWED_SOLVERS
         sub_problems = self.core.problem.number_of_sub_problems
         problem_scenarios = len(self.core.index.scenarios_info)
-        allowed_solvers = Defaults.NumericalSettings.ALLOWED_SOLVERS
 
-        if solver is None:
-            solver = Defaults.NumericalSettings.DEFAULT_SOLVER
+        # Merge order: defaults < solver_settings < kwargs < explicit 'solver' arg
+        solver_config = {
+            **cvxpy_defaults,
+            **(solver_settings or {}),
+            **kwargs,
+        }
 
-        if solver not in allowed_solvers:
-            msg = f"Solver '{solver}' not supported by current CVXPY version. " \
-                f"Available solvers: {allowed_solvers}"
+        if solver is not None:
+            solver_config['solver'] = solver
+
+        selected_solver = solver_config.get('solver', cvxpy_defaults['solver'])
+
+        if selected_solver not in cvxpy_allowed_solvers:
+            msg = f"Solver '{selected_solver}' not supported by current CVXPY " \
+                f"version. Available solvers: {cvxpy_allowed_solvers}"
             self.logger.error(msg)
             raise exc.SettingsError(msg)
 
-        if solver_settings:
-            solver_settings = {**solver_settings, **kwargs}
-        else:
-            solver_settings = kwargs
+        solver_settings = solver_config.copy()
+        solver_settings['solver'] = selected_solver
+        solver_settings['verbose'] = solver_verbose
 
         if sub_problems == 0:
             msg = "Numerical problem not found. Initialize problem first."
@@ -586,7 +600,7 @@ class Model:
             f"Model run | Solution mode: {solution_type}' | Solver: '{solver}' | "
             f"Problems: {problem_count} | Scenarios: {problem_scenarios}")
 
-        if verbose:
+        if solver_verbose:
             self.logger.info("="*30)
             self.logger.info("cvxpy logs below.")
 
@@ -595,15 +609,11 @@ class Model:
             level='info',
         ):
             self.core.solve_numerical_problems(
-                solver=solver,
-                solver_verbose=verbose,
                 force_overwrite=force_overwrite,
                 integrated_problems=integrated_problems,
                 convergence_monitoring=convergence_monitoring,
                 numerical_tolerance=numerical_tolerance,
                 maximum_iterations=maximum_iterations,
-                canon_backend=cp.SCIPY_CANON_BACKEND,
-                ignore_dpp=True,
                 **solver_settings,
             )
 

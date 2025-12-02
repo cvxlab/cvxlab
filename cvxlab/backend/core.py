@@ -658,14 +658,12 @@ class Core:
 
     def solve_numerical_problems(
             self,
-            solver: str,
-            solver_verbose: bool,
             integrated_problems: bool,
             convergence_monitoring: bool,
             force_overwrite: bool,
             maximum_iterations: Optional[int] = None,
             numerical_tolerance: Optional[float] = None,
-            **kwargs: Any,
+            **solver_settings: Any,
     ) -> None:
         """Solve independent or integrated numerical problems.
 
@@ -680,11 +678,10 @@ class Core:
         The method fetches the problem status after solving the problems.
 
         Args:
-            solver (str): The solver to use for solving the problems. 
-            solver_verbose (bool): If True, enables verbose output of solver 
-                during problem solving.
             integrated_problems (bool): If True, solves the problems as an 
                 integrated problem. If False, solves the problems as independent.
+            convergence_monitoring (bool): If True, enables convergence monitoring
+                during the solving of integrated problems.
             force_overwrite (bool): If True, forces the re-solution of problems 
                 even if they have already been solved without prompting the user.
             maximum_iterations (Optional[int], optional): The maximum number of 
@@ -693,7 +690,7 @@ class Core:
             numerical_tolerance (Optional[float], optional): The numerical 
                 tolerance for the solver. Overwrite default setting in Defaults. 
                 Defaults to None.
-            **kwargs: Additional keyword arguments passed to the solver.
+            **solver_settings: Additional keyword arguments passed to the solver.
 
         Raises:
             OperationalError: If numerical problems have not been defined.
@@ -717,19 +714,13 @@ class Core:
 
         if integrated_problems:
             self.solve_integrated_problems(
-                solver=solver,
-                solver_verbose=solver_verbose,
                 numerical_tolerance=numerical_tolerance,
                 convergence_monitoring=convergence_monitoring,
                 maximum_iterations=maximum_iterations,
-                **kwargs,
+                **solver_settings,
             )
         else:
-            self.solve_independent_problems(
-                solver=solver,
-                solver_verbose=solver_verbose,
-                **kwargs
-            )
+            self.solve_independent_problems(**solver_settings)
 
         self.problem.fetch_problem_status()
 
@@ -762,25 +753,16 @@ class Core:
                 tolerance_percentage=values_relative_diff_tolerance,
             )
 
-    def solve_independent_problems(
-            self,
-            solver: str,
-            solver_verbose: bool,
-            **kwargs: Any,
-    ) -> None:
+    def solve_independent_problems(self, **solver_settings: Any) -> None:
         """Solve independent numerical problems.
 
         This method get and solve the numerical problem/s in the Problem instance
-        based on a defined solver and verbosity settings. Eventually, additional
-        arguments can be passed to the solver.
+        based on solver settings as keyworded arguments.
         The method updates the 'status' field of the input DataFrame(s) in-place 
         to reflect the solution status of each problem.
 
         Args:
-            solver (str): The solver to use. If None, default solver will be chosen
-                automatically.
-            verbose (bool): If set to True, the solver will print progress information.
-            **kwargs (Any): Additional arguments to pass to the solver.
+            **solver_settings (Any): Additional arguments to pass to the solver.
 
         Raises:
             exc.OperationalError: If 'numerical_problems' has not defined as Problem
@@ -791,18 +773,14 @@ class Core:
         if isinstance(numerical_problems, pd.DataFrame):
             self.problem.solve_problem_dataframe(
                 problem_dataframe=numerical_problems,
-                solver_verbose=solver_verbose,
-                solver=solver,
-                **kwargs
+                **solver_settings
             )
         elif isinstance(numerical_problems, dict):
             for sub_problem in numerical_problems.keys():
                 self.problem.solve_problem_dataframe(
                     problem_dataframe=numerical_problems[sub_problem],
                     problem_name=sub_problem,
-                    solver_verbose=solver_verbose,
-                    solver=solver,
-                    **kwargs
+                    **solver_settings
                 )
         else:
             if numerical_problems is None:
@@ -812,12 +790,10 @@ class Core:
 
     def solve_integrated_problems(
             self,
-            solver: str,
-            solver_verbose: bool,
             numerical_tolerance: Optional[float] = None,
             maximum_iterations: Optional[int] = None,
             convergence_monitoring: bool = True,
-            **kwargs: Any,
+            **solver_settings: Any,
     ) -> None:
         """Solve integrated numerical problems iteratively.
 
@@ -843,17 +819,15 @@ class Core:
         solve all sub-problems iteratively for the same case (combination of sets).
 
         Args:
-            solver (str): The solver to use. If None, default solver will be chosen
-                automatically.
-            solver_verbose (bool): If True, enables verbose output during problem 
-                solving.
-            maximum_iterations (Optional[int], optional): The maximum number of 
-                iterations for the solver. Overwrite default setting in Defaults. 
-                Defaults to None.
             numerical_tolerance (Optional[float], optional): The numerical 
                 tolerance for the solver. Overwrite default setting in Defaults. 
                 Defaults to None.
-            **kwargs (Any): Additional arguments to pass to the solver.
+            maximum_iterations (Optional[int], optional): The maximum number of 
+                iterations for the solver. Overwrite default setting in Defaults. 
+                Defaults to None.
+            convergence_monitoring (bool, optional): If True, enables convergence
+                monitoring during the solving of integrated problems. Defaults to True.
+            **solver_settings (Any): Arguments to pass to the solver.
         """
         if maximum_iterations is None:
             maximum_iterations = \
@@ -953,9 +927,7 @@ class Core:
                                     problem_name=sub_problem,
                                     problem_dataframe=problem_df,
                                     scenarios_idx=scenario_idx,
-                                    solver=solver,
-                                    solver_verbose=solver_verbose,
-                                    **kwargs
+                                    **solver_settings
                                 )
 
                                 status = problem_df.loc[
