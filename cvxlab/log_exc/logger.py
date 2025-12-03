@@ -224,7 +224,9 @@ class Logger:
     def convergence_monitor(
             self,
             output_dir: str,
-            tolerance: float,
+            norm_metric: str,
+            tolerance_max: float,
+            tolerance_avg: float,
             scenario_name: str = "N/A",
             activate_terminal: bool = True,
             refresh_interval: float = 2.0,
@@ -256,8 +258,10 @@ class Logger:
         header_lines = [
             "="*79,
             f"CONVERGENCE MONITORING - Scenario: {scenario_name}",
-            f"Tolerance: {tolerance*100:.3f}%",
-            "All values in percentage. '*' indicates value above tolerance.",
+            f"Numerical changes across iteration assessed based on Norm metric: '{norm_metric}'",
+            f"Tolerance on each data tables norm: {tolerance_max:.3f}",
+            f"Tolerance on RMS for all data tables norm: {tolerance_avg:.3f}",
+            "Tolerances in absolute values. '*' indicates value above tolerance.",
             "="*79,
             ""
         ]
@@ -359,7 +363,9 @@ if __name__ == '__main__':
     with logger.convergence_monitor(
         output_dir=test_dir,
         scenario_name="test_scenario",
-        tolerance=0.001,
+        norm_metric='l2',
+        tolerance_max=0.01,
+        tolerance_avg=0.005,
     ) as conv_monitor:
 
         conv_log = conv_monitor['log']

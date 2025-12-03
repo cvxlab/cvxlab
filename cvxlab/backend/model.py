@@ -510,7 +510,8 @@ class Model:
         solver: Optional[str] = None,
         solver_verbose: bool = False,
         solver_settings: Optional[dict[str, Any]] = None,
-        numerical_tolerance: Optional[float] = None,
+        numerical_tolerance_max: Optional[float] = None,
+        numerical_tolerance_avg: Optional[float] = None,
         maximum_iterations: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
@@ -538,12 +539,15 @@ class Model:
                 numerical solver operation during the model run. Defaults to False.
             solver_settings (dict[str, Any], optional): Additional settings
                 for the solver passed as key-value pairs. Defaults to None.
-            numerical_tolerance (float, optional): The numerical tolerance for 
-                solving integrated problems. In case it is not defined, this is set
-                as 'Defaults.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE'.
+            numerical_tolerance_max (float, optional): Numerical tolerance for verifying
+                maximum relative change between iterations in integrated problems for 
+                each data table. Overrides 'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
+            numerical_tolerance_avg (float, optional): Numerical tolerance for verifying
+                average (RMS) norm for all data tables across iterations in integrated problems. 
+                Overrides 'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
             maximum_iterations (int, optional): The maximum number of iterations 
-                for solving integrated problems. In case it is not defined, this is
-                set as 'Defaults.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING'.
+                for solving integrated problems. Overrides 
+                'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
             **kwargs: Additional keyword arguments to be passed to the solver. Useful 
                 for setting solver-specific options.
 
@@ -612,7 +616,8 @@ class Model:
                 force_overwrite=force_overwrite,
                 integrated_problems=integrated_problems,
                 convergence_monitoring=convergence_monitoring,
-                numerical_tolerance=numerical_tolerance,
+                numerical_tolerance_max=numerical_tolerance_max,
+                numerical_tolerance_avg=numerical_tolerance_avg,
                 maximum_iterations=maximum_iterations,
                 **solver_settings,
             )

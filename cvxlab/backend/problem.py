@@ -120,7 +120,7 @@ class Problem:
             return len(self.numerical_problems)
 
     @property
-    def endogenous_tables(self) -> list:
+    def endogenous_tables_all(self) -> list:
         """List of keys of the data tables that collect endogenous data.
 
         This property returns a list of keys corresponding to data tables
@@ -140,6 +140,22 @@ class Problem:
                 endogenous_tables_keys.append(table_key)
 
         return endogenous_tables_keys
+
+    @property
+    def endogenous_tables_mixed(self) -> list:
+        """List of keys of the data tables that collect mixed endogenous/exogenous data.
+
+        This property returns a list of keys corresponding to data tables
+        that contain both endogenous and exogenous data, typically used in
+        integrated problems.
+
+        Returns:
+            list: A list of keys for data tables with mixed endogenous/exogenous data.
+        """
+        return [
+            table_key for table_key, data_table in self.index.data.items()
+            if isinstance(data_table.type, dict)
+        ]
 
     def create_cvxpy_variable(
         self,

@@ -459,8 +459,8 @@ class Database:
             table_key_list = self.index.data.keys()
         else:
             if not util.items_in_list(
-                table_key_list,
-                self.index.data.keys()
+                items=table_key_list,
+                control_list=self.index.data.keys()
             ):
                 msg = "One or more passed tables keys not present in the index."
                 self.logger.error(msg)

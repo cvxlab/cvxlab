@@ -8,6 +8,7 @@ SQLManager), and Problem (defining symbolic and numerical problems).
 import os
 from typing import Any, Dict, List, Optional
 from pathlib import Path
+from typing_extensions import Literal
 
 import numpy as np
 import pandas as pd
@@ -130,76 +131,81 @@ class Core:
             for data_table_key, data_table in self.index.data.items():
                 data_table: DataTable
 
-                if data_table.type == allowed_var_types['ENDOGENOUS'] or \
-                        isinstance(data_table.type, dict):
+                is_endogenous = data_table.type == allowed_var_types['ENDOGENOUS']
+                is_hybrid = isinstance(data_table.type, dict)
 
-                    self.logger.debug(
-                        f"Data table '{data_table_key}' | type: {data_table.type} | "
-                        "Generating dataframe and cvxpy variable.")
+                if not (is_endogenous or is_hybrid):
+                    continue
 
-                    # get all coordinates for the data table based on sets
-                    data_table.generate_coordinates_dataframes(
-                        sets_split_problems=self.index.sets_split_problem_dict
-                    )
+                data_table_type = allowed_var_types['ENDOGENOUS'] if is_endogenous else 'hybrid'
 
-                    # data table coordinates dataframe are filtered to keep only
-                    # coordinates defined by the variables whithin the data table
-                    coordinates_df_filtered = pd.DataFrame()
-                    for var_key, variable in self.index.variables.items():
-                        if var_key in data_table.variables_list:
-                            var_coords_df = util.unpivot_dict_to_dataframe(
-                                data_dict=variable.all_coordinates_w_headers
-                            )
-                            coordinates_df_filtered = pd.concat(
-                                objs=[coordinates_df_filtered, var_coords_df],
-                                ignore_index=True
-                            )
+                self.logger.debug(
+                    f"Generating data structure | Type: {data_table_type} | "
+                    f"Data table '{data_table_key}'")
 
-                    coordinates_df_filtered = coordinates_df_filtered.drop_duplicates()
+                # get all coordinates for the data table based on sets
+                data_table.generate_coordinates_dataframes(
+                    sets_split_problems=self.index.sets_split_problem_dict
+                )
 
-                    if isinstance(data_table.coordinates_dataframe, pd.DataFrame):
-                        data_table.coordinates_dataframe = \
-                            data_table.coordinates_dataframe.merge(
+                # data table coordinates dataframe are filtered to keep only
+                # coordinates defined by the variables whithin the data table
+                coordinates_df_filtered = pd.DataFrame()
+                for var_key, variable in self.index.variables.items():
+                    if var_key in data_table.variables_list:
+                        var_coords_df = util.unpivot_dict_to_dataframe(
+                            data_dict=variable.all_coordinates_w_headers
+                        )
+                        coordinates_df_filtered = pd.concat(
+                            objs=[coordinates_df_filtered, var_coords_df],
+                            ignore_index=True
+                        )
+
+                coordinates_df_filtered = coordinates_df_filtered.drop_duplicates()
+
+                if isinstance(data_table.coordinates_dataframe, pd.DataFrame):
+                    data_table.coordinates_dataframe = \
+                        data_table.coordinates_dataframe.merge(
+                            right=coordinates_df_filtered,
+                            on=list(coordinates_df_filtered.columns),
+                            how='inner'
+                        )
+
+                elif isinstance(data_table.coordinates_dataframe, dict):
+                    for problem_key, coord_df in \
+                            data_table.coordinates_dataframe.items():
+
+                        coord_df: pd.DataFrame
+                        data_table.coordinates_dataframe[problem_key] = \
+                            coord_df.merge(
                                 right=coordinates_df_filtered,
                                 on=list(coordinates_df_filtered.columns),
                                 how='inner'
-                            )
-
-                    elif isinstance(data_table.coordinates_dataframe, dict):
-                        for problem_key, coord_df in \
-                                data_table.coordinates_dataframe.items():
-
-                            coord_df: pd.DataFrame
-                            data_table.coordinates_dataframe[problem_key] = \
-                                coord_df.merge(
-                                    right=coordinates_df_filtered,
-                                    on=list(coordinates_df_filtered.columns),
-                                    how='inner'
-                            )
-
-                    # generate cvxpy variables associated with data tables
-                    if isinstance(data_table.coordinates_dataframe, pd.DataFrame):
-                        cvxpy_var = self.problem.create_cvxpy_variable(
-                            var_type=allowed_var_types['ENDOGENOUS'],
-                            integer=data_table.integer,
-                            shape=(data_table.table_length, 1),
-                            name=data_table_key,
                         )
 
-                    # in case of problem with sets split, multiple endogenous variables
-                    # are created and stored in a dictionary.
-                    elif isinstance(data_table.coordinates_dataframe, dict):
-                        cvxpy_var = {}
+                # generate cvxpy variables associated with data tables
+                if isinstance(data_table.coordinates_dataframe, pd.DataFrame):
+                    cvxpy_var = self.problem.create_cvxpy_variable(
+                        var_type=allowed_var_types['ENDOGENOUS'],
+                        integer=data_table.integer,
+                        shape=(data_table.table_length, 1),
+                        name=data_table_key,
+                    )
 
-                        for problem_key, coord_df in data_table.coordinates_dataframe.items():
-                            cvxpy_var[problem_key] = self.problem.create_cvxpy_variable(
-                                var_type=allowed_var_types['ENDOGENOUS'],
-                                integer=data_table.integer,
-                                shape=(len(coord_df), 1),
-                                name=f"{data_table_key}_{problem_key}",
-                            )
+                # in case of problem with sets split, multiple endogenous variables
+                # are created and stored in a dictionary.
+                elif isinstance(data_table.coordinates_dataframe, dict):
+                    cvxpy_var = {}
 
-                    data_table.cvxpy_var = cvxpy_var
+                    for problem_key, coord_df in data_table.coordinates_dataframe.items():
+                        cvxpy_var[problem_key] = self.problem.create_cvxpy_variable(
+                            var_type=allowed_var_types['ENDOGENOUS'],
+                            integer=data_table.integer,
+                            shape=(len(coord_df), 1),
+                            name=f"{data_table_key}_{problem_key}",
+                        )
+
+                data_table.cvxpy_var = cvxpy_var
 
         # generating variables dataframes with cvxpy var and filters dictionary
         # (endogenous vars will be sliced from existing cvxpy var in data table)
@@ -214,8 +220,8 @@ class Core:
                 if variable.type == allowed_var_types['CONSTANT']:
 
                     self.logger.debug(
-                        f"Variable '{var_key}' | type: {variable.type} | Constant "
-                        f"value '{variable.value}'.")
+                        f"Generating data structure | Type: {variable.type} | "
+                        f"Variable '{var_key}' | Value: '{variable.value}'")
 
                     variable.data = self.problem.generate_constant_data(
                         variable_key=var_key,
@@ -229,8 +235,8 @@ class Core:
                     allowed_var_types['ENDOGENOUS']
                 ]:
                     self.logger.debug(
-                        f"Variable '{var_key}' | type: {variable.type} | Generating "
-                        "data structure.")
+                        f"Generating data structure | Type: {variable.type} | "
+                        f"Variable '{var_key}'")
 
                     variable.data = self.problem.generate_vars_dataframe(
                         variable_key=var_key,
@@ -244,8 +250,8 @@ class Core:
                     variable.data = {}
 
                     self.logger.debug(
-                        f"Variable '{var_key}' | type: {variable.type} | Generating "
-                        "data structure.")
+                        f"Generating data structure | Type: hybrid | "
+                        f"Variable '{var_key}'")
 
                     for problem_key, problem_var_type in variable.type.items():
                         variable.data[problem_key] = self.problem.generate_vars_dataframe(
@@ -661,8 +667,9 @@ class Core:
             integrated_problems: bool,
             convergence_monitoring: bool,
             force_overwrite: bool,
+            numerical_tolerance_max: Optional[float] = None,
+            numerical_tolerance_avg: Optional[float] = None,
             maximum_iterations: Optional[int] = None,
-            numerical_tolerance: Optional[float] = None,
             **solver_settings: Any,
     ) -> None:
         """Solve independent or integrated numerical problems.
@@ -684,12 +691,15 @@ class Core:
                 during the solving of integrated problems.
             force_overwrite (bool): If True, forces the re-solution of problems 
                 even if they have already been solved without prompting the user.
+            numerical_tolerance_max (float, optional): Numerical tolerance for verifying
+                maximum relative change between iterations in integrated problems for 
+                each data table. Overrides 'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
+            numerical_tolerance_avg (float, optional): Numerical tolerance for verifying
+                average (RMS) norm for all data tables across iterations in integrated problems. 
+                Overrides 'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
             maximum_iterations (Optional[int], optional): The maximum number of 
-                iterations for the solver. Overwrite default setting in Defaults. 
-                Defaults to None.
-            numerical_tolerance (Optional[float], optional): The numerical 
-                tolerance for the solver. Overwrite default setting in Defaults. 
-                Defaults to None.
+                iterations for the solver. Overrides 
+                'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
             **solver_settings: Additional keyword arguments passed to the solver.
 
         Raises:
@@ -714,8 +724,9 @@ class Core:
 
         if integrated_problems:
             self.solve_integrated_problems(
-                numerical_tolerance=numerical_tolerance,
                 convergence_monitoring=convergence_monitoring,
+                numerical_tolerance_max=numerical_tolerance_max,
+                numerical_tolerance_avg=numerical_tolerance_avg,
                 maximum_iterations=maximum_iterations,
                 **solver_settings,
             )
@@ -790,9 +801,13 @@ class Core:
 
     def solve_integrated_problems(
             self,
-            numerical_tolerance: Optional[float] = None,
-            maximum_iterations: Optional[int] = None,
             convergence_monitoring: bool = True,
+            convergence_norm_type: Defaults.NumericalSettings.NormType = 'l2',
+            tables_to_check: Literal[
+                'all_endogenous', 'mixed_only'] | List[str] = 'all_endogenous',
+            numerical_tolerance_max: Optional[float] = None,
+            numerical_tolerance_avg: Optional[float] = None,
+            maximum_iterations: Optional[int] = None,
             **solver_settings: Any,
     ) -> None:
         """Solve integrated numerical problems iteratively.
@@ -809,9 +824,15 @@ class Core:
         Then, for each scenario defined in the index, the method iteratively solves
         all sub-problems until convergence is reached or until the maximum number
         of iterations is reached.
-        The method calculates the relative difference between the solutions in 
-        consecutive iterations using the 'get_tables_values_relative_difference' 
-        method of the SQLTools instance.
+        The method calculates the values differences between the solutions in 
+        consecutive iterations using the 'get_tables_values_norm_changes' method 
+        of the SQLTools instance, by computing different norm types for each table:
+
+            - Maximum relative/absolute changes (max_relative, max_absolute)
+            - Manhattan norm (l1) 
+            - Euclidean norm (l2)
+            - Maximum norm (linf)
+
         The method handles the database operations required for each iteration, 
         including updating the data for exogenous variables and exporting the 
         data for endogenous variables.
@@ -819,36 +840,68 @@ class Core:
         solve all sub-problems iteratively for the same case (combination of sets).
 
         Args:
-            numerical_tolerance (Optional[float], optional): The numerical 
-                tolerance for the solver. Overwrite default setting in Defaults. 
+            convergence_monitoring (bool, optional): If True, enables convergence
+                monitoring during the solving of integrated problems. Defaults to True.
+            convergence_norm_type (Literal['max_relative', 'max_absolute', 'l1', 
+                'l2', 'linf'], optional): The type of norm to use for convergence 
+                checking. Defaults to 'l2'.
+            numerical_tolerance_maximum (Optional[float], optional): The maximum
+                numerical tolerance that all value tables must respect as a convergence
+                criterion. Overwrite default setting in Defaults. Defaults to None.
+            numerical_tolerance_average (Optional[float], optional): The numerical 
+                tolerance that compares with the average norm (root mean square) 
+                for all values tables. Overwrite default setting in Defaults. 
                 Defaults to None.
             maximum_iterations (Optional[int], optional): The maximum number of 
                 iterations for the solver. Overwrite default setting in Defaults. 
                 Defaults to None.
-            convergence_monitoring (bool, optional): If True, enables convergence
-                monitoring during the solving of integrated problems. Defaults to True.
             **solver_settings (Any): Arguments to pass to the solver.
         """
-        if maximum_iterations is None:
-            maximum_iterations = \
-                Defaults.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING
-
-        if numerical_tolerance is None:
-            numerical_tolerance = \
-                Defaults.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE
-
         sqlite_db_file_name = Defaults.ConfigFiles.SQLITE_DATABASE_FILE
         sqlite_db_file_name_bkp = Defaults.ConfigFiles.SQLITE_DATABASE_FILE_BKP
         scenarios_header = Defaults.Labels.SCENARIO_COORDINATES
         problem_status_header = Defaults.Labels.PROBLEM_STATUS
+        rms_tables_header = Defaults.Labels.RMS_TABLES
 
         sqlite_db_path = self.paths['model_dir']
         base_name, extension = os.path.splitext(sqlite_db_file_name)
         sqlite_db_file_name_previous = f"{base_name}_previous{extension}"
-
-        tables_to_check = self.problem.endogenous_tables
         sub_problems_keys = list(self.problem.numerical_problems.keys())
         scenarios_df = self.index.scenarios_info
+
+        model_coupling_settings = Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS
+
+        if not maximum_iterations:
+            maximum_iterations = model_coupling_settings['max_iterations']
+
+        if not numerical_tolerance_max:
+            numerical_tolerance_max = \
+                model_coupling_settings['numerical_tolerance_max']
+
+        if not numerical_tolerance_avg:
+            numerical_tolerance_avg = \
+                model_coupling_settings['numerical_tolerance_avg']
+
+        if isinstance(tables_to_check, str):
+            if tables_to_check == 'all_endogenous':
+                tables_to_check = self.problem.endogenous_tables_all
+            elif tables_to_check == 'mixed_only':
+                tables_to_check = self.problem.endogenous_tables_mixed
+            else:
+                msg = "Parameter 'tables_to_check' string value not allowed. "
+                self.logger.error(msg)
+                raise exc.SettingsError(msg)
+
+        elif isinstance(tables_to_check, list):
+            invalid_tables = [
+                table for table in tables_to_check
+                if table not in self.problem.endogenous_tables_all
+            ]
+            if invalid_tables:
+                msg = f"One or more tables in 'tables_to_check' are not " \
+                    f"endogenous tables: {invalid_tables}."
+                self.logger.error(msg)
+                raise exc.SettingsError(msg)
 
         problems_status = pd.DataFrame(
             index=scenarios_df.index,
@@ -886,7 +939,9 @@ class Core:
                     output_dir=sqlite_db_path,
                     scenario_name=scenario_label if scenario_coords else "default",
                     activate_terminal=convergence_monitoring,
-                    tolerance=numerical_tolerance,
+                    norm_metric=convergence_norm_type,
+                    tolerance_max=numerical_tolerance_max,
+                    tolerance_avg=numerical_tolerance_avg,
                 ) as conv_monitor:
 
                     conv_log = conv_monitor['log']
@@ -900,14 +955,14 @@ class Core:
 
                             if iter_count > maximum_iterations:
                                 self.logger.warning(
-                                    "Maximum number of iterations hit before reaching "
-                                    f"convergence (tolerance: {numerical_tolerance*100}%).")
+                                    "Maximum number of iterations hit before reaching convergence "
+                                    f"(tolerance max: {numerical_tolerance_max}, tolerance avg: "
+                                    f"{numerical_tolerance_avg})")
                                 break
 
                             if iter_count > 1:
                                 self.logger.info(
-                                    "Updating exogenous variables data from "
-                                    "previous iteration.")
+                                    "Updating exogenous variables data from previous iteration.")
 
                                 self.data_to_cvxpy_exogenous_vars(
                                     scenarios_idx=scenario_idx)
@@ -965,33 +1020,47 @@ class Core:
                             # risultati non vengono esportati (break qui sopra) e il
                             # database rimane sempre uguale
                             with db_handler(self.sqltools):
-                                relative_difference = \
-                                    self.sqltools.get_tables_values_relative_difference(
+                                norm_changes = \
+                                    self.sqltools.get_tables_values_norm_changes(
                                         other_db_dir_path=sqlite_db_path,
                                         other_db_name=sqlite_db_file_name_previous,
+                                        norm_type=convergence_norm_type,
                                         tables_names=tables_to_check,
                                     )
 
                             # Defining messages for convergence monitoring
                             for table in tables_to_check:
-                                error = relative_difference.get(table, 0.0)
-                                all_errors[table].append(error)
+                                all_errors[table].append(norm_changes[table])
+
+                            all_tables_rms = util.root_mean_square(
+                                list(norm_changes.values()))
+                            if rms_tables_header not in all_errors:
+                                all_errors[rms_tables_header] = []
+                            all_errors[rms_tables_header].append(
+                                all_tables_rms)
 
                             lines = self._format_convergence_table(
                                 tables_to_check=tables_to_check,
                                 all_errors=all_errors,
                                 iter_count=iter_count,
-                                numerical_tolerance=numerical_tolerance,
+                                tolerance_max=numerical_tolerance_max,
+                                tolerance_avg=numerical_tolerance_avg,
                             )
 
-                            # Check convergence
-                            relative_difference_above = {
+                            # Check convergence:
+                            # - any table above tolerance_max?
+                            # - global RMS above tolerance_avg?
+                            tables_above_max = {
                                 table: value
-                                for table, value in relative_difference.items()
-                                if value > numerical_tolerance
+                                for table, value in norm_changes.items()
+                                if value > numerical_tolerance_max
                             }
+                            rms_above_avg = (
+                                numerical_tolerance_avg is not None
+                                and all_tables_rms > numerical_tolerance_avg
+                            )
 
-                            if relative_difference_above:
+                            if tables_above_max or rms_above_avg:
                                 self.logger.info(
                                     "Numerical convergence NOT reached")
                                 conv_log("\n".join(lines))
@@ -1036,24 +1105,35 @@ class Core:
             tables_to_check: List[str],
             all_errors: Dict[str, List[float]],
             iter_count: int,
-            numerical_tolerance: float,
+            tolerance_max: float,
+            tolerance_avg: float,
     ) -> List[str]:
         """Format convergence monitoring table with errors for each iteration.
 
+        - Per-table values are starred if > tolerance_max.
+        - 'ALL TABLES RMS' row is starred if tolerance_avg is provided and exceeded.
+
         Args:
             tables_to_check: List of table names to monitor.
-            all_errors: Dictionary mapping table names to list of errors.
+            all_errors: Dictionary mapping table names to list of errors. It can
+                include the special key 'ALL TABLES RMS' with a single series.
             iter_count: Current iteration count.
-            numerical_tolerance: Convergence tolerance threshold.
+            tolerance_max: Per-table convergence threshold.
+            tolerance_avg: Global RMS threshold (optional).
 
         Returns:
             List of formatted strings for table display.
         """
         lines = []
 
-        # Calculate dynamic column width
-        max_table_name_len = max(len(table) for table in tables_to_check)
-        table_col_width = max(max_table_name_len + 2, 12)
+        # Include RMS label in width calculation if present
+        rms_label = Defaults.Labels.RMS_TABLES
+        display_rows = list(tables_to_check)
+        if rms_label in all_errors:
+            display_rows.append(rms_label)
+
+        max_table_name_len = max(len(table) for table in display_rows)
+        table_col_width = max(max_table_name_len + 2, 16)
 
         # Header row with iteration numbers (starting from 2)
         header = f"{'Table':<{table_col_width}}" + \
@@ -1061,13 +1141,22 @@ class Core:
         lines.append(header)
         lines.append("-" * len(header))
 
-        # Data rows for each table
+        # Data rows for each table (star if > tolerance_max)
         for table in tables_to_check:
             values_str = "".join(
-                f"{e*100:>7.3f}{'*' if e > numerical_tolerance else ' '} "
-                for e in all_errors[table]
+                f"{e:>7.3f}{'*' if e > tolerance_max else ' '} "
+                for e in all_errors.get(table, [])
             )
             lines.append(f"{table:<{table_col_width}}{values_str}")
+
+        # Append RMS row if available, star if > tolerance_avg (when provided)
+        if rms_label in all_errors:
+            rms_values = all_errors.get(rms_label, [])
+            values_str = "".join(
+                f"{e:>7.3f}{'*' if (e > tolerance_avg) else ' '} "
+                for e in rms_values
+            )
+            lines.append(f"{rms_label:<{table_col_width}}{values_str}")
 
         return lines
 

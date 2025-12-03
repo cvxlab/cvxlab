@@ -8,6 +8,7 @@ functions that enhance the interoperability of data structures used throughout
 the application.
 """
 import itertools as it
+from typing_extensions import Literal
 import numpy as np
 import pandas as pd
 
@@ -15,6 +16,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from typing import Dict, List, Any, Optional, Tuple
 
+from cvxlab.defaults import Defaults
 from cvxlab.support import util_text
 
 
@@ -857,6 +859,130 @@ def find_dict_keys_corresponding_to_value(
         key for key, value in dictionary.items()
         if value == target_value
     ]
+
+
+def calculate_change_norm(
+        seq1: List[float] | Tuple[float, ...] | pd.Series | np.ndarray | float | int,
+        seq2: List[float] | Tuple[float, ...] | pd.Series | np.ndarray | float | int,
+        metric: Defaults.NumericalSettings.NormType,
+        ignore_nan: bool,
+) -> float:
+    """Compute change metric between two numeric sequences (or scalars).
+
+    This function computes a specified change metric between two numeric sequences
+    (or scalars). It supports various metrics including maximum relative change,
+    maximum absolute change, and L1, L2, and L-infinity norms. It can also ignore
+    NaN or non-numeric values during the computation.
+
+    Supported metrics (let x := seq1, y := seq2, d := x - y). 
+        "max_relative": maximum relative change. Implemented as:
+            max_i |d_i| / |y_i|   (∞ if |y_i| == 0 and |d_i| > 0)
+        "max_absolute": maximum absolute change. Implemented as:
+            max_i |d_i|
+        "linf": L-infinity norm (Maximum norm). Implemented as:
+            ||d||_∞  (max_i |d_i|)
+        "l1": L1 norm (Manhattan norm). Implemented as:
+            ||d||_1  (sum_i |d_i|)
+        "l2": L2 norm (Euclidean norm, commonly adopted). Implemented as:
+            ||d||_2  (sqrt(sum_i d_i^2))
+
+    Args:
+        seq1, seq2: Numeric sequences (or scalars). Must have same length.
+        metric: Metric name as above.
+        ignore_nan: If True, drop positions where either x or y is NaN/non-numeric.
+            If False, raises on non-numeric or NaN.
+
+    Returns:
+        float: The computed metric. If all positions are dropped, returns 0.0.
+
+    Raises:
+        ValueError: On length mismatch, invalid metric, or non-numeric values when 
+            ignore_nan=False.
+    """
+    # Convert inputs to 1D numpy arrays
+    x = np.asarray(seq1, dtype=float).ravel()
+    y = np.asarray(seq2, dtype=float).ravel()
+
+    if x.shape != y.shape:
+        raise ValueError("Sequences must have the same shape.")
+
+    # Build mask for valid numeric entries
+    valid_mask = np.isfinite(x) & np.isfinite(y)
+
+    if not ignore_nan:
+        if not np.all(valid_mask):
+            raise ValueError(
+                "NaN/Inf values encountered and ignore_nan=False.")
+    else:
+        x = x[valid_mask]
+        y = y[valid_mask]
+
+    if x.size == 0:
+        return 0.0
+
+    d = x - y
+    abs_d = np.abs(d)
+
+    if metric == "max_relative":
+        denom = np.abs(y)
+        # relative element-wise; denom==0 and abs_d>0 -> inf
+        with np.errstate(divide='ignore', invalid='ignore'):
+            rel = np.where(
+                abs_d == 0, 0.0, np.where(denom == 0, np.inf, abs_d / denom))
+        return float(np.max(rel))
+
+    if metric == "max_absolute":
+        return float(np.max(abs_d))
+
+    if metric == "l1":
+        return float(np.linalg.norm(d, ord=1))
+
+    if metric == "l2":
+        return float(np.linalg.norm(d, ord=2))
+
+    if metric == "linf":
+        return float(np.linalg.norm(d, ord=np.inf))
+
+    raise ValueError(f"Unsupported metric '{metric}'.")
+
+
+def root_mean_square(
+        values: Iterable | np.ndarray | pd.Series,
+        ignore_nan: bool = True,
+) -> float:
+    """Compute the root-mean-square (RMS) of numeric values.
+
+    RMS is defined as: rms = sqrt( (1/n) * sum_i v_i^2 )
+
+    Args:
+        values: Any iterable/array/Series of numeric values (list, set, tuple, 
+            ndarray, Series).
+        ignore_nan: If True, drops NaN/Inf entries before computing RMS; if all 
+            are dropped, returns 0.0. If False, raises on NaN/Inf.
+
+    Returns:
+        float: The RMS of the provided values.
+
+    Raises:
+        ValueError: If non-numeric, NaN/Inf values are present and ignore_nan=False.
+    """
+    arr = np.asarray(
+        list(values) if not isinstance(values, (np.ndarray, pd.Series))
+        else values, dtype=float
+    ).ravel()
+
+    valid_mask = np.isfinite(arr)
+    if not ignore_nan:
+        if not np.all(valid_mask):
+            raise ValueError(
+                "NaN/Inf values encountered and ignore_nan=False.")
+    else:
+        arr = arr[valid_mask]
+
+    if arr.size == 0:
+        return 0.0
+
+    return float(np.sqrt(np.mean(arr**2)))
 
 
 def calculate_values_difference(
