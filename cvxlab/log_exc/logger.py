@@ -340,7 +340,7 @@ class Logger:
         if not activate_terminal:
             self.logger.debug(
                 "Convergence monitoring: terminal disabled, logging to "
-                f"{convergence_file_path}")
+                f"'{log_filename}' only.")
 
         try:
             yield {'log': convergence_log, 'file': convergence_file_path}

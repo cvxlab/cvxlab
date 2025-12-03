@@ -664,9 +664,11 @@ class Core:
 
     def solve_numerical_problems(
             self,
+            force_overwrite: bool,
             integrated_problems: bool,
             convergence_monitoring: bool,
-            force_overwrite: bool,
+            convergence_norm: Defaults.NumericalSettings.NormType = 'l2',
+            convergence_tables: Optional[List[str]] = None,
             numerical_tolerance_max: Optional[float] = None,
             numerical_tolerance_avg: Optional[float] = None,
             maximum_iterations: Optional[int] = None,
@@ -685,12 +687,19 @@ class Core:
         The method fetches the problem status after solving the problems.
 
         Args:
+            force_overwrite (bool): If True, forces the re-solution of problems 
+                even if they have already been solved without prompting the user.
             integrated_problems (bool): If True, solves the problems as an 
                 integrated problem. If False, solves the problems as independent.
             convergence_monitoring (bool): If True, enables convergence monitoring
                 during the solving of integrated problems.
-            force_overwrite (bool): If True, forces the re-solution of problems 
-                even if they have already been solved without prompting the user.
+            convergence_norm (Defaults.NumericalSettings.NormType, optional):
+                The norm type to use for convergence monitoring in integrated 
+                problems. Defaults to 'l2' (Euclidean norm). Overrides 
+                'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
+            convergence_tables (Optional[List[str]], optional): List of data table
+                keys to check for convergence in integrated problems. If None,
+                all endogenous data tables are checked.
             numerical_tolerance_max (float, optional): Numerical tolerance for verifying
                 maximum relative change between iterations in integrated problems for 
                 each data table. Overrides 'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
@@ -725,6 +734,8 @@ class Core:
         if integrated_problems:
             self.solve_integrated_problems(
                 convergence_monitoring=convergence_monitoring,
+                convergence_norm_type=convergence_norm,
+                tables_to_check=convergence_tables,
                 numerical_tolerance_max=numerical_tolerance_max,
                 numerical_tolerance_avg=numerical_tolerance_avg,
                 maximum_iterations=maximum_iterations,
@@ -829,9 +840,9 @@ class Core:
         of the SQLTools instance, by computing different norm types for each table:
 
             - Maximum relative/absolute changes (max_relative, max_absolute)
-            - Manhattan norm (l1) 
-            - Euclidean norm (l2)
-            - Maximum norm (linf)
+            - Manhattan Norm (l1) 
+            - Euclidean Norm (l2)
+            - Maximum Norm (linf)
 
         The method handles the database operations required for each iteration, 
         including updating the data for exogenous variables and exporting the 

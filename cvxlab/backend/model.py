@@ -510,6 +510,9 @@ class Model:
         solver: Optional[str] = None,
         solver_verbose: bool = False,
         solver_settings: Optional[dict[str, Any]] = None,
+        convergence_norm: Defaults.NumericalSettings.NormType = 'l2',
+        convergence_tables: Literal[
+            'all_endogenous', 'mixed_only'] | List[str] = 'all_endogenous',
         numerical_tolerance_max: Optional[float] = None,
         numerical_tolerance_avg: Optional[float] = None,
         maximum_iterations: Optional[int] = None,
@@ -539,6 +542,13 @@ class Model:
                 numerical solver operation during the model run. Defaults to False.
             solver_settings (dict[str, Any], optional): Additional settings
                 for the solver passed as key-value pairs. Defaults to None.
+            convergence_norm (Defaults.NumericalSettings.NormType, optional):
+                The norm type to use for convergence monitoring in integrated
+                problems. Defaults to 'l2' (Euclidean Norm).
+            convergence_tables (Literal['all_endogenous', 'mixed_only'] | List[str], optional):
+                The data tables to consider for convergence monitoring in
+                integrated problems. Can be 'all_endogenous', 'mixed_only', or
+                a list of specific data table keys. Defaults to 'all_endogenous'.
             numerical_tolerance_max (float, optional): Numerical tolerance for verifying
                 maximum relative change between iterations in integrated problems for 
                 each data table. Overrides 'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
@@ -605,8 +615,7 @@ class Model:
             f"Problems: {problem_count} | Scenarios: {problem_scenarios}")
 
         if solver_verbose:
-            self.logger.info("="*30)
-            self.logger.info("cvxpy logs below.")
+            self.logger.info("Model run | CVXPY logs below")
 
         with self.logger.log_timing(
             message=f"Solving numerical problems...",
@@ -616,6 +625,8 @@ class Model:
                 force_overwrite=force_overwrite,
                 integrated_problems=integrated_problems,
                 convergence_monitoring=convergence_monitoring,
+                convergence_norm=convergence_norm,
+                convergence_tables=convergence_tables,
                 numerical_tolerance_max=numerical_tolerance_max,
                 numerical_tolerance_avg=numerical_tolerance_avg,
                 maximum_iterations=maximum_iterations,
@@ -662,12 +673,13 @@ class Model:
                 self.logger.warning(
                     "Numerical problem has not solved yet and results "
                     "cannot be exported.")
-            else:
-                self.core.cvxpy_endogenous_data_to_database(
-                    scenarios_idx=scenarios_idx,
-                    force_overwrite=force_overwrite,
-                    suppress_warnings=suppress_warnings
-                )
+                return
+
+            self.core.cvxpy_endogenous_data_to_database(
+                scenarios_idx=scenarios_idx,
+                force_overwrite=force_overwrite,
+                suppress_warnings=suppress_warnings
+            )
 
     def update_database_and_problem(self, force_overwrite: bool = False) -> None:
         """Update SQLite database with exogenous data and initialize problems.
