@@ -1148,6 +1148,7 @@ class Core:
             iter_count: int,
             tolerance_max: float,
             tolerance_avg: float,
+            values_format: str = ".4e",
     ) -> List[str]:
         """Format convergence monitoring table with errors for each iteration.
 
@@ -1161,6 +1162,7 @@ class Core:
             iter_count: Current iteration count.
             tolerance_max: Per-table convergence threshold.
             tolerance_avg: Global RMS threshold (optional).
+            values_format: Format string for floating-point values.
 
         Returns:
             List of formatted strings for table display.
@@ -1194,7 +1196,8 @@ class Core:
         if rms_label in all_errors:
             rms_values = all_errors.get(rms_label, [])
             values_str = "".join(
-                f"{e:>7.3f}{'*' if (e > tolerance_avg) else ' '} "
+                f"{format(e, values_format)}"
+                f"{'*' if (tolerance_avg is not None and e > tolerance_avg) else ' '} "
                 for e in rms_values
             )
             lines.append(f"{rms_label:<{table_col_width}}{values_str}")
