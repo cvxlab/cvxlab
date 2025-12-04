@@ -302,3 +302,46 @@ def extract_tokens_from_expression(
         allowed_tokens = list(dict.fromkeys(allowed_tokens))
 
     return allowed_tokens
+
+
+def detect_sign_constraints(
+    expression: str,
+    variable_names: List[str],
+) -> dict:
+    """Detect non-negative and non-positive constraints in an expression.
+
+    Direct pattern detection (whitespace-insensitive) for:
+    - non-negative: "var >= 0" or "0 <= var"
+    - non-positive: "var <= 0" or "0 >= var"
+
+    Args:
+        expression: The symbolic expression to inspect.
+        variable_names: Candidate variable names.
+
+    Returns:
+        dict: Mapping of variable name -> 'non-negative' | 'non-positive'.
+              Variables not present in the expression or without direct
+              constraints are omitted.
+    """
+    if not isinstance(expression, str):
+        raise TypeError('expression must be a string')
+    if not isinstance(variable_names, list):
+        raise TypeError('variable_names must be a list')
+
+    result = {}
+    for var in variable_names:
+        var_word = re.escape(var)
+        zero = r"0(?:\.0+)?"
+        # Patterns for non-negative
+        p_ge = re.compile(rf"\b{var_word}\b\s*>\=\s*{zero}\b")
+        p_le_sym = re.compile(rf"\b{zero}\b\s*<\=\s*\b{var_word}\b")
+        # Patterns for non-positive
+        p_le = re.compile(rf"\b{var_word}\b\s*<\=\s*{zero}\b")
+        p_ge_sym = re.compile(rf"\b{zero}\b\s*>\=\s*\b{var_word}\b")
+
+        if p_ge.search(expression) or p_le_sym.search(expression):
+            result[var] = 'non-negative'
+        elif p_le.search(expression) or p_ge_sym.search(expression):
+            result[var] = 'non-positive'
+
+    return result

@@ -164,3 +164,22 @@ def test_extract_tokens_from_expression():
     ]
 
     run_test_cases(extract_tokens_from_expression, expr_list)
+
+
+def test_detect_sign_constraints():
+    test_cases = [
+        # Non-negative direct
+        (("x >= 0", ["x"]), {"x": "non-negative"}, None),
+        # Non-negative symmetric
+        (("0 <= x", ["x"]), {"x": "non-negative"}, None),
+        # Non-positive direct
+        (("y <= 0", ["y"]), {"y": "non-positive"}, None),
+        # Non-positive symmetric
+        (("0 >= y", ["y"]), {"y": "non-positive"}, None),
+        # No match
+        (("x + y >= 1", ["x", "y"]), {}, None),
+        # Invalid variable_names type
+        (("x >= 0", "x"), None, TypeError),
+    ]
+
+    run_test_cases(detect_sign_constraints, test_cases)
