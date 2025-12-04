@@ -172,12 +172,18 @@ def test_detect_sign_constraints():
         (("x >= 0", ["x"]), {"x": "non-negative"}, None),
         # Non-negative symmetric
         (("0 <= x", ["x"]), {"x": "non-negative"}, None),
+        # Non-negative opposite
+        (("-x <= 0", ["x"]), {"x": "non-negative"}, None),
         # Non-positive direct
         (("y <= 0", ["y"]), {"y": "non-positive"}, None),
         # Non-positive symmetric
         (("0 >= y", ["y"]), {"y": "non-positive"}, None),
+        # Non-positive opposite
+        (("-y >= 0", ["y"]), {"y": "non-positive"}, None),
         # No match
-        (("x + y >= 1", ["x", "y"]), {}, None),
+        (("x + y >= 0", ["x", "y"]), {}, None),
+        (("x >= y", ["x", "y"]), {}, None),
+        (("x >= y", ["x"]), {}, None),
         # Invalid variable_names type
         (("x >= 0", "x"), None, TypeError),
     ]

@@ -334,6 +334,8 @@ class Defaults:
             Dict of allowed dimensions of variables, where coordinates can be defined.
         - VARIABLE_TYPES: 
             Dict of allowed variable types for data tables.
+        - VARIABLES_SINGS:
+            Dict of allowed variable signs for data tables.
         - USER_DEFINED_CONSTANTS: 
             Dictionary of user-defined constants. These are defined within the 
             dictionary values (complex constants are defined in util_constants module), 
@@ -371,6 +373,11 @@ class Defaults:
             'CONSTANT': 'constant',
             'EXOGENOUS': 'exogenous',
             'ENDOGENOUS': 'endogenous',
+        }
+
+        VARIABLES_SINGS = {
+            'NON-NEGATIVE': 'non-negative',
+            'NON-POSITIVE': 'non-positive',
         }
 
         ALLOWED_CONSTANTS = util_constants.CONSTANTS

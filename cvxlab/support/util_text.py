@@ -8,6 +8,8 @@ import ast
 import re
 from typing import Any, Iterable, List, Optional
 
+from cvxlab.defaults import Defaults
+
 
 def is_iterable(value: str) -> bool:
     """Check if a string represents an iterable (list, tuple, or dict).
@@ -307,41 +309,63 @@ def extract_tokens_from_expression(
 def detect_sign_constraints(
     expression: str,
     variable_names: List[str],
+    sings_labels: dict[str],
 ) -> dict:
     """Detect non-negative and non-positive constraints in an expression.
 
-    Direct pattern detection (whitespace-insensitive) for:
-    - non-negative: "var >= 0" or "0 <= var"
-    - non-positive: "var <= 0" or "0 >= var"
+    Supports direct patterns (whitespace-insensitive), including unary minus:
+    - non-negative: "var >= 0", "0 <= var", "-var <= 0", "0 >= -var"
+    - non-positive: "var <= 0", "0 >= var", "-var >= 0", "0 <= -var"
 
     Args:
-        expression: The symbolic expression to inspect.
-        variable_names: Candidate variable names.
+        expression (str): The symbolic expression to analyze.
+        variable_names (List[str]): A list of variable names to check for
+            sign constraints.
+        sings_labels (dict[str]): A dictionary defining labels for
+            non-negative and non-positive signs. If None, defaults from
+            Defaults.SymbolicDefinitions.VARIABLES_SINGS are used.
 
     Returns:
-        dict: Mapping of variable name -> 'non-negative' | 'non-positive'.
-              Variables not present in the expression or without direct
-              constraints are omitted.
+        dict: A dictionary mapping variable names to their detected sign
+            constraints ('non-negative' or 'non-positive').
+
+    Raises:
+        TypeError: If the input types are incorrect.
     """
     if not isinstance(expression, str):
         raise TypeError('expression must be a string')
     if not isinstance(variable_names, list):
         raise TypeError('variable_names must be a list')
 
+    def any_match(patterns: List[re.Pattern], text: str) -> bool:
+        return any(p.search(text) for p in patterns)
+
     result = {}
+    zero = r"(?:0(?:\.0+)?)"
+
     for var in variable_names:
         var_word = re.escape(var)
-        zero = r"0(?:\.0+)?"
-        # Patterns for non-negative
-        p_ge = re.compile(rf"\b{var_word}\b\s*>\=\s*{zero}\b")
-        p_le_sym = re.compile(rf"\b{zero}\b\s*<\=\s*\b{var_word}\b")
-        # Patterns for non-positive
-        p_le = re.compile(rf"\b{var_word}\b\s*<\=\s*{zero}\b")
-        p_ge_sym = re.compile(rf"\b{zero}\b\s*>\=\s*\b{var_word}\b")
 
-        if p_ge.search(expression) or p_le_sym.search(expression):
-            result[var] = 'non-negative'
-        elif p_le.search(expression) or p_ge_sym.search(expression):
-            result[var] = 'non-positive'
+        var_atom = rf"\(?\s*\b{var_word}\b\s*\)?"
+        neg_var_atom = rf"\(?\s*-\s*\b{var_word}\b\s*\)?"
+
+        # Build anchored (full-string) pattern groups once per var
+        non_negative_patterns = [
+            re.compile(rf"^\s*{var_atom}\s*>=\s*{zero}\s*$"),
+            re.compile(rf"^\s*{zero}\s*<=\s*{var_atom}\s*$"),
+            re.compile(rf"^\s*{neg_var_atom}\s*<=\s*{zero}\s*$"),
+            re.compile(rf"^\s*{zero}\s*>=\s*{neg_var_atom}\s*$"),
+        ]
+        non_positive_patterns = [
+            re.compile(rf"^\s*{var_atom}\s*<=\s*{zero}\s*$"),
+            re.compile(rf"^\s*{zero}\s*>=\s*{var_atom}\s*$"),
+            re.compile(rf"^\s*{neg_var_atom}\s*>=\s*{zero}\s*$"),
+            re.compile(rf"^\s*{zero}\s*<=\s*{neg_var_atom}\s*$"),
+        ]
+
+        if any_match(non_negative_patterns, expression):
+            result[var] = sings_labels['NON-NEGATIVE']
+        elif any_match(non_positive_patterns, expression):
+            result[var] = sings_labels['NON-POSITIVE']
 
     return result
