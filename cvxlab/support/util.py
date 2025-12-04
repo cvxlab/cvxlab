@@ -1392,3 +1392,67 @@ def normalize_dataframe(
         df.fillna(nan_fill_value, inplace=True)
 
     return df
+
+
+def update_df_values_to_zero(
+        dataframe: pd.DataFrame,
+        column_header: str,
+        condition_values: str,
+) -> pd.DataFrame:
+    """Set DataFrame column values to zero based on sign condition.
+
+    This function creates a copy of the input DataFrame and modifies the values
+    in the specified column based on the given condition. It sets values to zero
+    according to whether they are negative or positive.
+
+    Args:
+        dataframe (pd.DataFrame): The DataFrame to modify.
+        column_header (str): The name of the column to modify.
+        condition_values (str): 
+
+    Returns:
+        pd.DataFrame: A modified copy of the DataFrame with updated column values.
+
+    Raises:
+        TypeError: If dataframe is not a pandas DataFrame or column_header is not a string.
+        ValueError: If column_header does not exist in the DataFrame or if
+            condition_values is not one of the specified literals.
+    """
+    variable_sings = Defaults.SymbolicDefinitions.VARIABLES_SINGS
+
+    if not isinstance(dataframe, pd.DataFrame):
+        raise TypeError("Passed 'dataframe' must be a pandas DataFrame.")
+
+    if not isinstance(column_header, str):
+        raise TypeError("Passed 'column_header' must be a string.")
+
+    if column_header not in dataframe.columns:
+        raise ValueError(f"Column '{column_header}' not found in DataFrame.")
+
+    if condition_values not in variable_sings.values():
+        raise ValueError(
+            "Argument 'condition_values' must be one of "
+            f"{list(variable_sings.values())}."
+        )
+
+    df = dataframe.copy()
+
+    series = df[column_header]
+    numeric_series = pd.to_numeric(series, errors='coerce')
+
+    if numeric_series.isna().any():
+        invalid_mask = numeric_series.isna() & series.notna()
+        invalid_examples = series[invalid_mask].unique().tolist()
+        raise ValueError(
+            f"Column '{column_header}' contains non-numeric values: {invalid_examples}"
+        )
+
+    if condition_values == variable_sings['NON-NEGATIVE']:
+        # set negative values to zero
+        numeric_series = numeric_series.mask(numeric_series < 0, 0)
+    elif condition_values == variable_sings['NON-POSITIVE']:
+        # set positive values to zero
+        numeric_series = numeric_series.mask(numeric_series > 0, 0)
+
+    df[column_header] = numeric_series
+    return df
