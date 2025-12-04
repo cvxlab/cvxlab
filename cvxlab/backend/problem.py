@@ -694,6 +694,44 @@ class Problem:
             for key, problem in data.items():
                 self.symbolic_problem[key] = DotDict(problem)
 
+    def _collect_problems_expressions(self) -> Dict[Optional[int], List[str]]:
+        """Collect symbolic expressions grouped by problem key.
+
+        Normalizes the symbolic_problem structure into a dict keyed by problem_key
+        (None for single-problem setups) and aggregates all expressions by selecting
+        entries under Defaults.Labels.OBJECTIVE and Defaults.Labels.EXPRESSIONS.
+
+        Returns:
+            Dict[Optional[int], List[str]]: A mapping from problem_key to a flat list
+            of expression strings to be parsed/validated.
+
+        Notes:
+            - If no symbolic_problem is loaded, returns an empty dict.
+            - When symbolic_problem depth is 1, it is wrapped with key None.
+        """
+        if not self.symbolic_problem:
+            return {}
+
+        if util.find_dict_depth(self.symbolic_problem) == 1:
+            symbolic_problem = {None: self.symbolic_problem}
+        else:
+            symbolic_problem = self.symbolic_problem
+
+        problem_structure_labels = [
+            Defaults.Labels.OBJECTIVE,
+            Defaults.Labels.EXPRESSIONS,
+        ]
+
+        return {
+            problem_key: [
+                expr
+                for label, expr_list in problem.items()
+                if label in problem_structure_labels
+                for expr in expr_list
+            ]
+            for problem_key, problem in symbolic_problem.items()
+        }
+
     def validate_symbolic_expressions(self) -> None:
         """Validate symbolic expressions.
 
@@ -722,27 +760,10 @@ class Problem:
         source_format = self.settings['model_settings_from']
         token_patterns = Defaults.SymbolicDefinitions.TOKEN_PATTERNS
         allowed_operators = Defaults.SymbolicDefinitions.ALLOWED_OPERATORS
-        problem_structure_labels = [
-            Defaults.Labels.OBJECTIVE,
-            Defaults.Labels.EXPRESSIONS,
-        ]
 
         errors = []
 
-        if util.find_dict_depth(self.symbolic_problem) == 1:
-            symbolic_problem = {None: self.symbolic_problem}
-        else:
-            symbolic_problem = self.symbolic_problem
-
-        problems_expressions = {
-            problem_key: [
-                expr
-                for label, expr_list in problem.items()
-                if label in problem_structure_labels
-                for expr in expr_list
-            ]
-            for problem_key, problem in symbolic_problem.items()
-        }
+        problems_expressions = self._collect_problems_expressions()
 
         for problem_key, expr_list in problems_expressions.items():
 
@@ -838,6 +859,51 @@ class Problem:
                 f"Check setup '{source_format}' file. "
             self.logger.error(msg)
             raise exc.ConceptualModelError(msg)
+
+    def detect_and_mark_sign_constraints(self) -> None:
+        """Detect and mark sign constraints for hybrid variables.
+
+        Parses all symbolic expressions and detects sign constraints that
+        are implied for variables which are hybrid (type varies by problem).
+        Detected signs are stored into each 'Variable.sign' field.
+        This is useful in case of integrated problems, where hybrid variables 
+        values exchanges across different problems may result in values with 
+        signs that mismatches the constraints implied by expressions.
+
+        For example, one problem endogenous variable imposed as positive in one 
+        problem may return with very small negatives, then used in another problem
+        as exogenous variables that return infeasibile solution if the variable
+        causes violations of sign constraints implied by expressions.
+
+        Logs a warning listing variables where a sign constraint is implied.
+        """
+        if not self.symbolic_problem:
+            self.logger.warning(
+                "No symbolic problem loaded; skipping sign detection.")
+            return
+
+        problems_expressions = self._collect_problems_expressions()
+
+        vars_with_signs: Dict[str, str] = {}
+
+        for _, expr_list in problems_expressions.items():
+            for expression in expr_list:
+                sign_map = util_text.detect_sign_constraints(
+                    expression=expression,
+                    variable_names=self.index.hybrid_var_keys,
+                    sings_labels=Defaults.SymbolicDefinitions.VARIABLES_SINGS
+                )
+
+                for var_key, sign in sign_map.items():
+                    variable: Variable = self.index.variables[var_key]
+                    variable.sign = sign
+
+                    if var_key not in vars_with_signs:
+                        vars_with_signs[var_key] = sign
+                        self.logger.warning(
+                            "Detected hybrid variable with sign constraint | "
+                            f"'{var_key}' : '{sign}'"
+                        )
 
     def check_data_tables_and_problem_coherence(self) -> None:
         """Check coherence between symbolic problems and data tables.

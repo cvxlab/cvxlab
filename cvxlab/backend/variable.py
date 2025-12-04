@@ -82,6 +82,7 @@ class Variable:
         self.blank_fill: Optional[float] = None
         self.related_table: Optional[str] = None
         self.var_info: Optional[Dict[str, Any]] = None
+        self.sign: Optional[str] = None
 
         self.fetch_attributes(variable_info)
         self.rearrange_var_info()

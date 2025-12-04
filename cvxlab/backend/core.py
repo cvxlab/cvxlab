@@ -271,6 +271,7 @@ class Core:
             scenarios_idx: Optional[List[int] | int] = None,
             allow_none_values: bool = True,
             var_list_to_update: List[str] = [],
+            update_values_based_on_var_sign: bool = False,
     ) -> None:
         """Fetch data from the database and assign it to cvxpy exogenous variables.
 
@@ -283,6 +284,8 @@ class Core:
         The method can update all exogenous variables or a specified list of variables 
         (var_list_to_update): this may be useful for continuous user model run, 
         when only a subset of exogenous variables need to be updated.
+        Optionally, the method can check if variable data comply with sign constraints
+        defined for the variable, eventually putting non-complying values to zero.
 
         Args:
             scenarios_idx (Optional[List[int] | int], optional): List of indices
@@ -303,7 +306,7 @@ class Core:
         with self.logger.log_timing(
             message=f"Fetching data from '{self.settings['sqlite_database_file']}' "
                 "to cvxpy exogenous variables...",
-            level='debug',
+            level='info',
         ):
             filter_header = Defaults.Labels.FILTER_DICT_KEY
             cvxpy_var_header = Defaults.Labels.CVXPY_VAR
@@ -311,6 +314,7 @@ class Core:
             id_header = Defaults.Labels.ID_FIELD['id'][0]
             allowed_values_types = Defaults.NumericalSettings.ALLOWED_VALUES_TYPES
             allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
+            variable_sing = Defaults.SymbolicDefinitions.VARIABLES_SINGS
 
             if not isinstance(var_list_to_update, list):
                 msg = "Passed method parameter must be a list."
@@ -347,20 +351,15 @@ class Core:
                     if variable.data is None:
                         err_msg.append(
                             "Fetching data to variables | No data defined for "
-                            f"variable '{var_key}'."
-                        )
-
+                            f"variable '{var_key}'.")
                     if variable.related_table is None:
                         err_msg.append(
                             "Fetching data to variables | No related table "
-                            f"defined for variable '{var_key}'."
-                        )
-
+                            f"defined for variable '{var_key}'.")
                     if err_msg:
                         [self.logger.error(msg) for msg in err_msg]
                         raise exc.MissingDataError(
-                            "Fetching data to variables | Failed."
-                        )
+                            "Fetching data to variables | Failed.")
 
                     # for variables whose type is end/exo depending on the problem,
                     # fetch exogenous variable data.
@@ -446,6 +445,34 @@ class Core:
                                     f"{non_allowed_ids}."
                                 self.logger.error(msg)
                                 raise exc.MissingDataError(msg)
+
+                            # optionally, check if variable raw_data comply with sign
+                            # constraints defined for the variable, eventually putting
+                            # non-complying values to zero. This may be useful for
+                            # solving integrated problems iteratively, when small
+                            # negative values may appear due to numerical errors.
+                            if update_values_based_on_var_sign:
+                                # Only apply when the variable is hybrid and has a sign constraint
+                                if isinstance(variable.type, dict) and \
+                                        variable.sign is not None:
+
+                                    original_df = raw_data.copy()
+
+                                    raw_data = util.update_df_values_to_zero(
+                                        dataframe=raw_data,
+                                        column_header=values_header,
+                                        condition_values=variable.sign,
+                                    )
+                                    if not util.check_dataframes_equality(
+                                        df_list=[original_df, raw_data],
+                                        homogeneous_num_types=True,
+                                    ):
+                                        self.logger.warning(
+                                            "Sign-based update applied for variable "
+                                            f"'{var_key}'"
+                                        )
+                                else:
+                                    pass
 
                             # pivoting and reshaping data to fit variables
                             pivoted_data = variable.reshaping_normalized_table_data(
@@ -629,7 +656,7 @@ class Core:
         'validate_symbolic_expressions' methods of the Problem instance to load
         and validate the symbolic problem definitions from a file.
         The method also performs a coherence check between data tables and problem
-        definitions.
+        definitions based on 'check_data_tables_and_problem_coherence' method.
         """
         with self.logger.log_timing(
             message=f"Loading and validating symbolic problem...",
@@ -638,6 +665,7 @@ class Core:
             self.problem.load_symbolic_problem_from_file(force_overwrite)
             self.problem.validate_symbolic_expressions()
             self.problem.check_data_tables_and_problem_coherence()
+            self.problem.detect_and_mark_sign_constraints()
 
     def generate_numerical_problem(
             self,
@@ -976,7 +1004,9 @@ class Core:
                                     "Updating exogenous variables data from previous iteration.")
 
                                 self.data_to_cvxpy_exogenous_vars(
-                                    scenarios_idx=scenario_idx)
+                                    scenarios_idx=scenario_idx,
+                                    update_values_based_on_var_sign=True,
+                                )
 
                             self.files.copy_file_to_destination(
                                 path_destination=sqlite_db_path,

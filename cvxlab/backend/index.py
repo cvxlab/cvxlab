@@ -229,6 +229,22 @@ class Index:
 
         return scenarios_df
 
+    @property
+    def hybrid_var_keys(self) -> List[str]:
+        """List of keys of hybrid variables.
+
+        This property returns a list of keys identifying all hybrid variables
+        currently loaded in the Index. An empty list is returned if no hybrid
+        variables are found.
+
+        Returns:
+            List[str]: A list of hybrid variable keys.
+        """
+        return [
+            var_key for var_key, variable in self.variables.items()
+            if isinstance(variable.type, dict)
+        ]
+
     def load_and_validate_structure(
             self,
             data_structure_key: str,
