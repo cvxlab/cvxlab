@@ -1173,7 +1173,7 @@ class Core:
         Returns:
             List of formatted strings for table display.
         """
-        lines = []
+        lines: List[str] = []
 
         # Include RMS label in width calculation if present
         rms_label = Defaults.Labels.RMS_TABLES
@@ -1181,32 +1181,77 @@ class Core:
         if rms_label in all_errors:
             display_rows.append(rms_label)
 
-        max_table_name_len = max(len(table) for table in display_rows)
+        # Table (first) column width
+        max_table_name_len = max(len(table) for table in display_rows) \
+            if display_rows else len("Table")
         table_col_width = max(max_table_name_len + 2, 16)
 
-        # Header row with iteration numbers (starting from 2)
+        # Iteration labels as ranges: Iter_1-2, Iter_2-3, ...
+        # If iter_count < 2, there are no ranges to display.
+        iter_labels = [
+            f"Iter_{j-1}-{j}"
+            for j in range(2, max(iter_count, 2) + 1)
+        ]
+
+        # Helper to build a value token (formatted value + optional star)
+        def make_token(val: float, is_rms: bool = False) -> str:
+            val_str = format(val, values_format)
+            if is_rms:
+                star = '*' if (
+                    tolerance_avg is not None and
+                    val > tolerance_avg
+                ) else ' '
+            else:
+                star = '*' if val > tolerance_max else ' '
+            return f"{val_str}{star}"
+
+        # Compute per-value column width:
+        # longest among tokens (values_format + star) and iteration labels
+        tokens_for_width: List[str] = []
+        for table in tables_to_check:
+            tokens_for_width.extend(
+                make_token(v) for v in all_errors.get(table, []))
+        if rms_label in all_errors:
+            tokens_for_width.extend(
+                make_token(v, is_rms=True)
+                for v in all_errors.get(rms_label, [])
+            )
+
+        # Fallback token in case of empty errors
+        default_token_len = len(format(0.0, values_format)) + 1
+        max_token_len = max(
+            (len(t) for t in tokens_for_width),
+            default=default_token_len
+        )
+        max_label_len = max((len(lbl) for lbl in iter_labels), default=0)
+
+        # Add minimal inter-column spacing for readability
+        padding = 2
+        value_col_width = max(max_token_len, max_label_len) + padding
+
+        # Single header row
         header = f"{'Table':<{table_col_width}}" + \
-            "".join(f"Iter_{j:>2}  " for j in range(2, iter_count + 1))
+            "".join(f"{lbl:^{value_col_width}}" for lbl in iter_labels)
         lines.append(header)
         lines.append("-" * len(header))
 
-        # Data rows for each table (star if > tolerance_max)
+        # Data rows
         for table in tables_to_check:
+            values_tokens = [make_token(e) for e in all_errors.get(table, [])]
+            # Right-align tokens within fixed-width columns
             values_str = "".join(
-                f"{format(e, values_format)}{'*' if e > tolerance_max else ' '} "
-                for e in all_errors.get(table, [])
-            )
+                f"{tok:>{value_col_width}}" for tok in values_tokens)
             lines.append(f"{table:<{table_col_width}}{values_str}")
 
-        # Append RMS row if available, star if > tolerance_avg (when provided)
+        # RMS row
         if rms_label in all_errors:
-            rms_values = all_errors.get(rms_label, [])
-            values_str = "".join(
-                f"{format(e, values_format)}"
-                f"{'*' if (tolerance_avg is not None and e > tolerance_avg) else ' '} "
-                for e in rms_values
-            )
-            lines.append(f"{rms_label:<{table_col_width}}{values_str}")
+            rms_tokens = [
+                make_token(e, is_rms=True)
+                for e in all_errors.get(rms_label, [])
+            ]
+            rms_values_str = "".join(
+                f"{tok:>{value_col_width}}" for tok in rms_tokens)
+            lines.append(f"{rms_label:<{table_col_width}}{rms_values_str}")
 
         return lines
 
