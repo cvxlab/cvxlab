@@ -877,6 +877,9 @@ class Problem:
 
         Logs a warning listing variables where a sign constraint is implied.
         """
+        self.logger.debug(
+            f"Detecting and marking hybrid variables with sing constraints.")
+
         if not self.symbolic_problem:
             self.logger.warning(
                 "No symbolic problem loaded; skipping sign detection.")

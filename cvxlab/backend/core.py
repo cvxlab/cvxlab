@@ -295,6 +295,9 @@ class Core:
                 the data for the variable. Defaults to True.
             var_list_to_update (List[str], optional): List of variable keys to
                 update. If empty, updates all exogenous variables. Defaults to [].
+            update_values_based_on_var_sign (bool, optional): If True, checks
+                if variable data comply with sign constraints defined for the
+                variable, eventually putting non-complying values to zero.
 
         Raises:
             TypeError: If 'var_list_to_update' is not a list.
@@ -333,6 +336,8 @@ class Core:
             with db_handler(self.sqltools):
                 for var_key, variable in self.index.variables.items():
                     variable: Variable
+
+                    var_sing_data_update = False
 
                     if var_key not in var_list_to_update:
                         continue
@@ -467,10 +472,7 @@ class Core:
                                         df_list=[original_df, raw_data],
                                         homogeneous_num_types=True,
                                     ):
-                                        self.logger.warning(
-                                            "Sign-based update applied for variable "
-                                            f"'{var_key}'"
-                                        )
+                                        var_sing_data_update = True
                                 else:
                                     pass
 
@@ -485,6 +487,10 @@ class Core:
                                 cvxpy_var=variable_data[cvxpy_var_header][combination],
                                 data=pivoted_data
                             )
+
+                    if var_sing_data_update:
+                        self.logger.info(
+                            f"Sign-based update applied for variable '{var_key}'")
 
     def cvxpy_endogenous_data_to_database(
             self,
@@ -1148,7 +1154,7 @@ class Core:
             iter_count: int,
             tolerance_max: float,
             tolerance_avg: float,
-            values_format: str = ".4e",
+            values_format: str = ".3e",
     ) -> List[str]:
         """Format convergence monitoring table with errors for each iteration.
 
@@ -1187,7 +1193,7 @@ class Core:
         # Data rows for each table (star if > tolerance_max)
         for table in tables_to_check:
             values_str = "".join(
-                f"{e:>7.3f}{'*' if e > tolerance_max else ' '} "
+                f"{format(e, values_format)}{'*' if e > tolerance_max else ' '} "
                 for e in all_errors.get(table, [])
             )
             lines.append(f"{table:<{table_col_width}}{values_str}")
