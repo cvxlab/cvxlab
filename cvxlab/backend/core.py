@@ -489,7 +489,7 @@ class Core:
                             )
 
                     if var_sing_data_update:
-                        self.logger.info(
+                        self.logger.warning(
                             f"Sign-based update applied for variable '{var_key}'")
 
     def cvxpy_endogenous_data_to_database(
