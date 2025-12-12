@@ -123,6 +123,7 @@ class Defaults:
         VARIABLES_INFO_KEY = 'variables_info'
         VALUE_KEY = 'value'
         BLANK_FILL_KEY = 'blank_fill'
+        SIGN_KEY = 'sign'
 
         SUB_PROBLEM_KEY = 'sub_problem_key'
         FILTER_DICT_KEY = 'filter'
@@ -207,6 +208,13 @@ class Defaults:
             - blank_fill: 
                 (Optional) numerical value that will be used to fill variables
                 in case of blank or nan values.
+            - sign: 
+                (Optional) defines whether an endogenous variable is expected to 
+                be non-negative or non-positive. This will result in an implicit 
+                constraint defined in the model. Allowed values are defined in 
+                SymbolicDefinitions.VARIABLES_SIGNS. In case of integrated models,
+                this constraint is useful to check if endogenous variables values 
+                are exchanged with the correct sign, to avoid numerical inconsistencies.
             - set_key: 
                 (Optional) dictionary with keys as set_key symbols and values
                 defining the dimension and filters for the set.
@@ -272,6 +280,7 @@ class Defaults:
                     ANY: {
                         'value': (OPTIONAL, str),
                         'blank_fill': (OPTIONAL, Union[int, float]),
+                        'sign': (OPTIONAL, str),
                         ANY: (OPTIONAL, {
                             'dim': (OPTIONAL, str),
                             'filters': (OPTIONAL, dict),
@@ -334,7 +343,7 @@ class Defaults:
             Dict of allowed dimensions of variables, where coordinates can be defined.
         - VARIABLE_TYPES: 
             Dict of allowed variable types for data tables.
-        - VARIABLES_SINGS:
+        - VARIABLES_SIGNS:
             Dict of allowed variable signs for data tables.
         - USER_DEFINED_CONSTANTS: 
             Dictionary of user-defined constants. These are defined within the 
@@ -375,7 +384,7 @@ class Defaults:
             'ENDOGENOUS': 'endogenous',
         }
 
-        VARIABLES_SINGS = {
+        VARIABLES_SIGNS = {
             'NON-NEGATIVE': 'non-negative',
             'NON-POSITIVE': 'non-positive',
         }

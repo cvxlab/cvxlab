@@ -117,22 +117,15 @@ class Variable:
         filter_key = Defaults.Labels.FILTERS
         set_key = Defaults.Labels.SET
         dim_key = Defaults.Labels.DIM
-        allowed_constants = Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS
+        sign_key = Defaults.Labels.SIGN_KEY
         dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if self.var_info is None:
             return
 
-        # get constant value if defined
-        constant_value = self.var_info.get(value_key, None)
-        if constant_value and constant_value in allowed_constants:
-            self.value = constant_value
-
-        # get blank fill value if defined
-        blank_fill_value = self.var_info.get(blank_fill_key, None)
-        if blank_fill_value is not None and \
-                isinstance(blank_fill_value, (int, float)):
-            self.blank_fill = blank_fill_value
+        self.value = self.var_info.get(value_key, None)
+        self.blank_fill = self.var_info.get(blank_fill_key, None)
+        self.sign = self.var_info.get(sign_key, None)
 
         # get rows and cols information
         for dimension in [dimensions['ROWS'], dimensions['COLS']]:

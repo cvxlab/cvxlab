@@ -1418,7 +1418,7 @@ def update_df_values_to_zero(
         ValueError: If column_header does not exist in the DataFrame or if
             condition_values is not one of the specified literals.
     """
-    variable_sings = Defaults.SymbolicDefinitions.VARIABLES_SINGS
+    variable_signs = Defaults.SymbolicDefinitions.VARIABLES_SIGNS
 
     if not isinstance(dataframe, pd.DataFrame):
         raise TypeError("Passed 'dataframe' must be a pandas DataFrame.")
@@ -1429,10 +1429,10 @@ def update_df_values_to_zero(
     if column_header not in dataframe.columns:
         raise ValueError(f"Column '{column_header}' not found in DataFrame.")
 
-    if condition_values not in variable_sings.values():
+    if condition_values not in variable_signs.values():
         raise ValueError(
             "Argument 'condition_values' must be one of "
-            f"{list(variable_sings.values())}."
+            f"{list(variable_signs.values())}."
         )
 
     df = dataframe.copy()
@@ -1447,10 +1447,10 @@ def update_df_values_to_zero(
             f"Column '{column_header}' contains non-numeric values: {invalid_examples}"
         )
 
-    if condition_values == variable_sings['NON-NEGATIVE']:
+    if condition_values == variable_signs['NON-NEGATIVE']:
         # set negative values to zero
         numeric_series = numeric_series.mask(numeric_series < 0, 0)
-    elif condition_values == variable_sings['NON-POSITIVE']:
+    elif condition_values == variable_signs['NON-POSITIVE']:
         # set positive values to zero
         numeric_series = numeric_series.mask(numeric_series > 0, 0)
 
