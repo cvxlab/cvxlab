@@ -317,7 +317,6 @@ class Core:
             id_header = Defaults.Labels.ID_FIELD['id'][0]
             allowed_values_types = Defaults.NumericalSettings.ALLOWED_VALUES_TYPES
             allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
-            variable_sing = Defaults.SymbolicDefinitions.VARIABLES_SINGS
 
             if not isinstance(var_list_to_update, list):
                 msg = "Passed method parameter must be a list."
@@ -658,7 +657,10 @@ class Core:
     ) -> None:
         """Call methods to load and validate symbolic problem.
 
-        The method calls the 'load_symbolic_problem_from_file' and
+        The method calls the 'load_symbolic_problem_from_file' and complete the 
+        problem expressions by adding implicit symbolic expressions using the 
+        'add_implicit_symbolic_expressions' (i.e. defining expressions for variables
+        with sign constraints defined in settings). Then, it calls the 
         'validate_symbolic_expressions' methods of the Problem instance to load
         and validate the symbolic problem definitions from a file.
         The method also performs a coherence check between data tables and problem
@@ -669,9 +671,9 @@ class Core:
             level='info',
         ):
             self.problem.load_symbolic_problem_from_file(force_overwrite)
+            self.problem.add_implicit_symbolic_expressions()
             self.problem.validate_symbolic_expressions()
             self.problem.check_data_tables_and_problem_coherence()
-            self.problem.detect_and_mark_sign_constraints()
 
     def generate_numerical_problem(
             self,

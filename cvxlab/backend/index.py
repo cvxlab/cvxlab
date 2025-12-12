@@ -524,6 +524,7 @@ class Index:
         variables_info_key = Defaults.Labels.VARIABLES_INFO_KEY
         value_key = Defaults.Labels.VALUE_KEY
         blank_fill_key = Defaults.Labels.BLANK_FILL_KEY
+        sign_key = Defaults.Labels.SIGN_KEY
 
         problems = {}
 
@@ -605,9 +606,25 @@ class Index:
                                 "'blank_fill' attribute cannot be assigned to " \
                                 "endogenous variables or constants."
 
+                    # sign field can only be assigned to endogenous or hybrid variables
+                    elif property_key == sign_key:
+                        if data_table.type == allowed_var_types['EXOGENOUS']:
+                            problems[f"{path}.{sign_key}"] = \
+                                "'sign' attribute cannot be assigned to " \
+                                "exogenous variables."
+
+                        # check if sign value is allowed
+                        elif property_value:
+                            allowed_signs = Defaults.SymbolicDefinitions.VARIABLES_SIGNS
+                            if property_value not in allowed_signs.values():
+                                problems[f"{path}.{sign_key}"] = \
+                                    f"Sign value '{property_value}' not allowed. " \
+                                    f"Allowed signs: {list(allowed_signs.values())}."
+
                     # other properties must be allowed coordinates
                     elif property_key not in data_table.coordinates:
-                        problems[path] = f"Coordinate '{property_key}' not found in coordinates."
+                        problems[path] = f"Property '{property_key}' not found in " \
+                            "allowed properties or defined coordinates."
 
                     # for each var coordinate
                     elif property_key in data_table.coordinates \

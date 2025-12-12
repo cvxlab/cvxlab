@@ -694,6 +694,70 @@ class Problem:
             for key, problem in data.items():
                 self.symbolic_problem[key] = DotDict(problem)
 
+    def add_implicit_symbolic_expressions(self) -> None:
+        """Add implicit symbolic expressions based on variable sign attributes.
+
+        This method adds implicit symbolic expressions to the existing symbolic
+        problem definitions based on the sign attributes of variables.
+        For each variable with a defined sign attribute (non-negative or
+        non-positive), the method generates corresponding symbolic expressions
+        (e.g., "var_key >= 0" or "var_key <= 0") and appends them to the
+        expressions list in the symbolic problem structure.
+
+        NOTES:
+            In case of multiple problems sharing hybrid type variables, the sign-
+                based expressions are only added to endogenous variables, skipping
+                exogenous variables.
+            For all other endogenous variables, the sign-based expressions are added
+                to all problems (so this may result in duplicate expressions).
+        """
+        self.logger.debug(f"Adding implicit symbolic expressions.")
+
+        expressions_key = Defaults.Labels.EXPRESSIONS
+        var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
+        var_signs = Defaults.SymbolicDefinitions.VARIABLES_SIGNS
+
+        if not self.symbolic_problem:
+            return
+
+        if util.find_dict_depth(self.symbolic_problem) == 1:
+            symbolic_problem = {None: self.symbolic_problem}
+        else:
+            symbolic_problem = self.symbolic_problem
+
+        for problem_key, problem in symbolic_problem.items():
+            implicit_expressions: List[str] = []
+
+            # collect implicit expressions (from variables sign attribute)
+            for var_key, variable in self.index.variables.items():
+                variable: Variable
+
+                if not variable.sign:
+                    continue
+
+                # skip exogenous variables in case of integrated problems
+                if isinstance(variable.type, dict):
+                    if variable.type[problem_key] == var_types['EXOGENOUS']:
+                        continue
+
+                if variable.sign == var_signs['NON-NEGATIVE']:
+                    implicit_expr = f"{var_key} >= 0"
+                elif variable.sign == var_signs['NON-POSITIVE']:
+                    implicit_expr = f"{var_key} <= 0"
+                else:
+                    msg = f"Variable '{var_key}' | Unsupported sign attribute " \
+                        f"'{variable.sign}'."
+                    self.logger.error(msg)
+                    raise exc.SettingsError(msg)
+
+                implicit_expressions.append(implicit_expr)
+
+            if expressions_key in problem and \
+                    isinstance(problem[expressions_key], list):
+                problem[expressions_key].extend(implicit_expressions)
+            else:
+                problem[expressions_key] = implicit_expressions
+
     def _collect_problems_expressions(self) -> Dict[Optional[int], List[str]]:
         """Collect symbolic expressions grouped by problem key.
 
@@ -859,54 +923,6 @@ class Problem:
                 f"Check setup '{source_format}' file. "
             self.logger.error(msg)
             raise exc.ConceptualModelError(msg)
-
-    def detect_and_mark_sign_constraints(self) -> None:
-        """Detect and mark sign constraints for hybrid variables.
-
-        Parses all symbolic expressions and detects sign constraints that
-        are implied for variables which are hybrid (type varies by problem).
-        Detected signs are stored into each 'Variable.sign' field.
-        This is useful in case of integrated problems, where hybrid variables 
-        values exchanges across different problems may result in values with 
-        signs that mismatches the constraints implied by expressions.
-
-        For example, one problem endogenous variable imposed as positive in one 
-        problem may return with very small negatives, then used in another problem
-        as exogenous variables that return infeasibile solution if the variable
-        causes violations of sign constraints implied by expressions.
-
-        Logs a warning listing variables where a sign constraint is implied.
-        """
-        self.logger.debug(
-            f"Detecting and marking hybrid variables with sing constraints.")
-
-        if not self.symbolic_problem:
-            self.logger.warning(
-                "No symbolic problem loaded; skipping sign detection.")
-            return
-
-        problems_expressions = self._collect_problems_expressions()
-
-        vars_with_signs: Dict[str, str] = {}
-
-        for _, expr_list in problems_expressions.items():
-            for expression in expr_list:
-                sign_map = util_text.detect_sign_constraints(
-                    expression=expression,
-                    variable_names=self.index.hybrid_var_keys,
-                    sings_labels=Defaults.SymbolicDefinitions.VARIABLES_SINGS
-                )
-
-                for var_key, sign in sign_map.items():
-                    variable: Variable = self.index.variables[var_key]
-                    variable.sign = sign
-
-                    if var_key not in vars_with_signs:
-                        vars_with_signs[var_key] = sign
-                        self.logger.warning(
-                            "Detected hybrid variable with sign constraint | "
-                            f"'{var_key}' : '{sign}'"
-                        )
 
     def check_data_tables_and_problem_coherence(self) -> None:
         """Check coherence between symbolic problems and data tables.
