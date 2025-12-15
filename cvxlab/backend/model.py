@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, List, Literal, Optional
 
 import pandas as pd
-import cvxpy as cp
 
 from cvxlab.defaults import Defaults
 from cvxlab.backend.core import Core
