@@ -82,7 +82,7 @@ class Variable:
         self.blank_fill: Optional[float] = None
         self.related_table: Optional[str] = None
         self.var_info: Optional[Dict[str, Any]] = None
-        self.sign: Optional[str] = None
+        self.nonneg: Optional[bool] = False
 
         self.fetch_attributes(variable_info)
         self.rearrange_var_info()
@@ -117,7 +117,7 @@ class Variable:
         filter_key = Defaults.Labels.FILTERS
         set_key = Defaults.Labels.SET
         dim_key = Defaults.Labels.DIM
-        sign_key = Defaults.Labels.SIGN_KEY
+        sign_key = Defaults.Labels.NONNEG_KEY
         dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if self.var_info is None:
@@ -125,7 +125,7 @@ class Variable:
 
         self.value = self.var_info.get(value_key, None)
         self.blank_fill = self.var_info.get(blank_fill_key, None)
-        self.sign = self.var_info.get(sign_key, None)
+        self.nonneg = self.var_info.get(sign_key, False)
 
         # get rows and cols information
         for dimension in [dimensions['ROWS'], dimensions['COLS']]:

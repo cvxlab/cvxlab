@@ -1394,21 +1394,18 @@ def normalize_dataframe(
     return df
 
 
-def update_df_values_to_zero(
+def filter_non_allowed_negatives(
         dataframe: pd.DataFrame,
         column_header: str,
-        condition_values: str,
 ) -> pd.DataFrame:
     """Set DataFrame column values to zero based on sign condition.
 
-    This function creates a copy of the input DataFrame and modifies the values
-    in the specified column based on the given condition. It sets values to zero
-    according to whether they are negative or positive.
+    This function creates a copy of the input DataFrame and modifies the negative 
+    values in the specified column to zero. 
 
     Args:
         dataframe (pd.DataFrame): The DataFrame to modify.
         column_header (str): The name of the column to modify.
-        condition_values (str): 
 
     Returns:
         pd.DataFrame: A modified copy of the DataFrame with updated column values.
@@ -1418,8 +1415,6 @@ def update_df_values_to_zero(
         ValueError: If column_header does not exist in the DataFrame or if
             condition_values is not one of the specified literals.
     """
-    variable_signs = Defaults.SymbolicDefinitions.VARIABLES_SIGNS
-
     if not isinstance(dataframe, pd.DataFrame):
         raise TypeError("Passed 'dataframe' must be a pandas DataFrame.")
 
@@ -1429,14 +1424,7 @@ def update_df_values_to_zero(
     if column_header not in dataframe.columns:
         raise ValueError(f"Column '{column_header}' not found in DataFrame.")
 
-    if condition_values not in variable_signs.values():
-        raise ValueError(
-            "Argument 'condition_values' must be one of "
-            f"{list(variable_signs.values())}."
-        )
-
     df = dataframe.copy()
-
     series = df[column_header]
     numeric_series = pd.to_numeric(series, errors='coerce')
 
@@ -1447,12 +1435,8 @@ def update_df_values_to_zero(
             f"Column '{column_header}' contains non-numeric values: {invalid_examples}"
         )
 
-    if condition_values == variable_signs['NON-NEGATIVE']:
-        # set negative values to zero
-        numeric_series = numeric_series.mask(numeric_series < 0, 0)
-    elif condition_values == variable_signs['NON-POSITIVE']:
-        # set positive values to zero
-        numeric_series = numeric_series.mask(numeric_series > 0, 0)
-
+    # set negative values to zero
+    numeric_series = numeric_series.mask(numeric_series < 0, 0)
     df[column_header] = numeric_series
+
     return df

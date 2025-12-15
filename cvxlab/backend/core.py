@@ -271,7 +271,7 @@ class Core:
             scenarios_idx: Optional[List[int] | int] = None,
             allow_none_values: bool = True,
             var_list_to_update: List[str] = [],
-            update_values_based_on_var_sign: bool = False,
+            filter_negative_values: bool = False,
     ) -> None:
         """Fetch data from the database and assign it to cvxpy exogenous variables.
 
@@ -284,8 +284,8 @@ class Core:
         The method can update all exogenous variables or a specified list of variables 
         (var_list_to_update): this may be useful for continuous user model run, 
         when only a subset of exogenous variables need to be updated.
-        Optionally, the method can check if variable data comply with sign constraints
-        defined for the variable, eventually putting non-complying values to zero.
+        Optionally, the method can check if variable data comply with nonneg attribute
+        defined for the variable, putting negative values to zero.
 
         Args:
             scenarios_idx (Optional[List[int] | int], optional): List of indices
@@ -295,9 +295,9 @@ class Core:
                 the data for the variable. Defaults to True.
             var_list_to_update (List[str], optional): List of variable keys to
                 update. If empty, updates all exogenous variables. Defaults to [].
-            update_values_based_on_var_sign (bool, optional): If True, checks
-                if variable data comply with sign constraints defined for the
-                variable, eventually putting non-complying values to zero.
+            filter_negative_values (bool, optional): If True, checks
+                if variable data comply with nonneg attribute defined for the
+                variable, putting negative values to zero.
 
         Raises:
             TypeError: If 'var_list_to_update' is not a list.
@@ -455,17 +455,16 @@ class Core:
                             # non-complying values to zero. This may be useful for
                             # solving integrated problems iteratively, when small
                             # negative values may appear due to numerical errors.
-                            if update_values_based_on_var_sign:
+                            if filter_negative_values:
                                 # Only apply when the variable is hybrid and has a sign constraint
                                 if isinstance(variable.type, dict) and \
-                                        variable.sign is not None:
+                                        variable.nonneg is True:
 
                                     original_df = raw_data.copy()
 
-                                    raw_data = util.update_df_values_to_zero(
+                                    raw_data = util.filter_non_allowed_negatives(
                                         dataframe=raw_data,
                                         column_header=values_header,
-                                        condition_values=variable.sign,
                                     )
                                     if not util.check_dataframes_equality(
                                         df_list=[original_df, raw_data],
@@ -489,7 +488,7 @@ class Core:
 
                     if var_sing_data_update:
                         self.logger.warning(
-                            f"Sign-based update applied for variable '{var_key}'")
+                            f"Negative values set to zero for variable '{var_key}'")
 
     def cvxpy_endogenous_data_to_database(
             self,
@@ -1013,7 +1012,7 @@ class Core:
 
                                 self.data_to_cvxpy_exogenous_vars(
                                     scenarios_idx=scenario_idx,
-                                    update_values_based_on_var_sign=True,
+                                    filter_negative_values=True,
                                 )
 
                             self.files.copy_file_to_destination(

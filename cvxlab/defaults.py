@@ -87,6 +87,7 @@ class Defaults:
         - VARIABLES_INFO_KEY: key related to the variables information.
         - VALUE_KEY: key related to the type for variable of type constants.
         - BLANK_FILL_KEY: key related to the value used to fill blank.
+        - NONNEG_KEY: key related to the non-negativity sign of endogenous variables.
 
         Dataframe columns default labels:
 
@@ -123,7 +124,7 @@ class Defaults:
         VARIABLES_INFO_KEY = 'variables_info'
         VALUE_KEY = 'value'
         BLANK_FILL_KEY = 'blank_fill'
-        SIGN_KEY = 'sign'
+        NONNEG_KEY = 'nonneg'
 
         SUB_PROBLEM_KEY = 'sub_problem_key'
         FILTER_DICT_KEY = 'filter'
@@ -208,11 +209,10 @@ class Defaults:
             - blank_fill: 
                 (Optional) numerical value that will be used to fill variables
                 in case of blank or nan values.
-            - sign: 
+            - nonneg: 
                 (Optional) defines whether an endogenous variable is expected to 
-                be non-negative or non-positive. This will result in an implicit 
-                constraint defined in the model. Allowed values are defined in 
-                SymbolicDefinitions.VARIABLES_SIGNS. In case of integrated models,
+                be non-negative. This will result in an implicit non-negativity 
+                constraint defined in the model. In case of integrated models,
                 this constraint is useful to check if endogenous variables values 
                 are exchanged with the correct sign, to avoid numerical inconsistencies.
             - set_key: 
@@ -280,7 +280,7 @@ class Defaults:
                     ANY: {
                         'value': (OPTIONAL, str),
                         'blank_fill': (OPTIONAL, Union[int, float]),
-                        'sign': (OPTIONAL, str),
+                        'nonneg': (OPTIONAL, bool),
                         ANY: (OPTIONAL, {
                             'dim': (OPTIONAL, str),
                             'filters': (OPTIONAL, dict),
@@ -343,14 +343,12 @@ class Defaults:
             Dict of allowed dimensions of variables, where coordinates can be defined.
         - VARIABLE_TYPES: 
             Dict of allowed variable types for data tables.
-        - VARIABLES_SIGNS:
-            Dict of allowed variable signs for data tables.
-        - USER_DEFINED_CONSTANTS: 
+        - ALLOWED_CONSTANTS: 
             Dictionary of user-defined constants. These are defined within the 
             dictionary values (complex constants are defined in util_constants module), 
             are used to define variables (see 'value' field in data tables). 
             Constants are be built with exogenous data only. 
-        - USER_DEFINED_OPERATORS: 
+        - ALLOWED_OPERATORS: 
             Dictionary of user-defined operators. Keys of operators can be directly 
             used in symbolic expressions. These are defined within the dictionary 
             values (complex operators are defined in util_operators module). 
@@ -382,11 +380,6 @@ class Defaults:
             'CONSTANT': 'constant',
             'EXOGENOUS': 'exogenous',
             'ENDOGENOUS': 'endogenous',
-        }
-
-        VARIABLES_SIGNS = {
-            'NON-NEGATIVE': 'non-negative',
-            'NON-POSITIVE': 'non-positive',
         }
 
         ALLOWED_CONSTANTS = util_constants.CONSTANTS

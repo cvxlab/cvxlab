@@ -715,7 +715,6 @@ class Problem:
 
         expressions_key = Defaults.Labels.EXPRESSIONS
         var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
-        var_signs = Defaults.SymbolicDefinitions.VARIABLES_SIGNS
 
         if not self.symbolic_problem:
             return
@@ -728,11 +727,11 @@ class Problem:
         for problem_key, problem in symbolic_problem.items():
             implicit_expressions: List[str] = []
 
-            # collect implicit expressions (from variables sign attribute)
+            # collect implicit expressions (from variables 'nonneg' attribute)
             for var_key, variable in self.index.variables.items():
                 variable: Variable
 
-                if not variable.sign:
+                if variable.nonneg is False:
                     continue
 
                 # skip exogenous variables in case of integrated problems
@@ -740,15 +739,9 @@ class Problem:
                     if variable.type[problem_key] == var_types['EXOGENOUS']:
                         continue
 
-                if variable.sign == var_signs['NON-NEGATIVE']:
+                # assign implicit non-negativity constraint
+                if variable.nonneg is True:
                     implicit_expr = f"{var_key} >= 0"
-                elif variable.sign == var_signs['NON-POSITIVE']:
-                    implicit_expr = f"{var_key} <= 0"
-                else:
-                    msg = f"Variable '{var_key}' | Unsupported sign attribute " \
-                        f"'{variable.sign}'."
-                    self.logger.error(msg)
-                    raise exc.SettingsError(msg)
 
                 implicit_expressions.append(implicit_expr)
 
