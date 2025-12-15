@@ -694,64 +694,7 @@ class Problem:
             for key, problem in data.items():
                 self.symbolic_problem[key] = DotDict(problem)
 
-    def add_implicit_symbolic_expressions(self) -> None:
-        """Add implicit symbolic expressions based on variable sign attributes.
-
-        This method adds implicit symbolic expressions to the existing symbolic
-        problem definitions based on the sign attributes of variables.
-        For each variable with a defined sign attribute (non-negative or
-        non-positive), the method generates corresponding symbolic expressions
-        (e.g., "var_key >= 0" or "var_key <= 0") and appends them to the
-        expressions list in the symbolic problem structure.
-
-        NOTES:
-            In case of multiple problems sharing hybrid type variables, the sign-
-                based expressions are only added to endogenous variables, skipping
-                exogenous variables.
-            For all other endogenous variables, the sign-based expressions are added
-                to all problems (so this may result in duplicate expressions).
-        """
-        self.logger.debug(f"Adding implicit symbolic expressions.")
-
-        expressions_key = Defaults.Labels.EXPRESSIONS
-        var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
-
-        if not self.symbolic_problem:
-            return
-
-        if util.find_dict_depth(self.symbolic_problem) == 1:
-            symbolic_problem = {None: self.symbolic_problem}
-        else:
-            symbolic_problem = self.symbolic_problem
-
-        for problem_key, problem in symbolic_problem.items():
-            implicit_expressions: List[str] = []
-
-            # collect implicit expressions (from variables 'nonneg' attribute)
-            for var_key, variable in self.index.variables.items():
-                variable: Variable
-
-                if variable.nonneg is False:
-                    continue
-
-                # skip exogenous variables in case of integrated problems
-                if isinstance(variable.type, dict):
-                    if variable.type[problem_key] == var_types['EXOGENOUS']:
-                        continue
-
-                # assign implicit non-negativity constraint
-                if variable.nonneg is True:
-                    implicit_expr = f"{var_key} >= 0"
-
-                implicit_expressions.append(implicit_expr)
-
-            if expressions_key in problem and \
-                    isinstance(problem[expressions_key], list):
-                problem[expressions_key].extend(implicit_expressions)
-            else:
-                problem[expressions_key] = implicit_expressions
-
-    def _collect_problems_expressions(self) -> Dict[Optional[int], List[str]]:
+    def _collect_problems_expressions(self) -> Dict[Optional[int | str], List[str]]:
         """Collect symbolic expressions grouped by problem key.
 
         Normalizes the symbolic_problem structure into a dict keyed by problem_key
@@ -787,6 +730,32 @@ class Problem:
                 for expr in expr_list
             ]
             for problem_key, problem in symbolic_problem.items()
+        }
+
+    def _get_vars_in_expression(
+        self,
+        expression: str,
+        tokens: Optional[Dict[str, List[str]]] = None,
+    ) -> Dict[str, Variable]:
+        """
+        Return {var_key: Variable} for variables referenced in a literal expression.
+
+        If 'tokens' is provided (as built by TOKEN_PATTERNS), it will use tokens['text'].
+        Otherwise it will tokenize the expression to extract text tokens.
+        """
+        token_patterns = Defaults.SymbolicDefinitions.TOKEN_PATTERNS
+        if tokens is None:
+            text_tokens = util_text.extract_tokens_from_expression(
+                expression=expression,
+                pattern=token_patterns['text'],
+            )
+        else:
+            text_tokens = tokens.get('text', [])
+
+        return {
+            var_key: variable
+            for var_key, variable in self.index.variables.items()
+            if var_key in text_tokens
         }
 
     def validate_symbolic_expressions(self) -> None:
@@ -878,11 +847,8 @@ class Problem:
                         f"{non_allowed_vars_keys}.")
 
                 # intra-problem sets in a variable must not be a dimension in other variables
-                vars_in_expression = {
-                    var_key: variable
-                    for var_key, variable in self.index.variables.items()
-                    if var_key in tokens['text']
-                }
+                vars_in_expression = self._get_vars_in_expression(
+                    expression, tokens)
 
                 intra_problem_sets = set()
                 shape_set_map = {}
@@ -916,6 +882,81 @@ class Problem:
                 f"Check setup '{source_format}' file. "
             self.logger.error(msg)
             raise exc.ConceptualModelError(msg)
+
+    def add_implicit_symbolic_expressions(self) -> None:
+        """Add implicit symbolic expressions based on variable sign attributes.
+
+        This method adds implicit symbolic expressions to the existing symbolic
+        problem definitions based on the sign attributes of variables.
+        For each variable with a defined sign attribute (non-negative or
+        non-positive), the method generates corresponding symbolic expressions
+        (e.g., "var_key >= 0" or "var_key <= 0") and appends them to the
+        expressions list in the symbolic problem structure.
+
+        NOTES:
+            In case of multiple problems sharing hybrid type variables, the sign-
+                based expressions are only added to endogenous variables, skipping
+                exogenous variables.
+            For all other endogenous variables, the sign-based expressions are added
+                to all problems (so this may result in duplicate expressions).
+        """
+        self.logger.debug(f"Adding implicit symbolic expressions.")
+
+        expressions_key = Defaults.Labels.EXPRESSIONS
+        var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
+
+        if not self.symbolic_problem:
+            return
+
+        problems_expressions = self._collect_problems_expressions()
+
+        if util.find_dict_depth(self.symbolic_problem) == 1:
+            symbolic_problem = {None: self.symbolic_problem}
+        else:
+            symbolic_problem = self.symbolic_problem
+
+        # Collect variables in all expressions for all problems
+        problems_vars: Dict[Optional[int | str], List[str]] = {}
+
+        for problem_key, expr_list in problems_expressions.items():
+            var_keys: set[str] = set()
+            for expression in expr_list:
+                var_keys.update(
+                    self._get_vars_in_expression(expression).keys())
+
+            problems_vars[problem_key] = list(var_keys)
+
+        # Add implicit expressions based on variable sign attributes
+        for problem_key, problem in symbolic_problem.items():
+            implicit_expressions: List[str] = []
+
+            # collect implicit expressions (from variables 'nonneg' attribute)
+            for var_key, variable in self.index.variables.items():
+                variable: Variable
+
+                if variable.nonneg is False:
+                    continue
+
+                # skip exogenous variables in case of integrated problems
+                if isinstance(variable.type, dict):
+                    if variable.type[problem_key] == var_types['EXOGENOUS']:
+                        continue
+
+                # skip variables not used in the problem expressions
+                if var_key not in problems_vars.get(problem_key, []):
+                    continue
+
+                # assign implicit non-negativity constraint
+                if variable.nonneg is True:
+                    implicit_expr = f"{var_key} >= 0"
+
+                implicit_expressions.append(implicit_expr)
+
+            if expressions_key in problem and \
+                    isinstance(problem[expressions_key], list):
+                problem[expressions_key].extend(implicit_expressions)
+            else:
+                problem[expressions_key] = implicit_expressions
 
     def check_data_tables_and_problem_coherence(self) -> None:
         """Check coherence between symbolic problems and data tables.
