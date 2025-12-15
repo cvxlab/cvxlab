@@ -1250,92 +1250,95 @@ class Index:
                     columns=df_columns,
                 )
 
-        if variable.data is None:
-            self.logger.warning(
-                f"Data not initialized for variable '{var_key}'.")
-            return
-
-        # Identifying variable data
-        if isinstance(variable.data, dict):
-            problem_key = util.find_dict_keys_corresponding_to_value(
-                dictionary=variable.type,
-                target_value=if_hybrid_var,
-            )
-            problem_key = problem_key[0] if problem_key else None
-            variable_data = variable.data[problem_key]
-        else:
-            variable_data = variable.data
-
-        # Filtering eventual sub-problem data (inter-problem sets cardinality)
-        scenario_series = pd.to_numeric(
-            variable_data[sub_problem_key_label], errors='coerce').dropna()
-        scenario_key_list = set(scenario_series.astype(int).tolist())
-
-        # If scenarios are present, enforce selection and filter
-        if scenario_key_list:
-            if scenario_key is None:
-                self.logger.warning(
-                    f"'scenario_key' not specified for variable '{var_key}'. "
-                    f"Available scenarios keys: {scenario_key_list}."
-                )
-                return
-
-            if scenario_key not in scenario_key_list:
-                self.logger.warning(
-                    f"Scenario '{scenario_key}' not found for variable '{var_key}'. "
-                    f"Available scenarios keys: {scenario_key_list}."
-                )
-                return
-
-            variable_data = variable_data.loc[
-                variable_data[sub_problem_key_label].eq(scenario_key)
-            ]
-
-        elif scenario_key is not None:
-            self.logger.warning(
-                f"'scenario_key' specified for variable '{var_key}', "
-                "but variable has no inter-problem sets defined."
-            )
-            return
-
-        if variable_data.empty:
-            self.logger.warning(
-                f"Variable '{var_key}' data is empty after filtering.")
-            return
-
-        # If multiple intra-problem sets are defined, filter accordingly
-        if len(variable_data) > 1:
-
-            if intra_problem_key is None:
-                self.logger.warning(
-                    f"'intra_problem_key' not specified for variable '{var_key}'. "
-                    f"Select from 0 to {len(variable_data) - 1}."
-                )
-                return
-
-            if not (0 <= int(intra_problem_key) < len(variable_data)):
-                self.logger.warning(
-                    f"'intra_problem_key' out of bounds for variable '{var_key}'. "
-                    f"Valid range: 0 to {len(variable_data) - 1}."
-                )
-                return
-
-            variable_series = variable_data.iloc[int(intra_problem_key)]
+            return values_dataframe
 
         else:
-            if intra_problem_key is not None:
+            if variable.data is None:
                 self.logger.warning(
-                    f"'intra_problem_key' specified for variable '{var_key}', "
-                    "but variable has no intra-problem sets defined."
+                    f"Data not initialized for variable '{var_key}'.")
+                return
+
+            # Identifying variable data
+            if isinstance(variable.data, dict):
+                problem_key = util.find_dict_keys_corresponding_to_value(
+                    dictionary=variable.type,
+                    target_value=if_hybrid_var,
+                )
+                problem_key = problem_key[0] if problem_key else None
+                variable_data = variable.data[problem_key]
+            else:
+                variable_data = variable.data
+
+            # Filtering eventual sub-problem data (inter-problem sets cardinality)
+            scenario_series = pd.to_numeric(
+                variable_data[sub_problem_key_label], errors='coerce').dropna()
+            scenario_key_list = set(scenario_series.astype(int).tolist())
+
+            # If scenarios are present, enforce selection and filter
+            if scenario_key_list:
+                if scenario_key is None:
+                    self.logger.warning(
+                        f"'scenario_key' not specified for variable '{var_key}'. "
+                        f"Available scenarios keys: {scenario_key_list}."
+                    )
+                    return
+
+                if scenario_key not in scenario_key_list:
+                    self.logger.warning(
+                        f"Scenario '{scenario_key}' not found for variable '{var_key}'. "
+                        f"Available scenarios keys: {scenario_key_list}."
+                    )
+                    return
+
+                variable_data = variable_data.loc[
+                    variable_data[sub_problem_key_label].eq(scenario_key)
+                ]
+
+            elif scenario_key is not None:
+                self.logger.warning(
+                    f"'scenario_key' specified for variable '{var_key}', "
+                    "but variable has no inter-problem sets defined."
                 )
                 return
 
-            variable_series = variable_data.iloc[0]
+            if variable_data.empty:
+                self.logger.warning(
+                    f"Variable '{var_key}' data is empty after filtering.")
+                return
 
-        # Building DataFrame with variable values
-        variable_values = variable_series[variable_header].value
-        if issparse(variable_values):
-            variable_values = variable_values.toarray()
+            # If multiple intra-problem sets are defined, filter accordingly
+            if len(variable_data) > 1:
+
+                if intra_problem_key is None:
+                    self.logger.warning(
+                        f"'intra_problem_key' not specified for variable '{var_key}'. "
+                        f"Select from 0 to {len(variable_data) - 1}."
+                    )
+                    return
+
+                if not (0 <= int(intra_problem_key) < len(variable_data)):
+                    self.logger.warning(
+                        f"'intra_problem_key' out of bounds for variable '{var_key}'. "
+                        f"Valid range: 0 to {len(variable_data) - 1}."
+                    )
+                    return
+
+                variable_series = variable_data.iloc[int(intra_problem_key)]
+
+            else:
+                if intra_problem_key is not None:
+                    self.logger.warning(
+                        f"'intra_problem_key' specified for variable '{var_key}', "
+                        "but variable has no intra-problem sets defined."
+                    )
+                    return
+
+                variable_series = variable_data.iloc[0]
+
+            # Building DataFrame with variable values
+            variable_values = variable_series[variable_header].value
+            if issparse(variable_values):
+                variable_values = variable_values.toarray()
 
         values_dataframe = pd.DataFrame(
             data=variable_values,
