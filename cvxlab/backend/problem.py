@@ -930,27 +930,19 @@ class Problem:
         for problem_key, problem in symbolic_problem.items():
             implicit_expressions: List[str] = []
 
-            # collect implicit expressions (from variables 'nonneg' attribute)
             for var_key, variable in self.index.variables.items():
                 variable: Variable
 
-                if variable.nonneg is False:
-                    continue
+                # Only add if variable has nonneg and is used in this problem
+                if variable.nonneg:
 
-                # skip exogenous variables in case of integrated problems
-                if isinstance(variable.type, dict):
-                    if variable.type[problem_key] == var_types['EXOGENOUS']:
-                        continue
+                    if isinstance(variable.type, dict):
+                        if variable.type[problem_key] == var_types['ENDOGENOUS']:
+                            implicit_expressions.append(f"{var_key} >= 0")
 
-                # skip variables not used in the problem expressions
-                if var_key not in problems_vars.get(problem_key, []):
-                    continue
-
-                # assign implicit non-negativity constraint
-                if variable.nonneg is True:
-                    implicit_expr = f"{var_key} >= 0"
-
-                implicit_expressions.append(implicit_expr)
+                    elif variable.type == var_types['ENDOGENOUS']:
+                        if var_key in problems_vars.get(problem_key, []):
+                            implicit_expressions.append(f"{var_key} >= 0")
 
             if expressions_key in problem and \
                     isinstance(problem[expressions_key], list):
