@@ -8,7 +8,6 @@ functions that enhance the interoperability of data structures used throughout
 the application.
 """
 import itertools as it
-from typing_extensions import Literal
 import numpy as np
 import pandas as pd
 

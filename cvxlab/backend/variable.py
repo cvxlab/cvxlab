@@ -8,7 +8,6 @@ that may include dimensions, mapping of related tables, and operations that
 convert SQL data to formats usable by optimization tools like cvxpy.
 """
 from typing import Any, Dict, Iterator, List, Optional, Tuple
-from typing_extensions import Literal
 
 import cvxpy as cp
 import pandas as pd

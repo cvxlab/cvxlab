@@ -6,9 +6,8 @@ data tables and variables), Database (handling SQLite database operations, using
 SQLManager), and Problem (defining symbolic and numerical problems).
 """
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 from pathlib import Path
-from typing_extensions import Literal
 
 import numpy as np
 import pandas as pd
