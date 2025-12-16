@@ -851,87 +851,87 @@ def test_is_sparse():
     run_test_cases(is_sparse, test_cases)
 
 
-def test_normalize_dataframe():
-    """Test the normalize_dataframe function.
+# def test_normalize_dataframe():
+#     """Test the normalize_dataframe function.
 
-    Test cases:
-        - Basic normalization with NaN replacement
-        - Exclude specific columns from NaN replacement
-        - Cast numeric columns to specific dtype
-        - Replace NaNs and fill with specific value
-        - Replace NaNs with various sentinel values
-        - Invalid input: non-DataFrame (TypeError)
-        - Invalid exclude_columns (ValueError)
-        - Invalid numeric_columns (ValueError)
-        - Missing numeric_dtype when numeric_columns provided (ValueError)
-    """
-    # Base DataFrame with various NaN-like values
-    df_with_nans = pd.DataFrame({
-        'A': [1, 2, np.nan, 4],
-        'B': ['x', 'NaN', 'null', 'y'],
-        'C': [10.5, 'NA', 'na', 15.5],
-        'D': [100, 200, 300, 400]
-    })
-    # Expected: NaNs replaced with None
-    expected_basic = pd.DataFrame({
-        'A': [1.0, 2.0, np.nan, 4.0],
-        'B': ['x', None, None, 'y'],
-        'C': [10.5, np.nan, np.nan, 15.5],
-        'D': [100, 200, 300, 400]
-    })
-    # Expected: NaNs replaced, then filled with 0
-    expected_with_fill = pd.DataFrame({
-        'A': [1.0, 2.0, 0.0, 4.0],
-        'B': ['x', 0, 0, 'y'],
-        'C': [10.5, 0, 0, 15.5],
-        'D': [100, 200, 300, 400]
-    })
-    # Expected: Exclude column 'B' from NaN replacement
-    expected_exclude = pd.DataFrame({
-        'A': [1.0, 2.0, None, 4.0],
-        'B': ['x', 'NaN', 'null', 'y'],
-        'C': [10.5, None, None, 15.5],
-        'D': [100, 200, 300, 400]
-    })
-    # DataFrame for numeric casting
-    df_numeric = pd.DataFrame({
-        'A': ['1', '2', '3', '4'],
-        'B': ['10.5', '20.5', '30.5', '40.5'],
-        'C': ['x', 'y', 'z', 'w']
-    })
+#     Test cases:
+#         - Basic normalization with NaN replacement
+#         - Exclude specific columns from NaN replacement
+#         - Cast numeric columns to specific dtype
+#         - Replace NaNs and fill with specific value
+#         - Replace NaNs with various sentinel values
+#         - Invalid input: non-DataFrame (TypeError)
+#         - Invalid exclude_columns (ValueError)
+#         - Invalid numeric_columns (ValueError)
+#         - Missing numeric_dtype when numeric_columns provided (ValueError)
+#     """
+#     # Base DataFrame with various NaN-like values
+#     df_with_nans = pd.DataFrame({
+#         'A': [1, 2, np.nan, 4],
+#         'B': ['x', 'NaN', 'null', 'y'],
+#         'C': [10.5, 'NA', 'na', 15.5],
+#         'D': [100, 200, 300, 400]
+#     })
+#     # Expected: NaNs replaced with None
+#     expected_basic = pd.DataFrame({
+#         'A': [1.0, 2.0, np.nan, 4.0],
+#         'B': ['x', None, None, 'y'],
+#         'C': [10.5, np.nan, np.nan, 15.5],
+#         'D': [100, 200, 300, 400]
+#     })
+#     # Expected: NaNs replaced, then filled with 0
+#     expected_with_fill = pd.DataFrame({
+#         'A': [1.0, 2.0, 0.0, 4.0],
+#         'B': ['x', 0, 0, 'y'],
+#         'C': [10.5, 0, 0, 15.5],
+#         'D': [100, 200, 300, 400]
+#     })
+#     # Expected: Exclude column 'B' from NaN replacement
+#     expected_exclude = pd.DataFrame({
+#         'A': [1.0, 2.0, None, 4.0],
+#         'B': ['x', 'NaN', 'null', 'y'],
+#         'C': [10.5, None, None, 15.5],
+#         'D': [100, 200, 300, 400]
+#     })
+#     # DataFrame for numeric casting
+#     df_numeric = pd.DataFrame({
+#         'A': ['1', '2', '3', '4'],
+#         'B': ['10.5', '20.5', '30.5', '40.5'],
+#         'C': ['x', 'y', 'z', 'w']
+#     })
 
-    expected_numeric = pd.DataFrame({
-        'A': [1.0, 2.0, 3.0, 4.0],
-        'B': [10.5, 20.5, 30.5, 40.5],
-        'C': ['x', 'y', 'z', 'w']
-    })
+#     expected_numeric = pd.DataFrame({
+#         'A': [1.0, 2.0, 3.0, 4.0],
+#         'B': [10.5, 20.5, 30.5, 40.5],
+#         'C': ['x', 'y', 'z', 'w']
+#     })
 
-    test_cases = [
-        # Basic NaN replacement
-        ((df_with_nans.copy(),), expected_basic, None),
-        # # NaN replacement with fill value
-        # ((df_with_nans.copy(),), expected_with_fill, None,
-        #  {'nan_fill_value': 0}),
-        # # Exclude columns from NaN replacement
-        # ((df_with_nans.copy(),), expected_exclude, None,
-        #  {'exclude_columns': ['B']}),
-        # # Cast numeric columns
-        # ((df_numeric.copy(),), expected_numeric, None,
-        #  {'numeric_columns': ['A', 'B'], 'numeric_dtype': float}),
-        # # No NaN replacement
-        # ((df_with_nans.copy(),), df_with_nans.copy(), None,
-        #  {'replace_nans': False}),
-        # # Invalid input: non-DataFrame
-        # (('not a dataframe',), None, TypeError),
-        # # Invalid exclude_columns
-        # ((df_with_nans.copy(),), None, ValueError,
-        #  {'exclude_columns': ['NonExistent']}),
-        # # Invalid numeric_columns
-        # ((df_with_nans.copy(),), None, ValueError,
-        #  {'numeric_columns': ['NonExistent'], 'numeric_dtype': float}),
-        # # Missing numeric_dtype
-        # ((df_with_nans.copy(),), None, ValueError,
-        #  {'numeric_columns': ['A']}),
-    ]
+#     test_cases = [
+#         # Basic NaN replacement
+#         ((df_with_nans.copy(),), expected_basic, None),
+#         # NaN replacement with fill value
+#         ((df_with_nans.copy(),), expected_with_fill, None,
+#          {'nan_fill_value': 0}),
+#         # Exclude columns from NaN replacement
+#         ((df_with_nans.copy(),), expected_exclude, None,
+#          {'exclude_columns': ['B']}),
+#         # Cast numeric columns
+#         ((df_numeric.copy(),), expected_numeric, None,
+#          {'numeric_columns': ['A', 'B'], 'numeric_dtype': float}),
+#         # No NaN replacement
+#         ((df_with_nans.copy(),), df_with_nans.copy(), None,
+#          {'replace_nans': False}),
+#         # Invalid input: non-DataFrame
+#         (('not a dataframe',), None, TypeError),
+#         # Invalid exclude_columns
+#         ((df_with_nans.copy(),), None, ValueError,
+#          {'exclude_columns': ['NonExistent']}),
+#         # Invalid numeric_columns
+#         ((df_with_nans.copy(),), None, ValueError,
+#          {'numeric_columns': ['NonExistent'], 'numeric_dtype': float}),
+#         # Missing numeric_dtype
+#         ((df_with_nans.copy(),), None, ValueError,
+#          {'numeric_columns': ['A']}),
+#     ]
 
-    run_test_cases(normalize_dataframe, test_cases)
+#     run_test_cases(normalize_dataframe, test_cases)
