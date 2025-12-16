@@ -887,18 +887,22 @@ class Problem:
         """Add implicit symbolic expressions based on variable sign attributes.
 
         This method adds implicit symbolic expressions to the existing symbolic
-        problem definitions based on the sign attributes of variables.
-        For each variable with a defined sign attribute (non-negative or
-        non-positive), the method generates corresponding symbolic expressions
-        (e.g., "var_key >= 0" or "var_key <= 0") and appends them to the
-        expressions list in the symbolic problem structure.
+        problem definitions based on the nonneg attribute of variables.
+        For each variable with a defined nonneg attribute as true, the method 
+        generates corresponding symbolic expressions (e.g., "var_key >= 0") and 
+        appends them to the expressions list in the symbolic problem structure.
 
         NOTES:
-            In case of multiple problems sharing hybrid type variables, the sign-
-                based expressions are only added to endogenous variables, skipping
-                exogenous variables.
-            For all other endogenous variables, the sign-based expressions are added
-                to all problems (so this may result in duplicate expressions).
+            In case of single-problem setups, all implicit expressions are added
+                to the problem.
+            In case of multiple problems: 
+                For hybrid variables type, the non-negativity constraints 
+                    are added to the problem where the variable is endogenous.
+                For pure endogenous variables, the non-negativity constraints are
+                    added only if the variable is used in the problem expressions.
+                    In case the variable is not used in any problem expressions,
+                    an error is raised (constraint must be explicitly defined in
+                    symbolic problem).
         """
         self.logger.debug(f"Adding implicit symbolic expressions.")
 
@@ -917,32 +921,81 @@ class Problem:
 
         # Collect variables in all expressions for all problems
         problems_vars: Dict[Optional[int | str], List[str]] = {}
-
         for problem_key, expr_list in problems_expressions.items():
             var_keys: set[str] = set()
             for expression in expr_list:
                 var_keys.update(
                     self._get_vars_in_expression(expression).keys())
-
             problems_vars[problem_key] = list(var_keys)
+
+        implicit_expr_by_problem: Dict[Optional[int | str], List[str]] = {
+            problem_key: [] for problem_key in symbolic_problem
+        }
+        errors: List[str] = []
 
         # Add implicit expressions based on variable sign attributes
         for problem_key, problem in symbolic_problem.items():
-            implicit_expressions: List[str] = []
 
             for var_key, variable in self.index.variables.items():
                 variable: Variable
 
-                # Only add if variable has nonneg and is used in this problem
-                if variable.nonneg:
+                if not variable.nonneg:
+                    continue
 
-                    if isinstance(variable.type, dict):
-                        if variable.type[problem_key] == var_types['ENDOGENOUS']:
-                            implicit_expressions.append(f"{var_key} >= 0")
+                # Case of one single problem: add all implicit constraints
+                if len(problems_expressions) == 1:
+                    constraint = f"{var_key} >= 0"
+                    if constraint not in problems_expressions.get(problem_key, []) and \
+                            constraint not in implicit_expr_by_problem[problem_key]:
+                        implicit_expr_by_problem[problem_key].append(
+                            constraint)
+                        continue
 
-                    elif variable.type == var_types['ENDOGENOUS']:
-                        if var_key in problems_vars.get(problem_key, []):
-                            implicit_expressions.append(f"{var_key} >= 0")
+                # Multiple problems, hybrid variables: add implicit expressions
+                # only to problem where variable is endogenous
+                if isinstance(variable.type, dict):
+                    if variable.type[problem_key] == var_types['ENDOGENOUS']:
+                        constraint = f"{var_key} >= 0"
+                        if constraint not in problems_expressions.get(problem_key, []) and \
+                                constraint not in implicit_expr_by_problem[problem_key]:
+                            implicit_expr_by_problem[problem_key].append(
+                                constraint)
+
+                # Multiple problems, pure endogenous variables
+                elif variable.type == var_types['ENDOGENOUS']:
+
+                    # Case of variable used in the problem expressions
+                    if var_key in problems_vars.get(problem_key, []):
+                        constraint = f"{var_key} >= 0"
+                        if constraint not in problems_expressions.get(problem_key, []) and \
+                                constraint not in implicit_expr_by_problem[problem_key]:
+                            implicit_expr_by_problem[problem_key].append(
+                                constraint)
+
+                    else:
+                        # If variable not used in problems expressions, raise error
+                        used_elsewhere = any(
+                            var_key in vars_list
+                            for other_key, vars_list in problems_vars.items()
+                            if other_key != problem_key
+                        )
+                        if not used_elsewhere and var_key not in errors:
+                            errors.append(var_key)
+
+        if errors:
+            msg = (
+                "Generation of implicit symbolic expressions failed | "
+                f"Non-negative variables '{errors}' not used in any problems "
+                "expressions. For these variables, define non-negativity constraints "
+                "explicitly, if needed."
+            )
+            self.logger.error(msg)
+            raise exc.ConceptualModelError(msg)
+
+        # Append implicit expressions to symbolic problem
+        for problem_key, problem in symbolic_problem.items():
+            implicit_expressions = implicit_expr_by_problem.get(
+                problem_key, [])
 
             if expressions_key in problem and \
                     isinstance(problem[expressions_key], list):

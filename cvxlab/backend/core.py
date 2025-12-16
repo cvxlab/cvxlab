@@ -670,8 +670,8 @@ class Core:
             level='info',
         ):
             self.problem.load_symbolic_problem_from_file(force_overwrite)
-            self.problem.validate_symbolic_expressions()
             self.problem.add_implicit_symbolic_expressions()
+            self.problem.validate_symbolic_expressions()
             self.problem.check_data_tables_and_problem_coherence()
 
     def generate_numerical_problem(
