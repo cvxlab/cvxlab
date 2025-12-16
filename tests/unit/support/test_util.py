@@ -1,46 +1,12 @@
 """Test for the cvxlab/support/util.py module."""
-import pytest
-
 from cvxlab.support.util import *
 from tests.unit.conftest import run_test_cases
 
 
-def test_validate_selection():
-    """
-    Test the 'validate_selection' method.
-
-    This test method checks the behavior of the validate_selection function
-    under various scenarios, including valid and invalid selections, as well
-    as empty valid selections and non-string selections.
-    """
-    test_cases = [
-        (['option1', 'option2'], 'option2', None),  # valid selection
-        (['option1', 'option2'], 'invalid_option', ValueError),  # invalid selection
-        ([], 'option1', ValueError),  # no valid selections
-        (['option1', 'option2'], 1, ValueError),  # integer selection
-    ]
-
-    for valid_selections, selection, expected_exception in test_cases:
-        if expected_exception:
-            with pytest.raises(expected_exception):
-                validate_selection(valid_selections, selection)
-        else:
-            validate_selection(valid_selections, selection)
-
-
 def test_get_user_confirmation(monkeypatch):
-    """
-    Test the function 'confirm_action'.
-    This test function checks the following scenarios:
-    1. A valid case where the user confirms the action by entering 'y'.
-    2. A valid case where the user denies the action by entering 'n'.
+    """Test the function 'confirm_action'.
 
     The 'monkeypatch' fixture is used to simulate user input.
-
-    Raises
-    ------
-    AssertionError
-        If the output of 'confirm_action' doesn't match the expected output.
     """
     monkeypatch.setattr('builtins.input', lambda _: 'y')
     assert get_user_confirmation("Confirm?") == True
@@ -49,17 +15,42 @@ def test_get_user_confirmation(monkeypatch):
     assert get_user_confirmation("Confirm?") == False
 
 
-def test_find_dict_depth():
-    """Test the 'find_dict_depth' method.
+def test_validate_selection():
+    """Test the 'validate_selection' method."""
 
-    Test cases:
-     - tests a dictionary with only 1 depth
-     - tests a dictionary with 3 depth
-     - tests an empty dictionary
-     - tests a dictionary with other data types inside of it
-     - tests a non-dictionary input
-     - tests a non-dictionary input
-    """
+    test_cases = [
+        ((['opt1', 'opt2'], 'opt2'), None, None),
+        ((['opt1', 2], 2), None, None),
+        ((['opt1', 'opt2'], 'OPT2'), None, None, {'ignore_case': True}),
+        ((['opt1', 4], 'OPT1'), None, ValueError, {'ignore_case': True}),
+        ((['opt1', 'opt2'], 'invalid_option'), None, ValueError),
+        (([], None), None, ValueError),
+        ((['opt1', 'opt2'], ['opt3, opt4']), None, TypeError)
+    ]
+
+    run_test_cases(validate_selection, test_cases)
+
+
+def test_items_in_list():
+    """Test the 'items_in_list' method."""
+    test_cases = [
+        (([2, 3], [1, 2, 3, 4, 5]), True, None),
+        (({2, 3}, {1, 2, 3, 4, 5}), True, None),
+        (((2, 3), [1, 2, 3, 4, 5]), True, None),
+        ((['a', 'd'], ['a', 'b', 'c']), False, None),
+        (([4, 5], (1, 2, 3)), False, None),
+        (([1, 2], []), False, None),
+        (([], [1, 2, 3]), False, None),
+        (('str', [1, 2, 3]), None, TypeError),
+        (((1, 2), 'not_a_control_list'), None, TypeError),
+        (({'a': 1}, {'a': 2, 'b': 3}), True, None)
+    ]
+
+    run_test_cases(items_in_list, test_cases)
+
+
+def test_find_dict_depth():
+    """Test the 'find_dict_depth' method."""
     test_cases = [
         ({1: 1, 2: 2}, 1, None),
         ({1: {2: 2, 3: {4: 4, 5: 5}}, 6: 6}, 3, None),
@@ -73,543 +64,430 @@ def test_find_dict_depth():
 
 
 def test_pivot_dict():
-    """
-    Test the function 'pivot_dict'.
-
-    This test function checks the following scenarios:
-    1. A valid case where a dictionary is pivoted without specifying a keys order.
-    2. A valid case where a dictionary is pivoted with a specified keys order.
-    3. An invalid case where a non-existent key is included in the keys order.
-
-    Raises
-    ------
-    AssertionError
-        If the output of 'pivot_dict' doesn't match the expected output.
-    ValueError
-        If a non-existent key is included in the keys order.
-    """
+    """Test the function 'pivot_dict'"""
     data = {
         'key_1': ['item_1', 'item_2', 'item_3'],
         'key_2': [10, 20, 30]
     }
 
-    # valid data input
-    result = pivot_dict(data)
-    expected_result = {
+    expected_default = {
         'item_1': {10: None, 20: None, 30: None},
         'item_2': {10: None, 20: None, 30: None},
         'item_3': {10: None, 20: None, 30: None},
     }
-    assert result == expected_result
 
-    # valid data input with different keys_order
-    result = pivot_dict(data, ['key_2', 'key_1'])
-    expected_result = {
+    expected_reordered = {
         10: {'item_1': None, 'item_2': None, 'item_3': None},
         20: {'item_1': None, 'item_2': None, 'item_3': None},
         30: {'item_1': None, 'item_2': None, 'item_3': None},
     }
-    assert result == expected_result
 
-    # invalid keys_order
-    with pytest.raises(ValueError):
-        pivot_dict(data, ['key3', 'key2'])
+    test_cases = [
+        ((data,), expected_default, None),
+        ((data,), expected_reordered, None, {
+         'keys_order': ['key_2', 'key_1']}),
+        ((data,), None, ValueError, {'keys_order': ['key3', 'key2']}),
+    ]
+
+    run_test_cases(pivot_dict, test_cases)
+
+
+def test_dict_cartesian_product():
+    """Test the 'dict_cartesian_product' function."""
+    data_1 = {'A': [1, 2], 'B': ['x', 'y']}
+    data_2 = {'X': [10]}
+    data_3 = {'A': [1, 2, 3], 'B': ['a'], 'C': [True, False]}
+
+    expected_with_keys = [
+        {'A': 1, 'B': 'x'},
+        {'A': 1, 'B': 'y'},
+        {'A': 2, 'B': 'x'},
+        {'A': 2, 'B': 'y'},
+    ]
+
+    expected_without_keys = [
+        [1, 'x'],
+        [1, 'y'],
+        [2, 'x'],
+        [2, 'y'],
+    ]
+
+    expected_single = [{'X': 10}]
+
+    expected_multiple = [
+        {'A': 1, 'B': 'a', 'C': True},
+        {'A': 1, 'B': 'a', 'C': False},
+        {'A': 2, 'B': 'a', 'C': True},
+        {'A': 2, 'B': 'a', 'C': False},
+        {'A': 3, 'B': 'a', 'C': True},
+        {'A': 3, 'B': 'a', 'C': False},
+    ]
+
+    test_cases = [
+        ((data_1,), expected_with_keys, None),
+        ((data_1,), expected_without_keys, None, {'include_dict_keys': False}),
+        (({},), [], None),
+        ((data_2,), expected_single, None),
+        ((data_3,), expected_multiple, None),
+        (('not_a_dict',), None, TypeError),
+        ((data_1,), None, TypeError, {'include_dict_keys': 'invalid'}),
+    ]
+
+    run_test_cases(dict_cartesian_product, test_cases)
+
+
+def test_dict_values_cartesian_product():
+    """Test the 'dict_values_cartesian_product' method.
+
+    Test cases:
+        - tests valid dictionaries 
+        - tests an empty dictionary
+        - tests a non-dictionary input
+    """
+    test_cases = [
+        ({0: {'a', 'b', 'c', 'd'}}, 4, None),
+        ({0: {'a', 'b'}, 1: {1, 2}}, 4, None),
+        ({0: {'a', 'b', 'c'}, 1: {1, 2}}, 6, None),
+        ({0: {'a', 'b', 'c'}, 1: {1, 2}, 3: {'d', 'e'}}, 12, None),
+        ({0: {'a', 'b', 'c'}, 1: {1, 2}, 3: {}}, 0, None),
+        ({}, 0, None),
+        ('not_a_dict', None, TypeError),
+    ]
+
+    run_test_cases(dict_values_cartesian_product, test_cases)
+
+
+def test_flattening_list():
+    """Test the 'flattening_list' method."""
+    nested_list = [1, [2, 3, [4]], 'a', ['b', ['c']], (5, 6)]
+
+    test_cases = [
+        ([[1, 2], [3]], [1, 2, 3], None),
+        (nested_list, [1, 2, 3, 4, 'a', 'b', 'c', 5, 6], None),
+        ('not_a_list', None, TypeError),
+    ]
+
+    run_test_cases(flattening_list, test_cases)
 
 
 def test_unpivot_dict_to_dataframe():
-    """
-    Test cases:
-    - Unpivot dict with unspecified key order.
-    - Unpivot dict with key order as the same order of passed dict keys.
-    - Unpivot dict with key order different compared to passed dict keys.
-    - Unpivot dict with key order as subset of passed dict keys.
-    - 
-    """
-
+    """Test the function 'unpivot_dict_to_dataframe'."""
     std_dict = {'A': [1, 2], 'B': [3, 4]}
 
-    key_orders = {
-        1: None,
-        2: ['A', 'B'],
-        3: ['B', 'A'],
-        4: ['B'],
-        5: ['Z'],
-    }
+    df_1 = pd.DataFrame({'A': [1, 1, 2, 2], 'B': [3, 4, 3, 4]})
+    df_2 = pd.DataFrame({'A': [1, 1, 2, 2], 'B': [3, 4, 3, 4]})
+    df_3 = pd.DataFrame({'B': [3, 3, 4, 4], 'A': [1, 2, 1, 2]})
+    df_4 = pd.DataFrame({'B': [3, 4]})
 
-    expected_outputs = {
-        1: pd.DataFrame({'A': [1, 1, 2, 2], 'B': [3, 4, 3, 4]}),
-        2: pd.DataFrame({'A': [1, 1, 2, 2], 'B': [3, 4, 3, 4]}),
-        3: pd.DataFrame({'B': [3, 3, 4, 4], 'A': [1, 2, 1, 2]}),
-        4: pd.DataFrame({'B': [3, 4]}),
-        5: ValueError
-    }
+    test_cases = [
+        (std_dict, df_1, None),
+        (std_dict, df_2, None, {'key_order': ['A', 'B']}),
+        (std_dict, df_3, None, {'key_order': ['B', 'A']}),
+        (std_dict, df_4, None, {'key_order': ['B']}),
+        (std_dict, None, ValueError, {'key_order': ['Z']}),
+        ('not_a_dict', None, TypeError),
+        ({}, pd.DataFrame(), None),
+    ]
 
-    for item, key_order in key_orders.items():
-
-        if expected_outputs[item] is ValueError:
-            with pytest.raises(ValueError):
-                unpivot_dict_to_dataframe(
-                    data_dict=std_dict,
-                    key_order=key_order,
-                )
-        else:
-            assert unpivot_dict_to_dataframe(
-                data_dict=std_dict,
-                key_order=key_order,
-            ).equals(expected_outputs[item]), f"Failed on test case '{item}'"
+    run_test_cases(unpivot_dict_to_dataframe, test_cases)
 
 
 def test_add_item_to_dict():
-    """
-    Test the function 'add_item_to_dict'.
-
-    This test function checks the following scenarios:
-    1. A valid case where a dictionary item is added at a specific position.
-    2. A case where the position index is out of bounds.
-    3. A case where the item to be added is not a dictionary.
-    """
+    """Test the function 'add_item_to_dict'."""
     dictionary = {'key1': 'value1', 'key2': 'value2'}
-
-    # working case
     item = {'key3': 'value3'}
-    position = 0
-    result = add_item_to_dict(dictionary, item, position)
     expected_result = {**item, **dictionary}
-    assert result == expected_result
 
-    # position index out of bound
-    with pytest.raises(ValueError):
-        add_item_to_dict(dictionary, item, 10)
+    test_cases = [
+        ((dictionary, item, 0), expected_result, None),
+        ((dictionary, item, 10), None, ValueError),
+        ((dictionary, 'not_a_dictionary'), None, TypeError),
+        (('not_a_dictionary', item), None, TypeError),
+    ]
 
-    # passing wrong item type
-    with pytest.raises(TypeError):
-        add_item_to_dict(dictionary, 'not_a_dictionary')
-    with pytest.raises(TypeError):
-        add_item_to_dict('not_a_dictionary', item)
+    run_test_cases(add_item_to_dict, test_cases)
 
 
 def test_check_dataframes_equality():
-    """
-    Test the check_dataframes_equality function.
-    This function creates several pairs of pandas DataFrames with different 
-    characteristics (identical, same shape and headers but different values, 
-    different column order, different row order, different headers, different 
-    shapes) and checks if the check_dataframes_equality function correctly 
-    identifies whether they are equal considering the specified conditions.
-    """
-    # identical dataframes
+    """Test the 'check_dataframes_equality' function."""
     df1 = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
     df2 = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-    assert check_dataframes_equality([df1, df2]) == True
-
-    # dataframes with same shape and headers but different values
     df3 = pd.DataFrame({'A': [1, 2, 3], 'B': [7, 8, 9]})
-    assert check_dataframes_equality([df1, df3]) == False
-
-    # identical dataframes but different column order
     df4 = pd.DataFrame({'B': [4, 5, 6], 'A': [1, 2, 3]})
-    assert check_dataframes_equality(
-        [df1, df4], cols_order_matters=False) == True
-    assert check_dataframes_equality(
-        [df1, df4], cols_order_matters=True) == False
-
-    # identical dataframes but different row order
     df5 = pd.DataFrame({'A': [3, 2, 1], 'B': [6, 5, 4]})
-    assert check_dataframes_equality(
-        [df1, df5], rows_order_matters=False) == True
-    assert check_dataframes_equality(
-        [df1, df5], rows_order_matters=True) == False
-
-    # identical dataframe except for one column (skipped)
     df6 = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6], 'C': [7, 8, 9]})
-    assert check_dataframes_equality([df1, df6], skip_columns=['C']) == True
-
-    # dataframes with different headers
     df7 = pd.DataFrame({'D': [1, 2, 3], 'E': [4, 5, 6]})
-    assert check_dataframes_equality([df1, df7]) == False
-
-    # empty dataframe with skipped column
     df8 = pd.DataFrame()
-    assert check_dataframes_equality([df1, df8], skip_columns=['A']) == False
 
-    # skip column that does not exist
-    with pytest.raises(ValueError):
-        check_dataframes_equality([df1, df6], skip_columns=['column_2'])
+    test_cases = [
+        (([df1, df2],), True, None),
+        (([df1, df3],), False, None),
+        (([df1, df4],), True, None, {'cols_order_matters': False}),
+        (([df1, df4],), False, None, {'cols_order_matters': True}),
+        (([df1, df5],), True, None, {'rows_order_matters': False}),
+        (([df1, df5],), False, None, {'rows_order_matters': True}),
+        (([df1, df6],), True, None, {'skip_columns': ['C']}),
+        (([df1, df7],), False, None),
+        (([df1, df8],), False, None, {'skip_columns': ['A']}),
+        (([df1, df6],), None, ValueError, {'skip_columns': ['column_2']}),
+    ]
+
+    run_test_cases(check_dataframes_equality, test_cases)
 
 
 def test_check_dataframe_columns_equality():
-    """
-    Test the check_dataframe_columns_equality function.
-    This function creates several pairs of pandas DataFrames with different 
-    column headers and checks if the check_dataframe_columns_equality function 
-    correctly identifies whether they have the same set of columns. It also 
-    tests the function's ability to ignore specified columns.
-    """
+    """Test the check_dataframe_columns_equality function."""
     df1 = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
     df2 = pd.DataFrame({'A': [5, 6], 'B': [7, 8]})
     df3 = pd.DataFrame({'A': [9, 10], 'C': [11, 12]})
     df4 = 'not_a_dataframe'
     df5 = pd.DataFrame()
 
-    assert check_dataframe_columns_equality([df1, df2]) == True
-    assert check_dataframe_columns_equality([df1, df3]) == False
-    assert check_dataframe_columns_equality([df1, df2, df3]) == False
-    assert check_dataframe_columns_equality(
-        [df1, df2], skip_columns=['B']) == True
-    assert check_dataframe_columns_equality(
-        [df1, df3], skip_columns=['B', 'C']) == True
+    test_cases = [
+        (([df1, df2],), True, None),
+        (([df1, df3],), False, None),
+        (([df1, df2, df3],), False, None),
+        (([df1, df2],), True, None, {'skip_columns': ['B']}),
+        (([df1, df3],), True, None, {'skip_columns': ['B', 'C']}),
+        (([df1, df4],), None, TypeError, {'skip_columns': ['B', 'C']}),
+        (([],), None, ValueError),
+        (([df1, df5],), False, None),
+    ]
 
-    with pytest.raises(TypeError):
-        check_dataframe_columns_equality(
-            [df1, df4], skip_columns=['B', 'C'])
-
-    with pytest.raises(ValueError):
-        check_dataframe_columns_equality([])
-
-    assert check_dataframe_columns_equality([df1, df5]) == False
+    run_test_cases(check_dataframe_columns_equality, test_cases)
 
 
 def test_add_column_to_dataframe():
-    """
-    Test the add_column_to_dataframe function.
-    This function creates a pandas DataFrame and tests the add_column_to_dataframe 
-    function by adding a new column to the DataFrame. It checks if the function 
-    correctly adds the column, handles invalid input, and correctly returns 
-    whether the column was added.
-    """
-    df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+    """Test the 'add_column_to_dataframe' function."""
+    df_base = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+    df_col_c = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6], 'C': [7, 8, 9]})
+    df_none = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6], 'C': None})
+    df_empty_expected = pd.DataFrame({'A': [None]}, index=[0])
 
-    # adding a new column with values
-    assert add_column_to_dataframe(df, 'C', [7, 8, 9]) == True
-    pd.testing.assert_frame_equal(
-        df, pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6], 'C': [7, 8, 9]}))
+    test_cases = [
+        # Adding new column with values
+        ((df_base.copy(), 'C', [7, 8, 9]), df_col_c, None),
+        # Adding column that already exists (no change)
+        ((df_base.copy(), 'A'), df_base, None),
+        # Adding new column with None values
+        ((df_base.copy(), 'C', None), df_none, None),
+        # Passing an empty dataframe must return a dataframe with one index row (0)
+        ((pd.DataFrame(), 'A', None), df_empty_expected, None),
+        # Invalid column_header type
+        ((df_base.copy(), 123), None, TypeError),
+        # Invalid dataframe input
+        (("not a dataframe", 'D'), None, TypeError),
+        # Invalid column_position out of bounds
+        ((df_base.copy(), 'D', None, 10), None, ValueError),
+        # Invalid number of values (length mismatch)
+        ((df_base.copy(), 'E', [1, 4]), None, ValueError),
+    ]
 
-    # adding a column header that already exists
-    df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-    assert add_column_to_dataframe(df, 'A') == False
-
-    # adding a new column with no values
-    df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-    assert add_column_to_dataframe(df, 'C', None) == True
-    pd.testing.assert_frame_equal(
-        df, pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6], 'C': None}))
-
-    # Test adding a column with invalid column_header
-    with pytest.raises(TypeError):
-        add_column_to_dataframe(df, 123)
-
-    # Test adding a column with invalid dataframe
-    with pytest.raises(TypeError):
-        add_column_to_dataframe("not a dataframe", 'D')
-
-    # Test adding a column with invalid column_position
-    with pytest.raises(ValueError):
-        add_column_to_dataframe(df, 'D', column_position=10)
-
-    # Test adding a column with invalid number of values
-    with pytest.raises(ValueError):
-        add_column_to_dataframe(df, 'E', [1, 4])
+    run_test_cases(add_column_to_dataframe, test_cases)
 
 
 def test_substitute_dict_keys():
-    """
-    Test the substitute_dict_keys function.
-    This function tests the substitute_keys function with valid and invalid 
-    input, and checks if the function correctly substitutes the keys, handles 
-    invalid input, and raises the correct errors.
-    """
-    # valid input
+    """Test the substitute_dict_keys function."""
     source_dict = {'A': 1, 'B': 2, 'C': 3}
     key_mapping_dict = {'A': 'X', 'B': 'Y', 'C': 'Z'}
     expected_dict = {'X': 1, 'Y': 2, 'Z': 3}
-    assert substitute_dict_keys(source_dict, key_mapping_dict) == expected_dict
 
-    # key that does not exist in source_dict
-    source_dict = {'A': 1, 'B': 2, 'C': 3}
-    with pytest.raises(ValueError):
-        substitute_dict_keys(source_dict, {'D': 'W'})
+    test_cases = [
+        ((source_dict, key_mapping_dict), expected_dict, None),
+        ((source_dict, {'D': 'W'}), None, ValueError),
+        ((source_dict, {'A': 'X', 'D': 'W'}), None, ValueError),
+        (("not a dictionary", key_mapping_dict), None, TypeError),
+        ((source_dict, "not a dictionary"), None, TypeError),
+    ]
 
-    # not all keys exist in source_dict
-    source_dict = {'A': 1, 'B': 2, 'C': 3}
-    with pytest.raises(ValueError):
-        substitute_dict_keys(source_dict, {'A': 'X', 'D': 'W'})
+    run_test_cases(substitute_dict_keys, test_cases)
 
-    # keys with invalid source_dict
-    with pytest.raises(TypeError):
-        substitute_dict_keys("not a dictionary", key_mapping_dict)
 
-    # keys with invalid key_mapping_dict
-    with pytest.raises(TypeError):
-        substitute_dict_keys(source_dict, "not a dictionary")
+def test_fetch_dict_primary_key():
+    """
+    Test the fetch_dict_primary_key function.
+
+    This function tests various scenarios:
+    - Finding a single matching primary key
+    """
+    dict_single = {
+        'key1': {'dim': 'rows'},
+        'key2': {'dim': 'cols'},
+    }
+    dict_multiple = {
+        'key1': {'dim': 'rows'},
+        'key2': {'dim': 'cols'},
+        'key3': {'dim': 'rows'},
+    }
+    dict_not_nested = {
+        'key1': 'not_a_dict',
+    }
+    not_a_dict = 'not_a_dict'
+
+    test_cases = [
+        ((dict_single, 'dim', 'rows'), ['key1'], None),
+        ((dict_single, 'dim', 'cols'), ['key2'], None),
+        ((dict_single, 'dim', 'depth'), [], None),
+        ((dict_multiple, 'dim', 'rows'), ['key1', 'key3'], None),
+        ((dict_multiple, 'dim', 'cols'), ['key2'], None),
+        ((dict_multiple, 'dim', 'depth'), [], None),
+        ((dict_not_nested, 'dim', 'rows'), [], None),
+        ((not_a_dict, 'dim', 'rows'), None, TypeError),
+    ]
+
+    run_test_cases(fetch_dict_primary_key, test_cases)
 
 
 def test_filter_dataframe():
-    """
-    Test the filter_dataframe function.
-    This function tests the filter_dataframe function with valid and invalid 
-    input, and checks if the function correctly filters the DataFrame, handles 
-    invalid input, and raises the correct errors.
-    """
+    """Test the filter_dataframe function."""
     df = pd.DataFrame({
         'items': ['item_1', 'item_2', 'item_3', 'item_1', 'item_2', 'item_3'],
         'techs': ['tech_1', 'tech_1', 'tech_1', 'tech_2', 'tech_2', 'tech_2'],
         'values': [1, 2, 3, 4, 5, 6]
     })
 
-    # filtering DataFrame with valid input
-    filter_dict = {'items': ['item_1', 'item_2']}
-    filtered_df = filter_dataframe(df, filter_dict)
-    expected_df = pd.DataFrame({
+    expected_1 = pd.DataFrame({
         'items': ['item_1', 'item_2', 'item_1', 'item_2'],
         'techs': ['tech_1', 'tech_1', 'tech_2', 'tech_2'],
         'values': [1, 2, 4, 5]
     })
-    pd.testing.assert_frame_equal(filtered_df, expected_df)
 
-    # filtering DataFrame with different column order not preserving cols order
-    filter_dict = {'techs': ['tech_1'], 'items': ['item_1', 'item_2']}
-    filtered_df = filter_dataframe(df, filter_dict)
-    expected_df = pd.DataFrame({
+    expected_2 = pd.DataFrame({
         'items': ['item_1', 'item_2'],
         'techs': ['tech_1', 'tech_1'],
         'values': [1, 2]
     })
-    pd.testing.assert_frame_equal(filtered_df, expected_df)
 
-    # filtering DataFrame with different column order cols preserving order
-    filter_dict = {'techs': ['tech_2'], 'items': ['item_1', 'item_2']}
-    filtered_df = filter_dataframe(
-        df,
-        filter_dict,
-        reorder_cols_based_on_filter=True,
-    )
-    expected_df = pd.DataFrame({
+    expected_3 = pd.DataFrame({
         'techs': ['tech_2', 'tech_2'],
         'items': ['item_1', 'item_2'],
         'values': [4, 5]
     })
-    pd.testing.assert_frame_equal(filtered_df, expected_df)
 
-    # filtering DataFrame with different column order cols preserving order
-    # and keeping the original dataframe index
-    filter_dict = {'techs': ['tech_2'], 'items': ['item_1', 'item_2']}
-    filtered_df = filter_dataframe(
-        df,
-        filter_dict,
-        reset_index=False,
-        reorder_cols_based_on_filter=True,
-    )
-    expected_df = pd.DataFrame({
+    expected_4 = pd.DataFrame({
         'techs': ['tech_2', 'tech_2'],
         'items': ['item_1', 'item_2'],
         'values': [4, 5]
     })
-    expected_df.index = [3, 4]
-    pd.testing.assert_frame_equal(filtered_df, expected_df)
+    expected_4.index = [3, 4]
 
-    # filtering DataFrame with different rows order NOT preserving rows order
-    filter_dict = {'items': ['item_2', 'item_1']}
-    filtered_df = filter_dataframe(df, filter_dict)
-    expected_df = pd.DataFrame({
-        'items': ['item_1', 'item_2', 'item_1', 'item_2'],
-        'techs': ['tech_1', 'tech_1', 'tech_2', 'tech_2'],
-        'values': [1, 2, 4, 5]
-    })
-    pd.testing.assert_frame_equal(filtered_df, expected_df)
-
-    # filtering DataFrame with different rows order preserving rows order
-    filter_dict = {
-        'items': ['item_2', 'item_1'],
-        'techs': ['tech_2', 'tech_1']
-    }
-    filtered_df = filter_dataframe(
-        df,
-        filter_dict,
-        reorder_rows_based_on_filter=True,
-    )
-    expected_df = pd.DataFrame({
+    expected_5 = pd.DataFrame({
         'items': ['item_2', 'item_2', 'item_1', 'item_1'],
         'techs': ['tech_2', 'tech_1', 'tech_2', 'tech_1'],
         'values': [5, 2, 4, 1]
     })
-    pd.testing.assert_frame_equal(filtered_df, expected_df)
 
-    # filtering DataFrame with different cols/rows order preserving filter
-    # order and index
-    filter_dict = {
-        'techs': ['tech_2', 'tech_1'],
-        'items': ['item_3', 'item_1'],
-    }
-    filtered_df = filter_dataframe(
-        df,
-        filter_dict,
-        reset_index=False,
-        reorder_rows_based_on_filter=True,
-        reorder_cols_based_on_filter=True,
-    )
-    expected_df = pd.DataFrame({
+    expected_6 = pd.DataFrame({
         'techs': ['tech_2', 'tech_2', 'tech_1', 'tech_1'],
         'items': ['item_3', 'item_1', 'item_3', 'item_1'],
         'values': [6, 4, 3, 1]
     })
-    expected_df.index = [5, 3, 2, 0]
-    pd.testing.assert_frame_equal(filtered_df, expected_df)
+    expected_6.index = [5, 3, 2, 0]
 
-    # filtering DataFrame with invalid filter_dict
-    with pytest.raises(ValueError):
-        filter_dataframe(df, {'D': ['apple', 'banana', 'cherry']})
+    test_cases = [
+        ((df.copy(), {'items': ['item_1', 'item_2']}), expected_1, None),
+        ((df.copy(), {'techs': ['tech_1'], 'items': [
+         'item_1', 'item_2']}), expected_2, None),
+        ((df.copy(), {'techs': ['tech_2'], 'items': ['item_1', 'item_2']}), expected_3, None,
+         {'reorder_cols_based_on_filter': True}),
+        ((df.copy(), {'techs': ['tech_2'], 'items': ['item_1', 'item_2']}), expected_4, None,
+         {'reset_index': False, 'reorder_cols_based_on_filter': True}),
+        ((df.copy(), {'items': ['item_2', 'item_1']}), expected_1, None),
+        ((df.copy(), {'items': ['item_2', 'item_1'], 'techs': ['tech_2', 'tech_1']}), expected_5, None,
+         {'reorder_rows_based_on_filter': True}),
+        ((df.copy(), {'techs': ['tech_2', 'tech_1'], 'items': ['item_3', 'item_1']}), expected_6, None,
+         {'reset_index': False, 'reorder_rows_based_on_filter': True, 'reorder_cols_based_on_filter': True}),
+        ((df.copy(), {'D': ['apple', 'banana', 'cherry']}), None, ValueError),
+        (("not a dataframe", {'items': ['item_1']}), None, ValueError),
+    ]
 
-    # filtering DataFrame with invalid df_to_filter
-    with pytest.raises(ValueError):
-        filter_dataframe("not a dataframe", filter_dict)
+    run_test_cases(filter_dataframe, test_cases)
 
 
 def test_find_non_allowed_types():
-    """
-    Test the find_non_allowed_types function.
-    This function tests the find_non_allowed_types function with valid and 
-    invalid input, and checks if the function correctly identifies rows with 
-    non-allowed types, handles invalid input, and raises the correct errors.
-    """
+    """Test the find_non_allowed_types function."""
     allowed_types = (int, float)
 
-    # Test with valid input
-    dataframe = pd.DataFrame({'A': [1, 2, '3', 4], 'B': ['a', 'b', 'c', 'd']})
-    assert find_non_allowed_types(
-        dataframe,
-        allowed_types,
-        target_col_header='A',
-        return_col_header='B'
-    ) == ['c']
+    df1 = pd.DataFrame({'A': [1, 2, '3', 4], 'B': ['a', 'b', 'c', 'd']})
+    df2 = pd.DataFrame({'A': [1, 2, 3, 4], 'B': ['a', 'b', 'c', 'd']})
+    df3 = pd.DataFrame({'A': [1, None, '3', 4], 'B': ['a', 'b', 'c', 'd']})
+    df4 = pd.DataFrame({'A': [1, None, 3, 4], 'B': ['a', 'b', 'c', 'd']})
 
-    # Test with no non-allowed types
-    dataframe = pd.DataFrame({'A': [1, 2, 3, 4], 'B': ['a', 'b', 'c', 'd']})
-    assert find_non_allowed_types(
-        dataframe,
-        allowed_types,
-        target_col_header='A',
-        return_col_header='B',
-    ) == []
+    test_cases = [
+        # Valid input with non-allowed types
+        ((df1, allowed_types, 'A', 'B'), ['c'], None),
+        # No non-allowed types
+        ((df2, allowed_types, 'A', 'B'), [], None),
+        # return_col_header=None
+        ((df1, allowed_types, 'A'), ['3'], None),
+        # allow_none=True
+        ((df3, allowed_types, 'A', 'B'), ['c'], None, {'allow_none': True}),
+        # allow_none=False
+        ((df4, allowed_types, 'A', 'B'), ['b'], None, {'allow_none': False}),
+        # Invalid dataframe
+        (('not a dataframe', allowed_types, 'A'), None, ValueError),
+        # Invalid allowed_types
+        ((df1, 'not a tuple', 'A'), None, ValueError),
+        # Invalid target_col_header
+        ((df1, allowed_types, 'not a column'), None, ValueError),
+        # Invalid return_col_header
+        ((df1, allowed_types, 'A', 'not a column'), None, ValueError),
+    ]
 
-    # Test with return_col_header=None
-    dataframe = pd.DataFrame({'A': [1, 2, '3', 4], 'B': ['a', 'b', 'c', 'd']})
-    assert find_non_allowed_types(
-        dataframe,
-        allowed_types,
-        target_col_header='A',
-    ) == ['3']
-
-    # Test with allow_none as True
-    dataframe = pd.DataFrame(
-        {'A': [1, None, '3', 4], 'B': ['a', 'b', 'c', 'd']})
-    assert find_non_allowed_types(
-        dataframe,
-        allowed_types,
-        target_col_header='A',
-        return_col_header='B',
-        allow_none=True,
-    ) == ['c']
-
-    dataframe = pd.DataFrame({'A': [1, None, 3, 4], 'B': ['a', 'b', 'c', 'd']})
-    assert find_non_allowed_types(
-        dataframe,
-        allowed_types,
-        target_col_header='A',
-        return_col_header='B',
-        allow_none=False,
-    ) == ['b']
-
-    # Test with invalid input
-    with pytest.raises(ValueError):
-        find_non_allowed_types(
-            dataframe='not a dataframe',
-            allowed_types=(int,),
-            target_col_header='A',
-        )
-    with pytest.raises(ValueError):
-        find_non_allowed_types(
-            dataframe=dataframe,
-            allowed_types='not a tuple',
-            target_col_header='A',
-        )
-    with pytest.raises(ValueError):
-        find_non_allowed_types(
-            dataframe=dataframe,
-            allowed_types=(int,),
-            target_col_header='not a column',
-        )
-    with pytest.raises(ValueError):
-        find_non_allowed_types(
-            dataframe=dataframe,
-            allowed_types=(int,),
-            target_col_header='A',
-            return_col_header='not a column',
-        )
+    run_test_cases(find_non_allowed_types, test_cases)
 
 
 def test_find_dict_key_corresponding_to_value():
-    """
-    Test the function find_dict_key_corresponding_to_value.
-    This function tests three scenarios: the target value exists in the 
-    dictionary; the target value does not exist in the dictionary; the 
-    provided argument is not a dictionary.
-
-    Raises:
-        TypeError: If the provided argument is not a dictionary.
-    """
+    """Test the function find_dict_keys_corresponding_to_value."""
     dictionary = {'a': 1, 'b': 2, 'c': 2, 'd': 3}
 
-    # Test with a dictionary where the target value exists
-    target_value = 2
-    assert find_dict_keys_corresponding_to_value(
-        dictionary, target_value) == ['b', 'c']
+    test_cases = [
+        ((dictionary, 2), ['b', 'c'], None),
+        ((dictionary, 4), [], None),
+        (("not a dictionary", 2), None, TypeError),
+    ]
 
-    # Test with a dictionary where the target value does not exist
-    target_value = 4
-    assert find_dict_keys_corresponding_to_value(
-        dictionary, target_value) == []
-
-    # Test with a non-dictionary argument
-    with pytest.raises(TypeError):
-        find_dict_keys_corresponding_to_value("not a dictionary", target_value)
+    run_test_cases(find_dict_keys_corresponding_to_value, test_cases)
 
 
 def test_calulate_values_difference():
-    # Test relative difference
-    assert calculate_values_difference(10, 5) == 1.0
-    assert calculate_values_difference(5, 10) == -0.5
-    assert calculate_values_difference(0, 10) == -1.0
-    assert calculate_values_difference(10, 0) == float('inf')
+    """Test the calculate_values_difference function."""
+    test_cases = [
+        # Relative difference
+        ((10, 5), 1.0, None),
+        ((5, 10), -0.5, None),
+        ((0, 10), -1.0, None),
+        ((10, 0), float('inf'), None),
 
-    # Test absolute difference
-    assert calculate_values_difference(10, 5, False) == 5
-    assert calculate_values_difference(5, 10, False) == -5
-    assert calculate_values_difference(0, 10, False) == -10
-    assert calculate_values_difference(10, 0, False) == 10
+        # Absolute difference
+        ((10, 5, False), 5, None),
+        ((5, 10, False), -5, None),
+        ((0, 10, False), -10, None),
+        ((10, 0, False), 10, None),
 
-    # Test module of difference
-    assert calculate_values_difference(10, 5, False, True) == 5
-    assert calculate_values_difference(5, 10, False, True) == 5
-    assert calculate_values_difference(0, 10, False, True) == 10
-    assert calculate_values_difference(10, 0, False, True) == 10
+        # Module of difference
+        ((10, 5, False, True), 5, None),
+        ((5, 10, False, True), 5, None),
+        ((0, 10, False, True), 10, None),
+        ((10, 0, False, True), 10, None),
 
-    # Test with non-numeric values
-    assert calculate_values_difference('a', 10, ignore_nan=True) is None
-    assert calculate_values_difference(10, 'a', ignore_nan=True) is None
-    assert calculate_values_difference('a', 'b', ignore_nan=True) is None
+        # Non-numeric values with ignore_nan=True
+        (('a', 10), None, None, {'ignore_nan': True}),
+        ((10, 'a'), None, None, {'ignore_nan': True}),
+        (('a', 'b'), None, None, {'ignore_nan': True}),
 
-    # Test with None values
-    assert calculate_values_difference(None, 10, ignore_nan=True) is None
-    assert calculate_values_difference(10, None, ignore_nan=True) is None
-    assert calculate_values_difference(None, None, ignore_nan=True) is None
+        # None values with ignore_nan=True
+        ((None, 10), None, None, {'ignore_nan': True}),
+        ((10, None), None, None, {'ignore_nan': True}),
+        ((None, None), None, None, {'ignore_nan': True}),
 
-    # Test ValueError when ignore_nan_values is False
-    with pytest.raises(ValueError):
-        calculate_values_difference('a', 10, True, False, False)
-    with pytest.raises(ValueError):
-        calculate_values_difference(10, 'a', True, False, False)
-    with pytest.raises(ValueError):
-        calculate_values_difference('a', 'b', True, False, False)
+        # ValueError when ignore_nan=False
+        (('a', 10, True, False, False), None, ValueError),
+        ((10, 'a', True, False, False), None, ValueError),
+        (('a', 'b', True, False, False), None, ValueError),
+    ]
+
+    run_test_cases(calculate_values_difference, test_cases)
 
 
 def test_remove_empty_items_from_dict():
@@ -636,7 +514,7 @@ def test_remove_empty_items_from_dict():
         'l': 'non-empty',
     }
 
-    expected_output_1 = {
+    expected_default = {
         'a': 1,
         'd': {
             'e': 2,
@@ -647,7 +525,7 @@ def test_remove_empty_items_from_dict():
         'l': 'non-empty',
     }
 
-    expected_output_2 = {
+    expected_custom = {
         'a': 1,
         'b': '',
         'c': None,
@@ -663,17 +541,110 @@ def test_remove_empty_items_from_dict():
         'l': 'non-empty',
     }
 
-    assert remove_empty_items_from_dict(input_dict) == expected_output_1
-    assert remove_empty_items_from_dict(
-        dictionary=input_dict, empty_values=[{}]
-    ) == expected_output_2
+    test_cases = [
+        ((input_dict,), expected_default, None),
+        ((input_dict,), expected_custom, None, {'empty_values': [{}]}),
+        (('not a dictionary',), None, TypeError),
+        ((input_dict,), None, ValueError, {
+         'empty_values': ['not in default']}),
+    ]
 
-    with pytest.raises(TypeError):
-        remove_empty_items_from_dict('not a dictionary')
+    run_test_cases(remove_empty_items_from_dict, test_cases)
 
-    with pytest.raises(ValueError):
-        remove_empty_items_from_dict(
-            input_dict, empty_values=['not in default'])
+
+def test_merge_dicts():
+    """Test the merge_dicts function.
+
+    Test cases:
+        - Merge multiple dictionaries with overlapping keys (allow duplicates)
+        - Merge multiple dictionaries with unique_values=True
+        - Merge dictionaries with None values (should skip None)
+        - Merge empty dictionaries
+        - Merge dictionaries with non-iterable values (convert to list)
+        - Merge dictionaries with string values (keep atomic)
+        - Merge dictionaries with bytes values (keep atomic)
+        - Single dictionary in list
+        - Empty list of dictionaries
+    """
+    dict1 = {'a': [1, 2], 'b': [3]}
+    dict2 = {'a': [2, 3], 'c': [4]}
+    dict3 = {'a': [1], 'b': [5], 'd': [6]}
+
+    # Expected results
+    expected_merged = {'a': [1, 2, 2, 3, 1], 'b': [3, 5], 'c': [4], 'd': [6]}
+    expected_unique = {'a': [1, 2, 3], 'b': [3, 5], 'c': [4], 'd': [6]}
+    expected_with_none = {'a': [1, 2], 'b': [3]}
+    expected_single = {'x': [10], 'y': [20]}
+    expected_scalar = {'a': [1, 2], 'b': ['text'], 'c': [True]}
+
+    test_cases = [
+        # Merge with duplicates allowed
+        (([dict1, dict2, dict3],), expected_merged, None),
+
+        # Merge with unique values only
+        (([dict1, dict2, dict3],), expected_unique,
+         None, {'unique_values': True}),
+
+        # Merge with None values (should be skipped)
+        (([{'a': [1, 2], 'b': None}, {'a': None, 'b': [3]}],),
+         expected_with_none, None),
+
+        # Empty dictionaries
+        (([{}, {}],), {}, None),
+
+        # Non-iterable values converted to list
+        (([{'a': 1, 'b': 'text', 'c': True}, {'a': 2}],), expected_scalar, None),
+
+        # String values kept atomic
+        (([{'text': 'hello'}, {'text': 'world'}],),
+         {'text': ['hello', 'world']}, None),
+
+        # Bytes values kept atomic
+        (([{'data': b'abc'}, {'data': b'def'}],),
+         {'data': [b'abc', b'def']}, None),
+
+        # Single dictionary
+        (([{'x': [10], 'y': [20]}],), expected_single, None),
+
+        # Empty list
+        (([],), {}, None),
+
+        # List with None dictionaries
+        (([None, {'a': [1]}, None],), {'a': [1]}, None),
+    ]
+
+    run_test_cases(merge_dicts, test_cases)
+
+
+def test_transform_dict_none_to_values():
+    """Test the transform_dict_none_to_values function.
+
+    Test cases:
+        - Transform None values to a specified value (string)
+        - Transform None values to a specified value (integer)
+        - Transform None values to a specified value (empty dict)
+        - Dictionary with no None values (no transformation)
+        - Empty dictionary
+        - Invalid input: non-dictionary (TypeError)
+    """
+
+    dict_with_nones = {'a': 1, 'b': None, 'c': 'text', 'd': None}
+    dict_no_nones = {'a': 1, 'b': 2, 'c': 'text'}
+
+    expected_to_zero = {'a': 1, 'b': 0, 'c': 'text', 'd': 0}
+    expected_to_empty_str = {'a': 1, 'b': '', 'c': 'text', 'd': ''}
+    expected_to_dict = {'a': 1, 'b': {}, 'c': 'text', 'd': {}}
+
+    test_cases = [
+        ((dict_with_nones, 0), expected_to_zero, None),
+        ((dict_with_nones, ''), expected_to_empty_str, None),
+        ((dict_with_nones, {}), expected_to_dict, None),
+        ((dict_no_nones, 0), dict_no_nones, None),
+        (({}, 'any_value'), {}, None),
+        (('not a dictionary', 0), None, TypeError),
+    ]
+
+    run_test_cases(transform_dict_none_to_values, test_cases)
 
 
 def test_pivot_dataframe_to_data_structure():
@@ -831,3 +802,136 @@ def test_pivot_dataframe_to_data_structure():
         )
 
         assert structure == expected_structure[key]
+
+
+def test_is_sparse():
+    """Test the is_sparse function.
+
+    Test cases:
+        - Array with proportion of zeros above threshold (should be sparse)
+        - Array with proportion of zeros below threshold (should not be sparse)
+        - Array with proportion of zeros equal to threshold (should be sparse)
+        - Array with all zeros (should return False - edge case)
+        - Array with no zeros (should not be sparse)
+        - Array with exactly at threshold
+    """
+    # Array with 70% zeros (above 50% threshold)
+    array_70_zeros = np.array([0, 0, 0, 0, 0, 0, 0, 1, 2, 3])
+    # Array with 30% zeros (below 50% threshold)
+    array_30_zeros = np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7])
+    # Array with exactly 50% zeros
+    array_50_zeros = np.array([0, 0, 0, 0, 0, 1, 2, 3, 4, 5])
+    # Array with all zeros
+    array_all_zeros = np.array([0, 0, 0, 0, 0])
+    # Array with no zeros
+    array_no_zeros = np.array([1, 2, 3, 4, 5])
+
+    test_cases = [
+        # Sparse: 70% zeros with 0.5 threshold
+        ((array_70_zeros, 0.5), True, None),
+        # Not sparse: 30% zeros with 0.5 threshold
+        ((array_30_zeros, 0.5), False, None),
+        # Sparse: exactly at threshold (50% zeros, 0.5 threshold)
+        ((array_50_zeros, 0.5), True, None),
+        # Edge case: all zeros should return False
+        ((array_all_zeros, 0.5), False, None),
+        # Not sparse: no zeros
+        ((array_no_zeros, 0.5), False, None),
+        # Sparse with lower threshold
+        ((array_30_zeros, 0.2), True, None),
+        # Not sparse with higher threshold
+        ((array_70_zeros, 0.8), False, None),
+        # Invalid input: non-numeric array
+        (('not_an_array', 0.5), None, TypeError),
+        # Invalid input: threshold out of bounds
+        ((array_70_zeros, 1.5), None, ValueError),
+        ((array_70_zeros, -0.1), None, ValueError),
+    ]
+
+    run_test_cases(is_sparse, test_cases)
+
+
+# def test_normalize_dataframe():
+#     """Test the normalize_dataframe function.
+
+#     Test cases:
+#         - Basic normalization with NaN replacement
+#         - Exclude specific columns from NaN replacement
+#         - Cast numeric columns to specific dtype
+#         - Replace NaNs and fill with specific value
+#         - Replace NaNs with various sentinel values
+#         - Invalid input: non-DataFrame (TypeError)
+#         - Invalid exclude_columns (ValueError)
+#         - Invalid numeric_columns (ValueError)
+#         - Missing numeric_dtype when numeric_columns provided (ValueError)
+#     """
+#     # Base DataFrame with various NaN-like values
+#     df_with_nans = pd.DataFrame({
+#         'A': [1, 2, np.nan, 4],
+#         'B': ['x', 'NaN', 'null', 'y'],
+#         'C': [10.5, 'NA', 'na', 15.5],
+#         'D': [100, 200, 300, 400]
+#     })
+#     # Expected: NaNs replaced with None
+#     expected_basic = pd.DataFrame({
+#         'A': [1.0, 2.0, np.nan, 4.0],
+#         'B': ['x', None, None, 'y'],
+#         'C': [10.5, np.nan, np.nan, 15.5],
+#         'D': [100, 200, 300, 400]
+#     })
+#     # Expected: NaNs replaced, then filled with 0
+#     expected_with_fill = pd.DataFrame({
+#         'A': [1.0, 2.0, 0.0, 4.0],
+#         'B': ['x', 0, 0, 'y'],
+#         'C': [10.5, 0, 0, 15.5],
+#         'D': [100, 200, 300, 400]
+#     })
+#     # Expected: Exclude column 'B' from NaN replacement
+#     expected_exclude = pd.DataFrame({
+#         'A': [1.0, 2.0, None, 4.0],
+#         'B': ['x', 'NaN', 'null', 'y'],
+#         'C': [10.5, None, None, 15.5],
+#         'D': [100, 200, 300, 400]
+#     })
+#     # DataFrame for numeric casting
+#     df_numeric = pd.DataFrame({
+#         'A': ['1', '2', '3', '4'],
+#         'B': ['10.5', '20.5', '30.5', '40.5'],
+#         'C': ['x', 'y', 'z', 'w']
+#     })
+
+#     expected_numeric = pd.DataFrame({
+#         'A': [1.0, 2.0, 3.0, 4.0],
+#         'B': [10.5, 20.5, 30.5, 40.5],
+#         'C': ['x', 'y', 'z', 'w']
+#     })
+
+#     test_cases = [
+#         # Basic NaN replacement
+#         ((df_with_nans.copy(),), expected_basic, None),
+#         # NaN replacement with fill value
+#         ((df_with_nans.copy(),), expected_with_fill, None,
+#          {'nan_fill_value': 0}),
+#         # Exclude columns from NaN replacement
+#         ((df_with_nans.copy(),), expected_exclude, None,
+#          {'exclude_columns': ['B']}),
+#         # Cast numeric columns
+#         ((df_numeric.copy(),), expected_numeric, None,
+#          {'numeric_columns': ['A', 'B'], 'numeric_dtype': float}),
+#         # No NaN replacement
+#         ((df_with_nans.copy(),), df_with_nans.copy(), None,
+#          {'replace_nans': False}),
+#         # Invalid input: non-DataFrame
+#         (('not a dataframe',), None, TypeError),
+#         # Invalid exclude_columns
+#         ((df_with_nans.copy(),), None, ValueError,
+#          {'exclude_columns': ['NonExistent']}),
+#         # Invalid numeric_columns
+#         ((df_with_nans.copy(),), None, ValueError,
+#          {'numeric_columns': ['NonExistent'], 'numeric_dtype': float}),
+#         # Missing numeric_dtype
+#         ((df_with_nans.copy(),), None, ValueError,
+#          {'numeric_columns': ['A']}),
+#     ]
+
+#     run_test_cases(normalize_dataframe, test_cases)

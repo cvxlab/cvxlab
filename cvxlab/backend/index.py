@@ -9,7 +9,7 @@ operational characteristics related to these entities.
 """
 from pathlib import Path
 from scipy.sparse import issparse
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 import pandas as pd
 import cvxpy as cp
@@ -71,6 +71,8 @@ class Index:
         self.sets = self.load_and_validate_structure(structures[0])
         self.data = self.load_and_validate_structure(structures[1])
 
+        self.check_data_tables_variables_naming_coherence()
+        self.check_sets_coherence()
         self.check_data_coherence()
         self.data_tables_completion()
 
@@ -196,8 +198,6 @@ class Index:
             Optional[pd.DataFrame]: A DataFrame with scenarios information if 
                 available, otherwise None.
         """
-        self.logger.debug("Fetching scenario/s information to Index.")
-
         scenarios_coordinates = {}
         list_sets_split_problem = list(self.sets_split_problem_dict.values())
         scenarios_coords_header = Defaults.Labels.SCENARIO_COORDINATES
@@ -212,7 +212,7 @@ class Index:
             key_order=list_sets_split_problem,
         )
 
-        util.add_column_to_dataframe(
+        scenarios_df = util.add_column_to_dataframe(
             dataframe=scenarios_df,
             column_header=scenarios_coords_header,
             column_values=None,
@@ -228,6 +228,22 @@ class Index:
             ] = scenarios_coords
 
         return scenarios_df
+
+    @property
+    def hybrid_var_keys(self) -> List[str]:
+        """List of keys of hybrid variables.
+
+        This property returns a list of keys identifying all hybrid variables
+        currently loaded in the Index. An empty list is returned if no hybrid
+        variables are found.
+
+        Returns:
+            List[str]: A list of hybrid variable keys.
+        """
+        return [
+            var_key for var_key, variable in self.variables.items()
+            if isinstance(variable.type, dict)
+        ]
 
     def load_and_validate_structure(
             self,
@@ -326,6 +342,144 @@ class Index:
 
         return validated_structure
 
+    def check_sets_coherence(self) -> None:
+        """Check coherence among set tables.
+
+        This method performs coherence checks among the set tables loaded in the Index.
+        All anomalies are collected in a dictionary with keys identifying the location
+        of the anomaly, and value as the related description. Errors are raised and
+        logged at the end of the method. Further checks may be developed.
+
+        The following checks are performed looping over set tables:
+
+        - In case of copied set tables (copy_from attribute), the source table
+            must be a valid set table.
+        - Copied set table split_problem attribute must match source set table.
+        - Copied set table structure must match source set table structure.
+        - Copied set table aggregations must match source set table aggregations.
+
+        Raises:
+            exc.SettingsError: Raised with the list of all exceptions collected
+                during the coherence checks, identifying mistakes in model settings.
+        """
+        problems = {}
+
+        for set_key, set_table in self.sets.items():
+            set_table: SetTable
+
+            # in case of copied set tables (copy_from attribute)
+            if set_table.copy_from:
+                set_table_source_key = set_table.copy_from
+
+                # source table must be a valid set table
+                if set_table_source_key not in self.sets:
+                    problems[set_key] = f"Source set table '{set_table_source_key}' " \
+                        "to be copied not found in defined sets."
+
+                else:
+                    set_table_source: SetTable = self.sets[set_table_source_key]
+
+                    # copied set table split_problem attribute must match source set table
+                    if set_table.split_problem != set_table_source.split_problem:
+                        problems[set_key] = f"'split_problem' attribute of copied set " \
+                            f"table do not match those of source set table " \
+                            f"'{set_table_source_key}'."
+
+                    # if filters are defined, they must be for source and destination sets
+                    if set_table_source.table_filters and not set_table.table_filters:
+                        problems[set_key] = f"Filters of set table '{set_key}' " \
+                            f"must be defined and equal to filters of the " \
+                            f"source set table '{set_table_source_key}'. " \
+                            "Check filters in settings files."
+
+                    # if aggregations are defined, they must be for source and destination sets
+                    if set_table.table_aggregations and not set_table_source.table_aggregations:
+                        problems[set_key] = "Aggregations must be defined for both " \
+                            f"copied set table and source set table '{set_table_source_key}'."
+
+        if problems:
+            if self.settings['detailed_validation']:
+                for key, error_log in problems.items():
+                    self.logger.error(
+                        f"Set tables coherence check | {key} | {error_log}")
+            else:
+                self.logger.error(
+                    f"Set tables coherence error | Sets tables | Entries: "
+                    f"{list(problems.keys())}")
+
+            msg = "Sets tables coherence check not successful. " \
+                "Check setup files."
+            if not self.settings['detailed_validation']:
+                msg += "Set 'detailed_validation=True' for more information."
+
+            self.logger.error(msg)
+            raise exc.SettingsError(msg)
+
+    def check_data_tables_variables_naming_coherence(self) -> None:
+        """Check naming coherence for data tables and variables.
+
+        This method performs naming coherence checks to ensure that:
+        - All data table names are unique (case insensitive).
+        - All variable names are unique (case sensitive).
+
+        The method collects all anomalies in a dictionary with keys identifying 
+        the location of the anomaly, and values as the related description. 
+        Errors are raised and logged at the end of the method.
+
+        Raises:
+            exc.SettingsError: Raised with the list of all exceptions collected
+                during the naming coherence checks, identifying mistakes in model settings.
+        """
+        self.logger.debug(
+            "Checking data tables and variables naming coherence.")
+
+        problems = {}
+
+        # Check that all data table names are unique (case insensitive)
+        table_names_lower = {}
+        for table_key in self.data.keys():
+            table_name_lower = table_key.lower()
+            if table_name_lower in table_names_lower:
+                problems['data_tables_naming'] = \
+                    f"Duplicate data table names (case insensitive): " \
+                    f"'{table_names_lower[table_name_lower]}' and '{table_key}'. " \
+                    f"Table names must be unique regardless of case."
+                break
+            table_names_lower[table_name_lower] = table_key
+
+        # Check that all variable names are unique (case sensitive)
+        all_variable_names = []
+        for data_table in self.data.values():
+            all_variable_names.extend(data_table.variables_info.keys())
+
+        duplicate_vars = [
+            var for var in set(all_variable_names)
+            if all_variable_names.count(var) > 1
+        ]
+
+        if duplicate_vars:
+            problems['variables_naming'] = \
+                f"Duplicate variable names found: {duplicate_vars}. " \
+                f"Variable names must be unique across all data tables."
+
+        if problems:
+            if self.settings['detailed_validation']:
+                for key, error_log in problems.items():
+                    self.logger.error(
+                        f"Naming coherence check | {key} | {error_log}")
+            else:
+                self.logger.error(
+                    f"Naming coherence error | Data tables, Variables | Entries: "
+                    f"{list(problems.keys())}")
+
+            msg = "Data tables and variables naming coherence check not successful. " \
+                "Check setup files."
+            if not self.settings['detailed_validation']:
+                msg += " Set 'detailed_validation=True' for more information."
+
+            self.logger.error(msg)
+            raise exc.SettingsError(msg)
+
     def check_data_coherence(self) -> None:
         """Check coherence between sets and data tables.
 
@@ -365,10 +519,12 @@ class Index:
         allowed_dims = list(Defaults.SymbolicDefinitions.DIMENSIONS.values())
 
         coordinates_key = Defaults.Labels.COORDINATES_KEY
+        dim_key = Defaults.Labels.DIM
         filters_key = Defaults.Labels.FILTERS
         variables_info_key = Defaults.Labels.VARIABLES_INFO_KEY
         value_key = Defaults.Labels.VALUE_KEY
         blank_fill_key = Defaults.Labels.BLANK_FILL_KEY
+        nonneg_key = Defaults.Labels.NONNEG_KEY
 
         problems = {}
 
@@ -438,7 +594,8 @@ class Index:
 
                         if property_value and property_value not in allowed_constants:
                             problems[f"{path}.{value_key}"] = \
-                                f"Constant value type '{property_value}' not allowed."
+                                f"Constant value type '{property_value}' not allowed. " \
+                                f"Allowed types: {list(allowed_constants)}."
 
                     # blank_fill field can only be assigned to exogenous variables
                     elif property_key == blank_fill_key:
@@ -449,20 +606,29 @@ class Index:
                                 "'blank_fill' attribute cannot be assigned to " \
                                 "endogenous variables or constants."
 
+                    # sign field can only be assigned to endogenous or hybrid variables
+                    elif property_key == nonneg_key:
+                        if data_table.type == allowed_var_types['EXOGENOUS'] and \
+                                property_value is True:
+                            problems[f"{path}.{nonneg_key}"] = \
+                                "Exogenous variables cannot be defined as " \
+                                "non-negative. Check variables settings."
+
                     # other properties must be allowed coordinates
                     elif property_key not in data_table.coordinates:
-                        problems[path] = f"Coordinate '{property_key}' not found in coordinates."
+                        problems[path] = f"Property '{property_key}' not found in " \
+                            "allowed properties or defined coordinates."
 
                     # for each var coordinate
                     elif property_key in data_table.coordinates \
                             and isinstance(property_value, dict):
 
                         # check if dim is allowed
-                        if 'dim' in property_value:
-                            if property_value['dim'] not in allowed_dims:
-                                problems[f"{path}.{property_key}.dim"] = \
+                        if dim_key in property_value:
+                            if property_value[dim_key] not in allowed_dims:
+                                problems[f"{path}.{property_key}.{dim_key}"] = \
                                     f"Coordinate '{property_key}': " \
-                                    f"dimension '{property_value['dim']}' not allowed."
+                                    f"dimension '{property_value[dim_key]}' not allowed."
 
                         # check if filters are allowed
                         if filters_key in property_value:
@@ -608,6 +774,18 @@ class Index:
 
         dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
+        def _key_matches_shape(
+                key: str,
+                shape: List[str] | str | int
+        ) -> bool:
+            """Check if a key matches a given shape."""
+            if isinstance(shape, list):
+                return key in shape
+            elif isinstance(shape, str):
+                return key == shape
+            else:  # shape is 1 (int)
+                return False
+
         for var_key, variable in self.variables.items():
             variable: Variable
 
@@ -633,11 +811,15 @@ class Index:
 
                 if key in Defaults.Labels.ID_FIELD:
                     continue
-                if key == variable.shape_sets[0]:
+
+                rows_shape = variable.shape_sets[0]
+                cols_shape = variable.shape_sets[1]
+
+                if _key_matches_shape(key, rows_shape):
                     rows[key] = table_header
-                if key == variable.shape_sets[1]:
+                elif _key_matches_shape(key, cols_shape):
                     cols[key] = table_header
-                if key not in variable.shape_sets:
+                else:
                     if key not in self.sets_split_problem_dict:
                         intra[key] = table_header
                     else:
@@ -782,7 +964,6 @@ class Index:
         sets_excel_data = self.files.excel_to_dataframes_dict(
             excel_file_name=excel_file_name,
             excel_file_dir_path=excel_file_dir_path,
-            empty_data_fill=Defaults.SymbolicDefinitions.STD_TEXT_DATA_FILL,
         )
 
         sets_excel_keys = sets_excel_data.keys()
@@ -1003,23 +1184,33 @@ class Index:
     def fetch_variable_data(
             self,
             var_key: str,
-            problem_key: Optional[int | str] = None,
             scenario_key: Optional[int] = None,
+            intra_problem_key: Optional[int] = None,
+            if_hybrid_var: Literal['endogenous', 'exogenous'] = 'endogenous',
     ) -> Optional[pd.DataFrame]:
         """Fetch variable data from Index.
 
         This method retrieves the data for a specified variable based on optional 
-        problem and scenario indices. Scenarios are defined by the linear combination
-        of inter-problem sets. 
+        inter-problem and intra-problem sets cardinality, supporting the data 
+        inspection process after a model has run, but before data has exported to the 
+        database. This is particularly useful in case multiple runs of the model, 
+        to facilitate the control of the numerical data from the user.
+        In case a variable is defined as both endogeous and exogenous, depending on 
+        the numerical problem, the user can specify the one to inspect (default 
+        as the endogenous one).
+        If the variable is specified for multiple inter- and intra-problem sets,
+        scenario_key defines the cardinality of inter-problem sets, while 
+        intra_problem_key defines the cardinality of intra-problem sets.
 
         Args:
             var_key (str): The key of the variable in the variables dictionary.
-            problem_key (Optional[int | str]): Key specifying which problem's data
-                to access if data is dictionary-based (i.e. if multiple numerical 
-                problems are defined). Defaults to None.
-            scenario_key (Optional[int]): Index specifying the which one among
-                the linear combination of inter-problem sets 
-                (i.e., sub-problems) to access. Defaults to None.
+            scenario_key (Optional[int]): Defines the cardinality of inter-problem 
+                sets. Default to None.
+            intra_problem_key (Optional[int]): Defines the cardinality of intra-problem
+                sets. Default to None.
+            if_hybrid_var (Literal['endogenous', 'exogenous']): Defines the type 
+                of variable data to inspect in case variable type depends on the 
+                problem.
 
         Returns:
             pd.DataFrame: A DataFrame containing the requested variable data, or
@@ -1027,6 +1218,7 @@ class Index:
         """
         variable_header = Defaults.Labels.CVXPY_VAR
         allowed_var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
+        sub_problem_key_label = Defaults.Labels.SUB_PROBLEM_KEY
 
         if var_key not in self.variables:
             self.logger.warning(
@@ -1037,6 +1229,16 @@ class Index:
 
         variable: Variable = self.variables[var_key]
 
+        df_index = variable.build_axis(
+            target_labels=variable.dims_labels[0],
+            target_items=variable.dims_items[0],
+        )
+
+        df_columns = variable.build_axis(
+            target_labels=variable.dims_labels[1],
+            target_items=variable.dims_items[1],
+        )
+
         if variable.type == allowed_var_types['CONSTANT']:
             data: cp.Constant = variable.data
             if variable.value == 'set_length':
@@ -1044,79 +1246,105 @@ class Index:
             else:
                 values_dataframe = pd.DataFrame(
                     data=data.value,
-                    index=variable.dims_items[0],
-                    columns=variable.dims_items[1],
+                    index=df_index,
+                    columns=df_columns,
                 )
 
-        if variable.data is None:
-            self.logger.warning(
-                f"Data not initialized for variable '{var_key}'.")
-            return
-
-        if isinstance(variable.data, dict):
-            if problem_key is None:
-                self.logger.warning(
-                    f"Variable '{var_key}' is defined for multiple problems. "
-                    "A symbolic problem index must be specified.")
-                return
-
-            if problem_key not in variable.data.keys():
-                self.logger.warning(
-                    f"Problem index must be included in {list(variable.data.keys())}.")
-                return
-
-            if len(variable.data) == 1 and problem_key is None:
-                problem_key = 0
-
-            variable_data = variable.data[problem_key]
+            return values_dataframe
 
         else:
-            if problem_key is not None:
+            if variable.data is None:
                 self.logger.warning(
-                    f"Variable '{var_key}' is not defined for multiple problems. "
-                    "Problem index must be None.")
+                    f"Data not initialized for variable '{var_key}'.")
                 return
 
-            variable_data = variable.data
+            # Identifying variable data
+            if isinstance(variable.data, dict):
+                problem_key = util.find_dict_keys_corresponding_to_value(
+                    dictionary=variable.type,
+                    target_value=if_hybrid_var,
+                )
+                problem_key = problem_key[0] if problem_key else None
+                variable_data = variable.data[problem_key]
+            else:
+                variable_data = variable.data
 
-        if isinstance(variable_data, pd.DataFrame):
+            # Filtering eventual sub-problem data (inter-problem sets cardinality)
+            scenario_series = pd.to_numeric(
+                variable_data[sub_problem_key_label], errors='coerce').dropna()
+            scenario_key_list = set(scenario_series.astype(int).tolist())
+
+            # If scenarios are present, enforce selection and filter
+            if scenario_key_list:
+                if scenario_key is None:
+                    self.logger.warning(
+                        f"'scenario_key' not specified for variable '{var_key}'. "
+                        f"Available scenarios keys: {scenario_key_list}."
+                    )
+                    return
+
+                if scenario_key not in scenario_key_list:
+                    self.logger.warning(
+                        f"Scenario '{scenario_key}' not found for variable '{var_key}'. "
+                        f"Available scenarios keys: {scenario_key_list}."
+                    )
+                    return
+
+                variable_data = variable_data.loc[
+                    variable_data[sub_problem_key_label].eq(scenario_key)
+                ]
+
+            elif scenario_key is not None:
+                self.logger.warning(
+                    f"'scenario_key' specified for variable '{var_key}', "
+                    "but variable has no inter-problem sets defined."
+                )
+                return
+
             if variable_data.empty:
-                self.logger.warning(f"Variable '{var_key}' data is empty.")
+                self.logger.warning(
+                    f"Variable '{var_key}' data is empty after filtering.")
                 return
 
+            # If multiple intra-problem sets are defined, filter accordingly
             if len(variable_data) > 1:
-                if scenario_key is None:
+
+                if intra_problem_key is None:
                     self.logger.warning(
-                        f"Variable '{var_key}' is defined for multiple "
-                        "sub-problems. A sub-problem index must be specified "
-                        f"from 0 to {len(variable_data) - 1}.")
+                        f"'intra_problem_key' not specified for variable '{var_key}'. "
+                        f"Select from 0 to {len(variable_data) - 1}."
+                    )
                     return
 
-                if scenario_key < 0 or scenario_key >= len(variable_data):
+                if not (0 <= int(intra_problem_key) < len(variable_data)):
                     self.logger.warning(
-                        f"Sub-problem index must be between 0 and {len(variable_data)-1}.")
+                        f"'intra_problem_key' out of bounds for variable '{var_key}'. "
+                        f"Valid range: 0 to {len(variable_data) - 1}."
+                    )
                     return
 
-            if len(variable_data) == 1:
-                if scenario_key is None:
-                    scenario_key = 0
-                elif scenario_key != 0:
+                variable_series = variable_data.iloc[int(intra_problem_key)]
+
+            else:
+                if intra_problem_key is not None:
                     self.logger.warning(
-                        f"A unique sub-problem is defined for variable '{var_key}'. "
-                        "Set sub-problem index to 0 or None")
+                        f"'intra_problem_key' specified for variable '{var_key}', "
+                        "but variable has no intra-problem sets defined."
+                    )
                     return
 
-            variable_series = variable_data.loc[scenario_key]
+                variable_series = variable_data.iloc[0]
+
+            # Building DataFrame with variable values
             variable_values = variable_series[variable_header].value
-
             if issparse(variable_values):
                 variable_values = variable_values.toarray()
 
-            values_dataframe = pd.DataFrame(
-                data=variable_values,
-                index=variable.dims_items[0],
-                columns=variable.dims_items[1],
-            )
+        values_dataframe = pd.DataFrame(
+            data=variable_values,
+            index=df_index,
+            columns=df_columns,
+        )
 
         return values_dataframe
 

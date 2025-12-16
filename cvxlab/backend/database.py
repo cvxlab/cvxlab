@@ -210,7 +210,7 @@ class Database:
 
                 if table_headers is not None:
                     if table_id_header not in table_headers.values():
-                        util.add_column_to_dataframe(
+                        dataframe = util.add_column_to_dataframe(
                             dataframe=dataframe,
                             column_header=table_id_header[0],
                             column_values=None,
@@ -324,7 +324,7 @@ class Database:
                     self.logger.error(msg)
                     raise exc.OperationalError(msg)
 
-                util.add_column_to_dataframe(
+                unpivoted_coords_df = util.add_column_to_dataframe(
                     dataframe=unpivoted_coords_df,
                     column_header=table.table_headers['id'][0],
                     column_values=None,
@@ -459,8 +459,8 @@ class Database:
             table_key_list = self.index.data.keys()
         else:
             if not util.items_in_list(
-                table_key_list,
-                self.index.data.keys()
+                items=table_key_list,
+                control_list=self.index.data.keys()
             ):
                 msg = "One or more passed tables keys not present in the index."
                 self.logger.error(msg)
@@ -489,9 +489,13 @@ class Database:
                             )
                         )
 
+                        data_to_table = util.normalize_dataframe(
+                            df=data[table_key]
+                        )
+
                         self.sqltools.dataframe_to_table(
                             table_name=table_key,
-                            dataframe=data[table_key],
+                            dataframe=data_to_table,
                             force_overwrite=force_overwrite,
                             action='update',
                         )
@@ -504,9 +508,12 @@ class Database:
 
             with db_handler(self.sqltools):
                 for table_key, table in data.items():
+                    table: pd.DataFrame
 
                     if table_key not in table_key_list:
                         continue
+
+                    table = util.normalize_dataframe(df=table)
 
                     self.sqltools.dataframe_to_table(
                         table_name=table_key,

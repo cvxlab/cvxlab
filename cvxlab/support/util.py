@@ -8,19 +8,34 @@ functions that enhance the interoperability of data structures used throughout
 the application.
 """
 import itertools as it
+from typing_extensions import Literal
 import numpy as np
 import pandas as pd
 
 from collections.abc import Iterable
 from copy import deepcopy
-from typing import Dict, List, Any, Literal, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple
 
+from cvxlab.defaults import Defaults
 from cvxlab.support import util_text
 
 
+def get_user_confirmation(message: str) -> bool:
+    """Prompt the user to confirm an action via command line input.
+
+    Args:
+        message (str): The message to display to the user.
+
+    Returns:
+        bool: True if the user confirms the action, False otherwise.
+    """
+    response = input(f"{message} (y/[n]): ").lower()
+    return response == 'y'
+
+
 def validate_selection(
-        valid_selections: Iterable[str],
-        selection: str,
+        valid_selections: Iterable[str | int],
+        selection: str | int,
         ignore_case: bool = False,
 ) -> None:
     """Validate a selected item against a list of valid selections.
@@ -30,18 +45,26 @@ def validate_selection(
     comparison.
 
     Args:
-        valid_selections (List[str]): A list containing all valid selections.
-        selection (str): The selection to validate.
+        valid_selections (List[str | int]): A list containing all valid selections.
+        selection (str | int): The selection to validate.
         ignore_case (bool): If True, ignores the case of the selection. 
             Works only with string selections. Default is False.
 
     Raises:
-        ValueError: If no valid selections are available.
-        ValueError: If ignore_case is True but the selections are not strings.
-        ValueError: If the selection is not found within the list of valid selections.
+        TypeError: If the selection is not of type string or int.
+        ValueError: 
+            If no valid selections are available.
+            If ignore_case is True but the selections are not strings.
+            If the selection is not found within the list of valid selections.
     """
     if not valid_selections:
         raise ValueError("No valid selections are available.")
+
+    if not isinstance(selection, str | int):
+        raise TypeError(
+            "Selection must be of type string or int. "
+            f"Passed type: {type(selection).__name__}; "
+        )
 
     if ignore_case:
         if all(isinstance(item, str) for item in valid_selections):
@@ -58,54 +81,56 @@ def validate_selection(
 
 
 def items_in_list(
-        items: List,
-        control_list: Iterable,
+        items: Any,
+        control_list: Any,
 ) -> bool:
-    """Check if all items in a list are present in a control list.
+    """Check if all items are present in a control collection.
+
+    Supports list, tuple, dict (uses its keys) as items and control_list.
+    Strings / bytes are not accepted (treated as atomic, raise TypeError).
 
     Args:
-        items (List): The list of items to check.
-        control_list (Iterable): The iterable to check against.
+        items: Collection whose (elements | keys) to test.
+        control_list: Collection providing membership domain.
 
     Returns:
-        bool: True if all items are present in the list to check, False otherwise.
+        bool: True if every item is in control_list, False otherwise.
 
     Raises:
-        TypeError: If either 'items' or 'list_to_check' is not iterable.
-        ValueError: If 'list_to_check' is empty.
+        TypeError: If inputs are of unsupported types.
+        ValueError: If control_list is empty.
     """
-    if not isinstance(items, list):
+    # Normalize items
+    if isinstance(items, dict):
+        normalized_items = list(items.keys())
+    elif isinstance(items, Iterable) and \
+            not isinstance(items, (str, bytes)):
+        normalized_items = set(items)
+    else:
         raise TypeError(
-            "'items' must be of type list. Passed "
-            f"type: {type(items).__name__}; "
-        )
-    if not isinstance(control_list, Iterable):
-        raise TypeError(
-            "'list_to_check' must be iterable. Passed "
-            f"type: {type(control_list).__name__}; "
+            "'items' must be a non-string Iterable or dict. "
+            f"Passed type: {type(items).__name__}."
         )
 
-    control_set = set(control_list)
-    if not control_set:
-        raise ValueError("The control_list must not be empty.")
+    # Normalize control_list
+    if isinstance(control_list, dict):
+        normalized_control = set(control_list.keys())
+    elif isinstance(control_list, Iterable) and \
+            not isinstance(control_list, (str, bytes)):
+        normalized_control = set(control_list)
+    else:
+        raise TypeError(
+            "'control_list' must be a non-string Iterable or dict. "
+            f"Passed type: {type(control_list).__name__}."
+        )
 
-    if not items:
+    if not normalized_control:
         return False
 
-    return all(item in control_list for item in items)
+    if not normalized_items:
+        return False
 
-
-def get_user_confirmation(message: str) -> bool:
-    """Prompt the user to confirm an action via command line input.
-
-    Args:
-        message (str): The message to display to the user.
-
-    Returns:
-        bool: True if the user confirms the action, False otherwise.
-    """
-    response = input(f"{message} (y/[n]): ").lower()
-    return response == 'y'
+    return all(item in normalized_control for item in normalized_items)
 
 
 def find_dict_depth(item: dict) -> int:
@@ -248,6 +273,63 @@ def dict_cartesian_product(
     ]
 
 
+def dict_values_cartesian_product(
+        data_dict: Dict[Any, List[Any]],
+) -> int:
+    """Return Cartesian product of dictionary values.
+
+    This function returns an integer representing the number of combination of 
+    items included in all values of a dictionary.
+
+    Args:
+        data_dict (Dict[Any, List[Any]]): The dictionary to be used for the 
+            cartesian product. The keys are any hashable type, and the values 
+            are lists of elements to be combined.
+
+    Returns:
+        int: An integer representing the number of combinations of the input values.
+
+    Raises:
+        TypeError: If 'data_dict' is not a dictionary.
+    """
+    if not isinstance(data_dict, dict):
+        raise TypeError(
+            "Argument 'data_dict' must be a dictionary. "
+            f"{type(data_dict).__name__} was passed instead."
+        )
+
+    if not data_dict:
+        return 0
+
+    combinations = it.product(*data_dict.values())
+    return len(list(combinations))
+
+
+def flattening_list(nested_list: List[Any]) -> List[Any]:
+    """Flatten a (possibly nested) list into a flat list.
+
+    Treats only list/tuple as flattenable. Strings, bytes, other iterables kept atomic.
+    Args:
+        nested_list (List[Any]): List containing elements and/or nested lists.
+    Returns:
+        List[Any]: Flat list of all atomic elements.
+    """
+    if not isinstance(nested_list, list):
+        raise TypeError("Argument must be a list.")
+
+    flat: List[Any] = []
+    stack = list(reversed(nested_list))
+
+    while stack:
+        item = stack.pop()
+        if isinstance(item, (list, tuple)):
+            stack.extend(reversed(item))
+        else:
+            flat.append(item)
+
+    return flat
+
+
 def unpivot_dict_to_dataframe(
         data_dict: Dict[str, List[str]],
         key_order: Optional[List[str]] = None,
@@ -277,6 +359,9 @@ def unpivot_dict_to_dataframe(
             "Argument 'data_dict' must be a dictionary. "
             f"{type(data_dict).__name__} was passed instead."
         )
+
+    if not data_dict:
+        return pd.DataFrame()
 
     if key_order is not None and not isinstance(key_order, list):
         raise TypeError(
@@ -362,7 +447,7 @@ def check_dataframes_equality(
         skip_columns: Optional[List[str]] = None,
         cols_order_matters: bool = False,
         rows_order_matters: bool = False,
-        homogeneous_num_types: bool = True,
+        homogeneous_num_types: bool = False,
 ) -> bool:
     """Check dataframes equality.
 
@@ -473,33 +558,25 @@ def add_column_to_dataframe(
         column_header: str,
         column_values: Any = None,
         column_position: Optional[int] = None,
-) -> bool:
-    """Add a column to a DataFrame.
+) -> pd.DataFrame:
+    """Add a column to a DataFrame at a specified position.
 
-    This function inserts a new column into the provided DataFrame at the specified 
-    position or at the end if no position is specified, only if the column does 
-    not already exist.
+    Creates a copy of the input DataFrame and adds a new column at the specified
+    position. If the column already exists, returns the original DataFrame unchanged.
 
     Args:
-        dataframe (pd.DataFrame): The pandas DataFrame to which the column 
-            will be added.
-        column_header (str): The name/header of the new column.
-        column_values (Any, optional): The values to be assigned to the new 
-            column. If not provided, the column will be populated with 
-            NaN values.
-        column_position (int, optional): The index position where the new 
-            column will be inserted. If not provided, the column will be 
-            inserted at the end. Default to None.
+        dataframe (pd.DataFrame): The DataFrame to which the column will be added.
+        column_header (str): The name of the column to add.
+        column_values (Any, optional): Values for the new column. Defaults to None.
+        column_position (int | None, optional): Position (0-indexed) where the column
+            should be inserted. If None, appends to the end. Defaults to None.
 
     Returns:
-        bool: True if the column was added, False if the column already exists.
+        pd.DataFrame: A new DataFrame with the added column.
 
     Raises:
-        TypeError: If column_header is not string or dataframe is not a Pandas
-            DataFrame.
-        ValueError: If the column_position is greater than the current number 
-            of columns or if the column_header is empty, or if the legth of the
-            passed column does not match the number of rows of the DataFrame.
+        TypeError: If dataframe is not a pandas DataFrame or column_header is not a string.
+        ValueError: If column_position is out of valid range.
     """
     if not isinstance(column_header, str):
         raise TypeError("Passed column header must be of type string.")
@@ -509,21 +586,31 @@ def add_column_to_dataframe(
             "Passed dataframe argument must be a Pandas DataFrame.")
 
     if column_header in dataframe.columns:
-        return False
+        return dataframe
 
-    if column_position is not None and column_position > len(dataframe):
-        raise ValueError(
-            "Passed column_position is greater than the number of columns "
-            "of the dataframe.")
+    dataframe = dataframe.copy()
+
+    # in case of empty dataframe, add a dummy row to allow column insertion
+    if dataframe.empty and len(dataframe) == 0:
+        dataframe = pd.DataFrame(index=[0])
 
     if column_position is None:
         column_position = len(dataframe.columns)
 
-    if column_values and \
-            len(column_values) != dataframe.shape[0]:
+    if not (0 <= column_position <= len(dataframe.columns)):
         raise ValueError(
-            "Passed column_values length must match the number or rows"
-            "of the DataFrame.")
+            "Passed column_position is greater than the number of columns "
+            "of the dataframe.")
+
+    if column_values is not None:
+        if not isinstance(column_values, (list, np.ndarray, pd.Series)):
+            column_values = [column_values] * len(dataframe)
+
+        if len(column_values) != len(dataframe):
+            raise ValueError(
+                f"Length of 'column_values' ({len(column_values)}) does not match "
+                f"DataFrame length ({len(dataframe)})."
+            )
 
     dataframe.insert(
         loc=column_position,
@@ -531,7 +618,7 @@ def add_column_to_dataframe(
         value=column_values,
     )
 
-    return True
+    return dataframe
 
 
 def substitute_dict_keys(
@@ -572,11 +659,12 @@ def fetch_dict_primary_key(
         dictionary: Dict[str, Any],
         second_level_key: str | int,
         second_level_value: Any,
-) -> Optional[str | int]:
-    """Fetch dictionary primary key by second-level key-value pair.
+) -> List[str | int]:
+    """Fetch dictionary primary keys by second-level key-value pair.
 
-    This function fetches the primary key from a dictionary based on a second-level 
-    key-value pair. If the second-level key-value pair is not found, returns None.
+    This function fetches all primary keys from a dictionary based on a second-level 
+    key-value pair. If the second-level key-value pair is not found, returns an 
+    empty list.
 
     Args:
         dictionary (Dict[str, Any]): The dictionary to search.
@@ -584,8 +672,8 @@ def fetch_dict_primary_key(
         second_level_value (Any): The value to search for in the second level.
 
     Returns:
-        Optional[str | int]: The primary key of the dictionary where the second-level 
-            key-value pair is found, or None if not found.
+        List[str | int]: A list of primary keys where the second-level key-value 
+            pair is found. Returns an empty list if not found.
 
     Raises: 
         TypeError: If dictionary is not a dictionary.
@@ -593,11 +681,13 @@ def fetch_dict_primary_key(
     if not isinstance(dictionary, dict):
         raise TypeError("Passed dictionary must be a dictionary.")
 
+    matching_keys = []
     for primary_key, value in dictionary.items():
         if isinstance(value, dict) and \
                 value.get(second_level_key) == second_level_value:
-            return primary_key
-    return None
+            matching_keys.append(primary_key)
+
+    return matching_keys
 
 
 def filter_dataframe(
@@ -769,6 +859,130 @@ def find_dict_keys_corresponding_to_value(
         key for key, value in dictionary.items()
         if value == target_value
     ]
+
+
+def calculate_change_norm(
+        seq1: List[float] | Tuple[float, ...] | pd.Series | np.ndarray | float | int,
+        seq2: List[float] | Tuple[float, ...] | pd.Series | np.ndarray | float | int,
+        metric: Defaults.NumericalSettings.NormType,
+        ignore_nan: bool,
+) -> float:
+    """Compute change metric between two numeric sequences (or scalars).
+
+    This function computes a specified change metric between two numeric sequences
+    (or scalars). It supports various metrics including maximum relative change,
+    maximum absolute change, and L1, L2, and L-infinity norms. It can also ignore
+    NaN or non-numeric values during the computation.
+
+    Supported metrics (let x := seq1, y := seq2, d := x - y). 
+        "max_relative": maximum relative change. Implemented as:
+            max_i |d_i| / |y_i|   (∞ if |y_i| == 0 and |d_i| > 0)
+        "max_absolute": maximum absolute change. Implemented as:
+            max_i |d_i|
+        "linf": L-infinity norm (Maximum norm). Implemented as:
+            ||d||_∞  (max_i |d_i|)
+        "l1": L1 norm (Manhattan norm). Implemented as:
+            ||d||_1  (sum_i |d_i|)
+        "l2": L2 norm (Euclidean norm, commonly adopted). Implemented as:
+            ||d||_2  (sqrt(sum_i d_i^2))
+
+    Args:
+        seq1, seq2: Numeric sequences (or scalars). Must have same length.
+        metric: Metric name as above.
+        ignore_nan: If True, drop positions where either x or y is NaN/non-numeric.
+            If False, raises on non-numeric or NaN.
+
+    Returns:
+        float: The computed metric. If all positions are dropped, returns 0.0.
+
+    Raises:
+        ValueError: On length mismatch, invalid metric, or non-numeric values when 
+            ignore_nan=False.
+    """
+    # Convert inputs to 1D numpy arrays
+    x = np.asarray(seq1, dtype=float).ravel()
+    y = np.asarray(seq2, dtype=float).ravel()
+
+    if x.shape != y.shape:
+        raise ValueError("Sequences must have the same shape.")
+
+    # Build mask for valid numeric entries
+    valid_mask = np.isfinite(x) & np.isfinite(y)
+
+    if not ignore_nan:
+        if not np.all(valid_mask):
+            raise ValueError(
+                "NaN/Inf values encountered and ignore_nan=False.")
+    else:
+        x = x[valid_mask]
+        y = y[valid_mask]
+
+    if x.size == 0:
+        return 0.0
+
+    d = x - y
+    abs_d = np.abs(d)
+
+    if metric == "max_relative":
+        denom = np.abs(y)
+        # relative element-wise; denom==0 and abs_d>0 -> inf
+        with np.errstate(divide='ignore', invalid='ignore'):
+            rel = np.where(
+                abs_d == 0, 0.0, np.where(denom == 0, np.inf, abs_d / denom))
+        return float(np.max(rel))
+
+    if metric == "max_absolute":
+        return float(np.max(abs_d))
+
+    if metric == "l1":
+        return float(np.linalg.norm(d, ord=1))
+
+    if metric == "l2":
+        return float(np.linalg.norm(d, ord=2))
+
+    if metric == "linf":
+        return float(np.linalg.norm(d, ord=np.inf))
+
+    raise ValueError(f"Unsupported metric '{metric}'.")
+
+
+def root_mean_square(
+        values: Iterable | np.ndarray | pd.Series,
+        ignore_nan: bool = True,
+) -> float:
+    """Compute the root-mean-square (RMS) of numeric values.
+
+    RMS is defined as: rms = sqrt( (1/n) * sum_i v_i^2 )
+
+    Args:
+        values: Any iterable/array/Series of numeric values (list, set, tuple, 
+            ndarray, Series).
+        ignore_nan: If True, drops NaN/Inf entries before computing RMS; if all 
+            are dropped, returns 0.0. If False, raises on NaN/Inf.
+
+    Returns:
+        float: The RMS of the provided values.
+
+    Raises:
+        ValueError: If non-numeric, NaN/Inf values are present and ignore_nan=False.
+    """
+    arr = np.asarray(
+        list(values) if not isinstance(values, (np.ndarray, pd.Series))
+        else values, dtype=float
+    ).ravel()
+
+    valid_mask = np.isfinite(arr)
+    if not ignore_nan:
+        if not np.all(valid_mask):
+            raise ValueError(
+                "NaN/Inf values encountered and ignore_nan=False.")
+    else:
+        arr = arr[valid_mask]
+
+    if arr.size == 0:
+        return 0.0
+
+    return float(np.sqrt(np.mean(arr**2)))
 
 
 def calculate_values_difference(
@@ -1057,6 +1271,15 @@ def is_sparse(array: np.ndarray, threshold: float) -> bool:
     Returns:
         bool: True if the array is sparse, False otherwise.
     """
+    if not isinstance(array, np.ndarray):
+        raise TypeError(
+            "Argument 'array' must be a numpy ndarray. "
+            f"{type(array).__name__} was passed instead."
+        )
+
+    if not (0 <= threshold <= 1):
+        raise ValueError("Argument 'threshold' must be between 0 and 1.")
+
     total_elements = array.size
     zero_elements = np.count_nonzero(array == 0)
     proportion_zero = zero_elements / total_elements
@@ -1067,3 +1290,153 @@ def is_sparse(array: np.ndarray, threshold: float) -> bool:
         return True
     else:
         return False
+
+
+def normalize_dataframe(
+        df: pd.DataFrame,
+        exclude_columns: Optional[List[str]] = None,
+        numeric_columns: Optional[List[str]] = None,
+        numeric_dtype: Optional[type] = None,
+        replace_nans: bool = True,
+        nan_fill_value: Optional[Any] = None,
+) -> pd.DataFrame:
+    """Normalize a DataFrame with optional casting and missing-value handling.
+
+    Processing steps (in order):
+      1. Copy the input DataFrame to avoid mutating the original.
+      2. Validate exclude_columns; build target_cols = all columns except exclusions.
+      3. If numeric_columns is provided, cast those columns (except excluded ones) to numeric_dtype.
+      4. If replace_nans is True, replace a set of Na-like sentinels in target_cols with Python None.
+      5. If nan_fill_value is not None, fill remaining None/NaN entries globally with that value.
+
+    Na-like sentinels replaced when replace_nans is True:
+      pd.NA, np.nan, float('nan'), 'nan', 'NaN', 'NA', 'na', 'N/A', 'null'
+
+    Args:
+        df (pd.DataFrame): Input DataFrame to normalize.
+        exclude_columns (List[str] | None): Columns to skip for Na-like replacement
+            and numeric casting. Default None.
+        numeric_columns (str | List[str] | None): Column name(s) to cast to numeric_dtype.
+            (Current signature accepts str; pass a list if multiple needed.)
+        numeric_dtype (type | None): Target dtype for columns in numeric_columns.
+            Required if numeric_columns is provided.
+        replace_nans (bool): If True, perform Na-like sentinel replacement in non-excluded columns.
+        nan_fill_value (Any | None): Value used with DataFrame.fillna after replacement.
+            If None, no fill is performed.
+
+    Returns:
+        pd.DataFrame: A new normalized DataFrame.
+
+    Raises:
+        TypeError: If df is not a pandas DataFrame.
+        ValueError: If exclude_columns or numeric_columns contain invalid names,
+            if numeric_columns is provided without numeric_dtype,
+            or if casting fails for any specified column.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(
+            "Argument 'df' must be a pandas DataFrame. "
+            f"{type(df).__name__} was passed instead."
+        )
+
+    df = df.copy()
+
+    # Validate exclude_columns
+    if exclude_columns is None:
+        exclude_columns = []
+    else:
+        if not items_in_list(exclude_columns, df.columns):
+            raise ValueError(
+                f"One or more columns in '{exclude_columns}' not found "
+                "in DataFrame.")
+
+    target_cols = [col for col in df.columns if col not in exclude_columns]
+
+    # Step 1: Convert numeric columns to specified dtype
+    if numeric_columns is not None:
+        if not items_in_list(numeric_columns, df.columns):
+            raise ValueError(
+                f"One or more columns in '{numeric_columns}' not found "
+                "in DataFrame.")
+
+        if not numeric_dtype:
+            raise ValueError(
+                "When 'numeric_columns' is specified, "
+                "'numeric_dtype' must also be provided.")
+
+        try:
+            df.update({
+                col: df[col].astype(numeric_dtype)
+                for col in numeric_columns
+                if col not in exclude_columns
+            })
+        except Exception as e:
+            raise ValueError(
+                "Error converting specified numeric columns to "
+                f"'{numeric_dtype}': {e}"
+            ) from e
+
+    # Step 2: Replace all NaN/Na variants with None
+    if replace_nans:
+        nan_variants = {
+            key: None for key in
+            [
+                pd.NA, np.nan, float('nan'),
+                'nan', 'NaN', 'NA', 'na', 'N/A', 'null'
+            ]
+        }
+        df[target_cols] = df[target_cols].replace(nan_variants)
+
+    # Step 3: Fill None/NaN with specific value
+    if nan_fill_value is not None:
+        df.fillna(nan_fill_value, inplace=True)
+
+    return df
+
+
+def filter_non_allowed_negatives(
+        dataframe: pd.DataFrame,
+        column_header: str,
+) -> pd.DataFrame:
+    """Set DataFrame column values to zero based on sign condition.
+
+    This function creates a copy of the input DataFrame and modifies the negative 
+    values in the specified column to zero. 
+
+    Args:
+        dataframe (pd.DataFrame): The DataFrame to modify.
+        column_header (str): The name of the column to modify.
+
+    Returns:
+        pd.DataFrame: A modified copy of the DataFrame with updated column values.
+
+    Raises:
+        TypeError: If dataframe is not a pandas DataFrame or column_header is not a string.
+        ValueError: If column_header does not exist in the DataFrame or if
+            condition_values is not one of the specified literals.
+    """
+    if not isinstance(dataframe, pd.DataFrame):
+        raise TypeError("Passed 'dataframe' must be a pandas DataFrame.")
+
+    if not isinstance(column_header, str):
+        raise TypeError("Passed 'column_header' must be a string.")
+
+    if column_header not in dataframe.columns:
+        raise ValueError(f"Column '{column_header}' not found in DataFrame.")
+
+    df = dataframe.copy()
+    series = df[column_header]
+    numeric_series = pd.to_numeric(series, errors='coerce')
+
+    if numeric_series.isna().any():
+        invalid_mask = numeric_series.isna() & series.notna()
+        invalid_examples = series[invalid_mask].unique().tolist()
+        raise ValueError(
+            f"Column '{column_header}' contains non-numeric values: {invalid_examples}"
+        )
+
+    # set negative values to zero
+    numeric_series = numeric_series.mask(numeric_series < 0, 0)
+    df[column_header] = numeric_series
+
+    return df

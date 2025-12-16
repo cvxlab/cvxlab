@@ -105,6 +105,7 @@ dmypy.json
 
 # Folders
 # .vscode/
+.work/
 
 # File extensions
 *.log

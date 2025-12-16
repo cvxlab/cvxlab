@@ -120,7 +120,7 @@ class Problem:
             return len(self.numerical_problems)
 
     @property
-    def endogenous_tables(self) -> list:
+    def endogenous_tables_all(self) -> list:
         """List of keys of the data tables that collect endogenous data.
 
         This property returns a list of keys corresponding to data tables
@@ -140,6 +140,22 @@ class Problem:
                 endogenous_tables_keys.append(table_key)
 
         return endogenous_tables_keys
+
+    @property
+    def endogenous_tables_mixed(self) -> list:
+        """List of keys of the data tables that collect mixed endogenous/exogenous data.
+
+        This property returns a list of keys corresponding to data tables
+        that contain both endogenous and exogenous data, typically used in
+        integrated problems.
+
+        Returns:
+            list: A list of keys for data tables with mixed endogenous/exogenous data.
+        """
+        return [
+            table_key for table_key, data_table in self.index.data.items()
+            if isinstance(data_table.type, dict)
+        ]
 
     def create_cvxpy_variable(
         self,
@@ -487,7 +503,7 @@ class Problem:
         )
 
         for header in headers.values():
-            util.add_column_to_dataframe(
+            var_data = util.add_column_to_dataframe(
                 dataframe=var_data,
                 column_header=header,
                 column_values=None,
@@ -508,9 +524,13 @@ class Problem:
                     for dim in [0, 1]:
                         if isinstance(variable.shape_sets[dim], int):
                             pass
-                        elif isinstance(variable.shape_sets[dim], str):
-                            dim_header = variable.dims_labels[dim]
-                            var_filter[dim_header] = variable.dims_items[dim]
+                        elif isinstance(variable.shape_sets[dim], list):
+
+                            for dim_header, dim_items in zip(
+                                variable.dims_labels[dim],
+                                variable.dims_items[dim],
+                            ):
+                                var_filter[dim_header] = dim_items
 
                 elif header in [headers['filter'], headers['sub_problem_key']]:
                     pass
@@ -674,6 +694,70 @@ class Problem:
             for key, problem in data.items():
                 self.symbolic_problem[key] = DotDict(problem)
 
+    def _collect_problems_expressions(self) -> Dict[Optional[int | str], List[str]]:
+        """Collect symbolic expressions grouped by problem key.
+
+        Normalizes the symbolic_problem structure into a dict keyed by problem_key
+        (None for single-problem setups) and aggregates all expressions by selecting
+        entries under Defaults.Labels.OBJECTIVE and Defaults.Labels.EXPRESSIONS.
+
+        Returns:
+            Dict[Optional[int], List[str]]: A mapping from problem_key to a flat list
+            of expression strings to be parsed/validated.
+
+        Notes:
+            - If no symbolic_problem is loaded, returns an empty dict.
+            - When symbolic_problem depth is 1, it is wrapped with key None.
+        """
+        if not self.symbolic_problem:
+            return {}
+
+        if util.find_dict_depth(self.symbolic_problem) == 1:
+            symbolic_problem = {None: self.symbolic_problem}
+        else:
+            symbolic_problem = self.symbolic_problem
+
+        problem_structure_labels = [
+            Defaults.Labels.OBJECTIVE,
+            Defaults.Labels.EXPRESSIONS,
+        ]
+
+        return {
+            problem_key: [
+                expr
+                for label, expr_list in problem.items()
+                if label in problem_structure_labels
+                for expr in expr_list
+            ]
+            for problem_key, problem in symbolic_problem.items()
+        }
+
+    def _get_vars_in_expression(
+        self,
+        expression: str,
+        tokens: Optional[Dict[str, List[str]]] = None,
+    ) -> Dict[str, Variable]:
+        """
+        Return {var_key: Variable} for variables referenced in a literal expression.
+
+        If 'tokens' is provided (as built by TOKEN_PATTERNS), it will use tokens['text'].
+        Otherwise it will tokenize the expression to extract text tokens.
+        """
+        token_patterns = Defaults.SymbolicDefinitions.TOKEN_PATTERNS
+        if tokens is None:
+            text_tokens = util_text.extract_tokens_from_expression(
+                expression=expression,
+                pattern=token_patterns['text'],
+            )
+        else:
+            text_tokens = tokens.get('text', [])
+
+        return {
+            var_key: variable
+            for var_key, variable in self.index.variables.items()
+            if var_key in text_tokens
+        }
+
     def validate_symbolic_expressions(self) -> None:
         """Validate symbolic expressions.
 
@@ -702,27 +786,10 @@ class Problem:
         source_format = self.settings['model_settings_from']
         token_patterns = Defaults.SymbolicDefinitions.TOKEN_PATTERNS
         allowed_operators = Defaults.SymbolicDefinitions.ALLOWED_OPERATORS
-        problem_structure_labels = [
-            Defaults.Labels.OBJECTIVE,
-            Defaults.Labels.EXPRESSIONS,
-        ]
 
         errors = []
 
-        if util.find_dict_depth(self.symbolic_problem) == 1:
-            symbolic_problem = {None: self.symbolic_problem}
-        else:
-            symbolic_problem = self.symbolic_problem
-
-        problems_expressions = {
-            problem_key: [
-                expr
-                for label, expr_list in problem.items()
-                if label in problem_structure_labels
-                for expr in expr_list
-            ]
-            for problem_key, problem in symbolic_problem.items()
-        }
+        problems_expressions = self._collect_problems_expressions()
 
         for problem_key, expr_list in problems_expressions.items():
 
@@ -780,11 +847,8 @@ class Problem:
                         f"{non_allowed_vars_keys}.")
 
                 # intra-problem sets in a variable must not be a dimension in other variables
-                vars_in_expression = {
-                    var_key: variable
-                    for var_key, variable in self.index.variables.items()
-                    if var_key in tokens['text']
-                }
+                vars_in_expression = self._get_vars_in_expression(
+                    expression, tokens)
 
                 intra_problem_sets = set()
                 shape_set_map = {}
@@ -792,7 +856,9 @@ class Problem:
                 for var_key, variable in vars_in_expression.items():
                     variable: Variable
                     intra_problem_sets.update(variable.intra_sets or [])
-                    shape_set_map[var_key] = set(variable.shape_sets or [])
+                    shape_set_map[var_key] = set(
+                        util.flattening_list(variable.shape_sets)
+                    )
 
                 for var_key, dim_sets in shape_set_map.items():
                     overlapping_sets = intra_problem_sets & dim_sets
@@ -816,6 +882,126 @@ class Problem:
                 f"Check setup '{source_format}' file. "
             self.logger.error(msg)
             raise exc.ConceptualModelError(msg)
+
+    def add_implicit_symbolic_expressions(self) -> None:
+        """Add implicit symbolic expressions based on variable sign attributes.
+
+        This method adds implicit symbolic expressions to the existing symbolic
+        problem definitions based on the nonneg attribute of variables.
+        For each variable with a defined nonneg attribute as true, the method 
+        generates corresponding symbolic expressions (e.g., "var_key >= 0") and 
+        appends them to the expressions list in the symbolic problem structure.
+
+        NOTES:
+            In case of single-problem setups, all implicit expressions are added
+                to the problem.
+            In case of multiple problems: 
+                For hybrid variables type, the non-negativity constraints 
+                    are added to the problem where the variable is endogenous.
+                For pure endogenous variables, the non-negativity constraints are
+                    added only if the variable is used in the problem expressions.
+                    In case the variable is not used in any problem expressions,
+                    an error is raised (constraint must be explicitly defined in
+                    symbolic problem).
+        """
+        self.logger.debug(f"Adding implicit symbolic expressions.")
+
+        expressions_key = Defaults.Labels.EXPRESSIONS
+        var_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
+
+        if not self.symbolic_problem:
+            return
+
+        problems_expressions = self._collect_problems_expressions()
+
+        if util.find_dict_depth(self.symbolic_problem) == 1:
+            symbolic_problem = {None: self.symbolic_problem}
+        else:
+            symbolic_problem = self.symbolic_problem
+
+        # Collect variables in all expressions for all problems
+        problems_vars: Dict[Optional[int | str], List[str]] = {}
+        for problem_key, expr_list in problems_expressions.items():
+            var_keys: set[str] = set()
+            for expression in expr_list:
+                var_keys.update(
+                    self._get_vars_in_expression(expression).keys())
+            problems_vars[problem_key] = list(var_keys)
+
+        implicit_expr_by_problem: Dict[Optional[int | str], List[str]] = {
+            problem_key: [] for problem_key in symbolic_problem
+        }
+        errors: List[str] = []
+
+        # Add implicit expressions based on variable sign attributes
+        for problem_key, problem in symbolic_problem.items():
+
+            for var_key, variable in self.index.variables.items():
+                variable: Variable
+
+                if not variable.nonneg:
+                    continue
+
+                # Case of one single problem: add all implicit constraints
+                if len(problems_expressions) == 1:
+                    constraint = f"{var_key} >= 0"
+                    if constraint not in problems_expressions.get(problem_key, []) and \
+                            constraint not in implicit_expr_by_problem[problem_key]:
+                        implicit_expr_by_problem[problem_key].append(
+                            constraint)
+                        continue
+
+                # Multiple problems, hybrid variables: add implicit expressions
+                # only to problem where variable is endogenous
+                if isinstance(variable.type, dict):
+                    if variable.type[problem_key] == var_types['ENDOGENOUS']:
+                        constraint = f"{var_key} >= 0"
+                        if constraint not in problems_expressions.get(problem_key, []) and \
+                                constraint not in implicit_expr_by_problem[problem_key]:
+                            implicit_expr_by_problem[problem_key].append(
+                                constraint)
+
+                # Multiple problems, pure endogenous variables
+                elif variable.type == var_types['ENDOGENOUS']:
+
+                    # Case of variable used in the problem expressions
+                    if var_key in problems_vars.get(problem_key, []):
+                        constraint = f"{var_key} >= 0"
+                        if constraint not in problems_expressions.get(problem_key, []) and \
+                                constraint not in implicit_expr_by_problem[problem_key]:
+                            implicit_expr_by_problem[problem_key].append(
+                                constraint)
+
+                    else:
+                        # If variable not used in problems expressions, raise error
+                        used_elsewhere = any(
+                            var_key in vars_list
+                            for other_key, vars_list in problems_vars.items()
+                            if other_key != problem_key
+                        )
+                        if not used_elsewhere and var_key not in errors:
+                            errors.append(var_key)
+
+        if errors:
+            msg = (
+                "Generation of implicit symbolic expressions failed | "
+                f"Non-negative variables '{errors}' not used in any problems "
+                "expressions. For these variables, define non-negativity constraints "
+                "explicitly, if needed."
+            )
+            self.logger.error(msg)
+            raise exc.ConceptualModelError(msg)
+
+        # Append implicit expressions to symbolic problem
+        for problem_key, problem in symbolic_problem.items():
+            implicit_expressions = implicit_expr_by_problem.get(
+                problem_key, [])
+
+            if expressions_key in problem and \
+                    isinstance(problem[expressions_key], list):
+                problem[expressions_key].extend(implicit_expressions)
+            else:
+                problem[expressions_key] = implicit_expressions
 
     def check_data_tables_and_problem_coherence(self) -> None:
         """Check coherence between symbolic problems and data tables.
@@ -1051,7 +1237,7 @@ class Problem:
         problems_df = self.index.scenarios_info.copy()
 
         for item in headers.values():
-            util.add_column_to_dataframe(
+            problems_df = util.add_column_to_dataframe(
                 dataframe=problems_df,
                 column_header=item,
                 column_values=None,
@@ -1206,7 +1392,7 @@ class Problem:
                         variable_data[cvxpy_var_header].values[0]
                 else:
                     msg = "Unable to identify a unique cvxpy variable for " \
-                        f"{var_key} based on the current problem filter."
+                        f"'{var_key}' based on the current problem filter."
                     self.logger.error(msg)
                     raise exc.ConceptualModelError(msg)
 
@@ -1462,9 +1648,7 @@ class Problem:
             problem_dataframe: pd.DataFrame,
             problem_name: Optional[str] = None,
             scenarios_idx: Optional[List[int] | int] = None,
-            solver_verbose: Optional[bool] = True,
-            solver: Optional[str] = None,
-            **kwargs: Any,
+            **solver_settings: Any,
     ) -> None:
         """Solve numerical problems defined in problem DataFrame.
 
@@ -1488,7 +1672,7 @@ class Problem:
                 will choose a solver automatically. Defaults to None.
             **kwargs (Any): Additional arguments to pass to the solver.
         """
-        if solver_verbose == False:
+        if solver_settings['verbose'] == False:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
             warnings.filterwarnings(
@@ -1529,8 +1713,7 @@ class Problem:
 
             self.logger.info(msg)
 
-            cvxpy_problem.solve(
-                solver=solver, verbose=solver_verbose, **kwargs)
+            cvxpy_problem.solve(**solver_settings)
 
             self.logger.info(f"Problem status: '{cvxpy_problem.status}'")
 

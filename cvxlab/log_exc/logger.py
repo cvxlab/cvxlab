@@ -3,9 +3,13 @@
 Provides the Logger class for consistent, colorized logging across the package.
 Supports configurable formats, log levels, child loggers, and timing context managers.
 """
-
 import logging
 import time
+import subprocess
+import tempfile
+import os
+import sys
+import platform
 
 from contextlib import contextmanager
 from typing import Literal
@@ -216,14 +220,198 @@ class Logger:
             if log_format:
                 self.logger.handlers[0].setFormatter(original_formatter)
 
+    @contextmanager
+    def convergence_monitor(
+            self,
+            output_dir: str,
+            norm_metric: str,
+            tolerance_max: float,
+            tolerance_avg: float,
+            scenario_name: str = "N/A",
+            activate_terminal: bool = True,
+            refresh_interval: float = 2.0,
+    ):
+        """Context manager for convergence monitoring in a separate terminal.
+
+        Creates a temporary file and opens a new terminal window to monitor
+        convergence data in real-time.
+
+        Args:
+            output_dir (str): Directory for temporary convergence file.
+            tolerance (float): Numerical tolerance threshold (as decimal).
+            scenario_name (str): Name/coordinates of the scenario being solved.
+            activate_terminal (bool): If True, opens monitoring terminal; if False, 
+                only writes to file.
+            refresh_interval (float): Seconds between terminal refreshes (default: 2.0s).
+
+
+        Yields:
+            dict: Dictionary with 'log' method for writing convergence data.
+        """
+        # Create log file
+        log_filename = f"convergence_{scenario_name}.log"
+        convergence_file_path = os.path.join(output_dir, log_filename)
+
+        if os.path.exists(convergence_file_path):
+            os.remove(convergence_file_path)
+
+        header_lines = [
+            "="*79,
+            f"CONVERGENCE MONITORING - Scenario: {scenario_name}",
+            f"Numerical changes across iteration assessed based on Norm metric: '{norm_metric}'",
+            f"Tolerance on each data tables norm: {tolerance_max:.3f}",
+            f"Tolerance on RMS for all data tables norm: {tolerance_avg:.3f}",
+            "Tolerances in absolute values. '*' indicates value above tolerance.",
+            "="*79,
+            ""
+        ]
+
+        terminal_process = None
+        terminal_opened = False
+
+        def open_terminal():
+            """Open a new terminal window to monitor the convergence log file."""
+            nonlocal terminal_process, terminal_opened
+
+            if terminal_opened or not activate_terminal:
+                return
+
+            try:
+                system = platform.system()
+
+                if system == 'Windows':
+                    ps_command = (
+                        f'while ($true) {{ '
+                        f'Clear-Host; '
+                        f'Get-Content "{convergence_file_path}"; '
+                        f'Start-Sleep -Seconds {refresh_interval} '
+                        f'}}'
+                    )
+                    terminal_process = subprocess.Popen(
+                        ['powershell', '-NoExit', '-Command', ps_command],
+                        creationflags=subprocess.CREATE_NEW_CONSOLE
+                    )
+
+                elif system == 'Darwin':  # macOS
+                    script = f'''
+                        tell application "Terminal"
+                            do script "while true; do clear; cat '{convergence_file_path}'; sleep {refresh_interval}; done"
+                            activate
+                        end tell
+                    '''
+                    terminal_process = subprocess.Popen(
+                        ['osascript', '-e', script]
+                    )
+
+                elif system == 'Linux':
+                    self.logger.warning(
+                        "Terminal-based convergence monitoring is not implemented "
+                        "for Linux systems in this version.")
+
+                else:
+                    self.logger.warning(
+                        f"Unsupported OS: {system}. "
+                        f"Logging to file only: {convergence_file_path}"
+                    )
+
+                terminal_opened = True
+
+            except Exception as e:
+                self.logger.warning(
+                    f"Could not open convergence monitoring terminal: {e}. "
+                    f"Logging to file: {convergence_file_path}"
+                )
+
+        def convergence_log(message: str):
+            """Rewrite file with header + current message only."""
+            with open(convergence_file_path, 'w') as f:
+                # Write header
+                for line in header_lines:
+                    f.write(line + "\n")
+
+                # Write only the latest message
+                f.write(message + "\n")
+                f.flush()
+
+            # Open terminal on first log entry
+            if not terminal_opened:
+                open_terminal()
+
+        if not activate_terminal:
+            self.logger.debug(
+                "Convergence monitoring: terminal disabled, logging to "
+                f"'{log_filename}' only.")
+
+        try:
+            yield {'log': convergence_log, 'file': convergence_file_path}
+
+        finally:
+            # Do nothing - keep the last logged message as-is
+            pass
+
 
 if __name__ == '__main__':
+
+    import tempfile
+
     logger = Logger(log_level='INFO', log_format='minimal')
+    logger.info("Starting convergence monitor test...")
 
-    try:
-        with logger.log_timing("Outer block"):
-            with logger.log_timing("Inner block"):
-                raise RuntimeError("Simulated failure")
+    # Use temporary directory
+    test_dir = tempfile.gettempdir()
 
-    except RuntimeError as e:
-        logger.error(f"Caught exception: {e}")
+    with logger.convergence_monitor(
+        output_dir=test_dir,
+        scenario_name="test_scenario",
+        norm_metric='l2',
+        tolerance_max=0.01,
+        tolerance_avg=0.005,
+    ) as conv_monitor:
+
+        conv_log = conv_monitor['log']
+
+        # Simulate convergence iterations
+        tables = ['table_1', 'table_2', 'table_3']
+        max_iterations = 5
+
+        # Store errors for all iterations
+        all_errors = {table: [] for table in tables}
+
+        for iteration in range(1, max_iterations + 1):
+            time.sleep(2)  # Simulate computation
+
+            # Generate decreasing errors for this iteration
+            for i, table in enumerate(tables):
+                error = 0.5 / (iteration + i)
+                all_errors[table].append(error)
+
+            # Build the complete message with all iterations so far
+            lines = []
+
+            # Header row with iteration numbers
+            header = f"{'Table':<12}" + \
+                "".join(f"Iter_{j:>2}  " for j in range(1, iteration + 1))
+            lines.append(header)
+            lines.append("-" * len(header))
+
+            # Data rows for each table
+            for table in tables:
+                values_str = "".join(
+                    f"{e*100:>7.3f}{'*' if e > 0.001 else ' '} "
+                    for e in all_errors[table]
+                )
+                lines.append(f"{table:<12}{values_str}")
+
+            # Check convergence
+            current_errors = [all_errors[table][-1] for table in tables]
+            if all(e < 0.001 for e in current_errors):
+                lines.append("")
+                lines.append("Convergence reached!")
+
+            # Log the complete message
+            conv_log("\n".join(lines))
+
+            if all(e < 0.001 for e in current_errors):
+                break
+
+    logger.info("Test completed. Check the monitoring terminal.")

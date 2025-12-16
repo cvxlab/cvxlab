@@ -5,7 +5,7 @@ defining templates for fundamental package objects (sets, data tables, variables
 for validation purposes, defining fundamental numerical settings and template 
 text messages.
 """
-from typing import Union
+from typing import Literal, TypeAlias, Union
 
 import cvxpy as cp
 import numpy as np
@@ -87,6 +87,7 @@ class Defaults:
         - VARIABLES_INFO_KEY: key related to the variables information.
         - VALUE_KEY: key related to the type for variable of type constants.
         - BLANK_FILL_KEY: key related to the value used to fill blank.
+        - NONNEG_KEY: key related to the non-negativity sign of endogenous variables.
 
         Dataframe columns default labels:
 
@@ -97,6 +98,8 @@ class Defaults:
         - PROBLEM_STATUS: column representing problem status.
         - OBJECTIVE: column representing the objective of the problem.
         - EXPRESSIONS: column representing expressions in the problem.
+        - RMS_TABLES: column representing label for RMS reporting monitor for 
+            integrated problems solving.
 
         Default field types for SQLite data tables:
 
@@ -121,6 +124,7 @@ class Defaults:
         VARIABLES_INFO_KEY = 'variables_info'
         VALUE_KEY = 'value'
         BLANK_FILL_KEY = 'blank_fill'
+        NONNEG_KEY = 'nonneg'
 
         SUB_PROBLEM_KEY = 'sub_problem_key'
         FILTER_DICT_KEY = 'filter'
@@ -129,6 +133,7 @@ class Defaults:
         PROBLEM_STATUS = 'status'
         OBJECTIVE = 'objective'
         EXPRESSIONS = 'expressions'
+        RMS_TABLES = 'ALL TABLES RMS'
 
         GENERIC_FIELD_TYPE = 'TEXT'
         VALUES_FIELD = {'values': ['values', 'REAL']}
@@ -204,6 +209,12 @@ class Defaults:
             - blank_fill: 
                 (Optional) numerical value that will be used to fill variables
                 in case of blank or nan values.
+            - nonneg: 
+                (Optional) defines whether an endogenous variable is expected to 
+                be non-negative. This will result in an implicit non-negativity 
+                constraint defined in the model. In case of integrated models,
+                this constraint is useful to check if endogenous variables values 
+                are exchanged with the correct sign, to avoid numerical inconsistencies.
             - set_key: 
                 (Optional) dictionary with keys as set_key symbols and values
                 defining the dimension and filters for the set.
@@ -268,7 +279,8 @@ class Defaults:
                 'variables_info': {
                     ANY: {
                         'value': (OPTIONAL, str),
-                        'blank_fill': (OPTIONAL, float),
+                        'blank_fill': (OPTIONAL, Union[int, float]),
+                        'nonneg': (OPTIONAL, bool),
                         ANY: (OPTIONAL, {
                             'dim': (OPTIONAL, str),
                             'filters': (OPTIONAL, dict),
@@ -331,12 +343,12 @@ class Defaults:
             Dict of allowed dimensions of variables, where coordinates can be defined.
         - VARIABLE_TYPES: 
             Dict of allowed variable types for data tables.
-        - USER_DEFINED_CONSTANTS: 
+        - ALLOWED_CONSTANTS: 
             Dictionary of user-defined constants. These are defined within the 
             dictionary values (complex constants are defined in util_constants module), 
             are used to define variables (see 'value' field in data tables). 
             Constants are be built with exogenous data only. 
-        - USER_DEFINED_OPERATORS: 
+        - ALLOWED_OPERATORS: 
             Dictionary of user-defined operators. Keys of operators can be directly 
             used in symbolic expressions. These are defined within the dictionary 
             values (complex operators are defined in util_operators module). 
@@ -383,23 +395,12 @@ class Defaults:
             homogenize numerical values provided by user in input data files.
         - ALLOWED_TEXT_TYPE: 
             Type of allowed text values.
-        - ALLOWED_SOLVERS: 
-            List of installed solvers available for use. Same solvers as in 
-            cvxpy.installed_solvers().
-        - DEFAULT_SOLVER: 
-            Default solver to be used if not specified by the user.
+        - ALLOWED_SOLVERS:
+            List of allowed solvers installed in the current CVXPY version.
         - TOLERANCE_TESTS_RESULTS_CHECK: 
             Tolerance for checking results of tests. It is a relative difference 
             (0.02 means 2% of maximum allowed difference between the resulting 
             database and the test databases).
-        - TOLERANCE_MODEL_COUPLING_CONVERGENCE: 
-            Tolerance for convergence of model coupling. It is a relative difference 
-            (0.01 means 1% of maximum allowed difference between the resulting 
-            database and the previous iteration databases, considering the highest 
-            difference between the values of all the tables).
-        - MAXIMUM_ITERATIONS_MODEL_COUPLING: 
-            Maximum number of iterations for model coupling. It is used to limit 
-            the number of iterations in case of convergence issues.
         - ROUNDING_DIGITS_RELATIVE_DIFFERENCE_DB: 
             Number of digits to round the relative difference between the values 
             of the database and the test database. It is used to avoid numerical 
@@ -414,7 +415,15 @@ class Defaults:
             Batch size for SQL operations. It is used to limit the number of rows 
             processed in a single SQL operation to avoid memory issues and speed 
             up database operations.
-
+        - CVXPY_DEFAULT_SETTINGS:
+            Default settings for CVXPY solver. It includes the default solver, 
+            canon backend, and whether to ignore DPP.
+        - MODEL_COUPLING_SETTINGS:
+            Settings for model coupling. It includes:
+                allowed norms for convergence (max_relative, max_absolute, l1, l2, linf),
+                numerical tolerance for convergence for each table (absolute value),
+                numerical tolerance for convergence for all tables (RMS, absolute value), 
+                maximum number of iterations.
         """
 
         STD_VALUES_TYPE = float
@@ -422,18 +431,36 @@ class Defaults:
             int, float, np.dtype('float64'), np.dtype('int64'))
         ALLOWED_TEXT_TYPE = str
         ALLOWED_SOLVERS = cp.installed_solvers()
-        DEFAULT_SOLVER = 'SCIPY'
         TOLERANCE_TESTS_RESULTS_CHECK = 0.02
-        TOLERANCE_MODEL_COUPLING_CONVERGENCE = 0.01
-        MAXIMUM_ITERATIONS_MODEL_COUPLING = 20
         ROUNDING_DIGITS_RELATIVE_DIFFERENCE_DB = 5
         SPARSE_MATRIX_ZEROS_THRESHOLD = 0.3
         SQL_BATCH_SIZE = 1000
+        CVXPY_DEFAULT_SETTINGS = {
+            'solver': 'SCIPY',
+            'canon_backend': cp.SCIPY_CANON_BACKEND,
+            'ignore_dpp': True,
+        }
+        MODEL_COUPLING_SETTINGS = {
+            'allowed_norms': ['max_relative', 'max_absolute', 'l1', 'l2', 'linf'],
+            # Per-table tolerance:
+            # - For l1, l2, linf, max_absolute: ABSOLUTE thresholds (same units as values)
+            # - For max_relative: RELATIVE threshold (fraction, e.g., 0.01 = 1%)
+            'numerical_tolerance_max': 0.1,
+            # Global RMS tolerance (ABSOLUTE; RMS of per-table errors in same units)
+            'numerical_tolerance_avg': 0.005,
+            'max_iterations': 20,
+        }
 
-    class TextNotes:
-        """Text notes and messages for user. Still under development."""
+        NormType: TypeAlias = Literal[
+            'max_relative', 'max_absolute', 'l1', 'l2', 'linf']
 
-        GENERIC_NOTE = ("")
+        @staticmethod
+        def validate_norm_type(norm: str) -> str:
+            allowed_norms = Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS['allowed_norms']
+            if norm not in allowed_norms:
+                raise ValueError(
+                    f"Unsupported norm type '{norm}'. Allowed: {allowed_norms}.")
+            return norm
 
     _SUBGROUPS = [
         ConfigFiles,
@@ -441,7 +468,6 @@ class Defaults:
         DefaultStructures,
         SymbolicDefinitions,
         NumericalSettings,
-        TextNotes,
     ]
 
     @classmethod

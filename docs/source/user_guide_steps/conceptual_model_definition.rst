@@ -65,8 +65,10 @@ where :math:`m + n = k`
   expressions in the model are defined and the numerical problem solved for each 
   coordinate combination in the Cartesian product of inter-problem sets: 
   :math:`\iota \in \mathcal{S}_{I_1} \times \cdots \times \mathcal{S}_{I_m}`. 
-  Inter-problem sets are used to define multiple instances of the same problem,
-  e.g., to represent different scenarios or running sensitivity analysis.
+  Each combination is called **scenario**, defining a distinct instance of 
+  the optimization problem. Inter-problem sets are used to define multiple scenarios,
+  e.g., to represent different demand projections, cost assumptions, or to perform 
+  sensitivity analysis.
 
 - **Dimensions sets** :math:`\mathcal{S}_{D_1}, \ldots, \mathcal{S}_{D_n}`: 
   Specify the shape and indexing of model variables — i.e., how variables are arranged 

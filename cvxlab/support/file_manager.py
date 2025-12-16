@@ -15,9 +15,9 @@ import os
 import shutil
 import json
 import yaml
+import time
 
 import pandas as pd
-import numpy as np
 
 from cvxlab.defaults import Defaults
 from cvxlab.log_exc import exceptions as exc
@@ -34,8 +34,10 @@ class FileManager:
     ensuring that file manipulations are handled efficiently and reliably.
 
     Attributes:
+
     - logger (Logger): Logger object for logging information and errors.
     - xls_engine (str): Default Excel engine to use ('openpyxl' or 'xlsxwriter').
+
     """
 
     def __init__(
@@ -527,19 +529,81 @@ class FileManager:
         ) as writer:
             dataframe.to_excel(writer, sheet_name=sheet_name, index=False)
 
+    def _open_excel_file(
+            self,
+            excel_file_name: str,
+            excel_file_dir_path: Path | str,
+    ) -> pd.ExcelFile:
+        """Open and return an Excel file object.
+
+        Args:
+            excel_file_name (str): Name of the Excel file.
+            excel_file_dir_path (Path | str): Directory containing the Excel file.
+
+        Returns:
+            pd.ExcelFile: Opened Excel file object.
+
+        Raises:
+            FileNotFoundError: If Excel file does not exist.
+            OperationalError: If file cannot be opened.
+        """
+        file_path = Path(excel_file_dir_path, excel_file_name)
+
+        if not os.path.exists(file_path):
+            msg = f'{excel_file_name} does not exist.'
+            self.logger.error(msg)
+            raise FileNotFoundError(msg)
+
+        try:
+            return pd.ExcelFile(file_path, engine=self.xls_engine)
+        except Exception as error:
+            msg = f"Error opening Excel file: {str(error)}"
+            self.logger.error(msg)
+            raise exc.OperationalError(msg)
+
+    def _parse_excel_sheet(
+            self,
+            xlsx: pd.ExcelFile,
+            sheet_name: str,
+    ) -> pd.DataFrame:
+        """Parse a single Excel sheet and optionally normalize.
+
+        Args:
+            xlsx (pd.ExcelFile): Excel file object.
+            sheet_name (str): Name of the sheet to parse.
+
+        Returns:
+            pd.DataFrame: Parsed DataFrame.
+
+        Raises:
+            OperationalError: If parsing fails.
+        """
+        try:
+            df = xlsx.parse(
+                sheet_name=sheet_name,
+                dtype_backend="python" if hasattr(pd, "options") else None,
+                keep_default_na=True,
+            )
+        except Exception as e:
+            msg = f"Excel parsing error | sheet '{sheet_name}' | {str(e)}"
+            self.logger.error(msg)
+            raise exc.OperationalError(msg)
+
+        return df
+
     def excel_to_dataframes_dict(
             self,
             excel_file_name: str,
             excel_file_dir_path: Path | str,
-            empty_data_fill: Optional[Any] = None,
-            set_values_type: bool = True,
-            values_normalization: bool = True,
+            sheet_names: Optional[List[str | int]] = None,
     ) -> Dict[str, pd.DataFrame]:
         """Read an Excel file with multiple sheets into a dictionary of DataFrames.
 
         Args:
             excel_file_name (str): Name of the Excel file.
             excel_file_dir_path (Path | str): Directory containing the Excel file.
+            sheet_names (Optional[List[str | int]]): List of sheet names to parse. 
+                If None, parses all sheets.
             empty_data_fill (Optional[Any]): Value to fill empty cells.
             set_values_type (bool): If True, set values column type.
             values_normalization (bool): If True, normalize values.
@@ -549,122 +613,35 @@ class FileManager:
 
         Raises:
             FileNotFoundError: If Excel file does not exist.
+            ValueError: If specified sheet names are not found in the file.
         """
-        file_path = Path(excel_file_dir_path, excel_file_name)
+        xlsx = self._open_excel_file(excel_file_name, excel_file_dir_path)
+        available_sheets = xlsx.sheet_names
 
-        if set_values_type:
-            values_dtype = Defaults.NumericalSettings.STD_VALUES_TYPE
-            values_name = Defaults.Labels.VALUES_FIELD['values'][0]
-
-        if not os.path.exists(file_path):
-            self.logger.error(f'{excel_file_name} does not exist.')
-            raise FileNotFoundError(f"{excel_file_name} does not exist.")
-
-        try:
-            df_dict = pd.read_excel(io=file_path, sheet_name=None)
-        except Exception as error:
-            msg = f"Error reading Excel file: {str(error)}"
-            self.logger.error(msg)
-            raise exc.OperationalError(msg)
-
-        if not values_normalization:
-            return df_dict
-
-        for df_key, dataframe in df_dict.items():
-            try:
-                # Convert 'values' column if needed
-                if set_values_type and values_name in dataframe.columns:
-                    dataframe[values_name] = \
-                        dataframe[values_name].astype(values_dtype)
-
-                # Explicitly replace all NaN types (including numpy.float64('nan'))
-                # with None and then replace NaN with None
-                dataframe.replace({pd.NA: None, np.nan: None}, inplace=True)
-
-                # replace None with empty_data_fill
-                if empty_data_fill is not None:
-                    dataframe.fillna(empty_data_fill, inplace=True)
-
-                df_dict[df_key] = dataframe
-
-            except ValueError as ve:
-                msg = f"Normalization error | xlsx sheet '{df_key}' | {str(ve)}"
+        if sheet_names is None:
+            sheets_to_parse = available_sheets
+        else:
+            invalid_sheets = [
+                s for s in sheet_names
+                if s not in available_sheets
+            ]
+            if invalid_sheets:
+                msg = (
+                    f"Sheet(s) {invalid_sheets} not found in '{excel_file_name}' | "
+                    f"Available sheets: {available_sheets}"
+                )
                 self.logger.error(msg)
-                raise exc.OperationalError(msg)
-            except Exception as e:
-                msg = f"Unexpected error | xlsx sheet '{df_key}' | {str(e)}"
-                self.logger.error(msg)
-                raise exc.OperationalError(msg)
+                raise ValueError(msg)
+
+            sheets_to_parse = sheet_names
+
+        df_dict: Dict[str, pd.DataFrame] = {}
+
+        for sheet in sheets_to_parse:
+            df_dict[sheet] = self._parse_excel_sheet(
+                xlsx=xlsx, sheet_name=sheet)
 
         return df_dict
-
-    def excel_tab_to_dataframe(
-            self,
-            excel_file_name: str,
-            excel_file_dir_path: Path | str,
-            tab_name: str = None,
-            convert_native_types: bool = False,
-    ) -> pd.DataFrame:
-        """Read a specific tab from an Excel file as a DataFrame.
-
-        Args:
-            excel_file_name (str): Name of the Excel file.
-            excel_file_dir_path (Path | str): Directory containing the Excel file.
-            tab_name (str, optional): Name of the tab to read. If None, reads first tab.
-            convert_native_types (bool): If True, keep native types.
-
-        Returns:
-            pd.DataFrame: DataFrame from the specified tab.
-
-        Raises:
-            FileNotFoundError: If Excel file does not exist.
-        """
-        file_path = Path(excel_file_dir_path, excel_file_name)
-
-        if not os.path.exists(file_path):
-            msg = f"{excel_file_name} does not exist."
-            self.logger.error(msg)
-            raise FileNotFoundError(msg)
-
-        xlsx_file = pd.ExcelFile(file_path)
-        sheet_names = xlsx_file.sheet_names
-
-        if tab_name is None:
-            if len(sheet_names) > 1:
-                msg = f"Multiple tabs found in '{excel_file_name}'. Specify " \
-                    f"one of the following tabs: '{sheet_names}'."
-                self.logger.error(msg)
-                raise ValueError(msg)
-            tab_name = sheet_names[0]
-        else:
-            if tab_name not in sheet_names:
-                msg = f"Tab '{tab_name}' not found in '{excel_file_name}'. " \
-                    f"Available tabs: '{sheet_names}'."
-                self.logger.error(msg)
-                raise ValueError(msg)
-
-        dataframe = xlsx_file.parse(
-            sheet_name=tab_name,
-            keep_default_na=convert_native_types,
-        )
-
-        # case of native types from excel
-        if not convert_native_types:
-            # replace empty strings with None
-            dataframe.replace('', None, inplace=True)
-            # replace true/True/TRUE/false/False/FALSE with bool
-            dataframe.replace(
-                Defaults.DefaultStructures.ALLOWED_BOOL,
-                inplace=True
-            )
-
-        # replace NaN with None
-        dataframe = dataframe.astype(object).where(pd.notna(dataframe), None)
-
-        self.logger.debug(
-            f"Excel tab '{tab_name}' loaded from '{excel_file_name}'.")
-
-        return dataframe
 
     def load_data_structure(
             self,
@@ -686,6 +663,7 @@ class FileManager:
             SettingsError: If file or tab is empty or source not recognized.
         """
         available_sources = Defaults.ConfigFiles.AVAILABLE_SOURCES
+
         util.validate_selection(
             selection=source,
             valid_selections=available_sources
@@ -702,8 +680,14 @@ class FileManager:
 
         elif source == 'xlsx':
             file_name = Defaults.ConfigFiles.SETUP_XLSX_FILE
-            raw_data = self.excel_tab_to_dataframe(
-                file_name, dir_path, structure_key)
+            raw_data_dict = self.excel_to_dataframes_dict(
+                excel_file_name=file_name,
+                excel_file_dir_path=dir_path,
+                sheet_names=[structure_key],
+            )
+
+            raw_data = raw_data_dict[structure_key]
+            raw_data = util.normalize_dataframe(raw_data)
 
             if raw_data.empty:
                 msg = f"Excel tab '{structure_key}' is empty."

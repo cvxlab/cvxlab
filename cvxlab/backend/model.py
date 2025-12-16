@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, List, Literal, Optional
 
 import pandas as pd
-import cvxpy as cp
 
 from cvxlab.defaults import Defaults
 from cvxlab.backend.core import Core
@@ -504,11 +503,17 @@ class Model:
 
     def run_model(
         self,
-        verbose: bool = False,
         force_overwrite: bool = False,
         integrated_problems: bool = False,
+        convergence_monitoring: bool = True,
         solver: Optional[str] = None,
-        numerical_tolerance: Optional[float] = None,
+        solver_verbose: bool = False,
+        solver_settings: Optional[dict[str, Any]] = None,
+        convergence_norm: Defaults.NumericalSettings.NormType = 'l2',
+        convergence_tables: Literal[
+            'all_endogenous', 'mixed_only'] | List[str] = 'all_endogenous',
+        numerical_tolerance_max: Optional[float] = None,
+        numerical_tolerance_avg: Optional[float] = None,
         maximum_iterations: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
@@ -521,42 +526,71 @@ class Model:
         Finally, it logs a summary of the problems status.
 
         Args:
-            verbose (bool, optional): If True, logs verbose output related to 
-                numerical solver operation during the model run. Defaults to False.
             force_overwrite (bool, optional): If True, overwrites existing results. 
                 Defaults to False.
             integrated_problems (bool, optional): If True, solve problems iteratively 
                 using a block Gauss-Seidel (alternating optimization) scheme, where 
                 updated endogenous variables are exchanged until convergence. 
                 Defaults to False.
+            convergence_monitoring (bool, optional): If True, enables convergence
+                monitoring during the solving of integrated problems. Defaults to True.
             solver (str, optional): The solver to use for solving numerical 
                 problems. Defaults to None, in which case the default solver 
-                specified in 'Defaults.NumericalSettings.DEFAULT_SOLVER' is used.
-            numerical_tolerance (float, optional): The numerical tolerance for 
-                solving integrated problems. In case it is not defined, this is set
-                as 'Defaults.NumericalSettings.TOLERANCE_MODEL_COUPLING_CONVERGENCE'.
+                specified in 'Defaults.NumericalSettings.CVXPY_DEFAULT_SETTINGS' is used.
+            solver_verbose (bool, optional): If True, logs verbose output related to 
+                numerical solver operation during the model run. Defaults to False.
+            solver_settings (dict[str, Any], optional): Additional settings
+                for the solver passed as key-value pairs. Defaults to None.
+            convergence_norm (Defaults.NumericalSettings.NormType, optional):
+                The norm type to use for convergence monitoring in integrated
+                problems. Defaults to 'l2' (Euclidean Norm).
+            convergence_tables (Literal['all_endogenous', 'mixed_only'] | List[str], optional):
+                The data tables to consider for convergence monitoring in
+                integrated problems. Can be 'all_endogenous', 'mixed_only', or
+                a list of specific data table keys. Defaults to 'all_endogenous'.
+            numerical_tolerance_max (float, optional): Numerical tolerance for verifying
+                maximum relative change between iterations in integrated problems for 
+                each data table. Overrides 'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
+            numerical_tolerance_avg (float, optional): Numerical tolerance for verifying
+                average (RMS) norm for all data tables across iterations in integrated problems. 
+                Overrides 'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
             maximum_iterations (int, optional): The maximum number of iterations 
-                for solving integrated problems. In case it is not defined, this is
-                set as 'Defaults.NumericalSettings.MAXIMUM_ITERATIONS_MODEL_COUPLING'.
-            **kwargs: Additional keyword arguments to be passed to the solver.
+                for solving integrated problems. Overrides 
+                'Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS'.
+            **kwargs: Additional keyword arguments to be passed to the solver. Useful 
+                for setting solver-specific options.
 
         Raises:
             exc.SettingsError: In case solver is not supported by current cvxpy version.
             exc.SettingsError: If no numerical problems are found, or if integrated
                 problems are requested but only one problem is found.
         """
+        cvxpy_defaults = Defaults.NumericalSettings.CVXPY_DEFAULT_SETTINGS
+        cvxpy_allowed_solvers = Defaults.NumericalSettings.ALLOWED_SOLVERS
         sub_problems = self.core.problem.number_of_sub_problems
         problem_scenarios = len(self.core.index.scenarios_info)
-        allowed_solvers = Defaults.NumericalSettings.ALLOWED_SOLVERS
 
-        if solver is None:
-            solver = Defaults.NumericalSettings.DEFAULT_SOLVER
+        # Merge order: defaults < solver_settings < kwargs < explicit 'solver' arg
+        solver_config = {
+            **cvxpy_defaults,
+            **(solver_settings or {}),
+            **kwargs,
+        }
 
-        if solver not in allowed_solvers:
-            msg = f"Solver '{solver}' not supported by current CVXPY version. " \
-                f"Available solvers: {allowed_solvers}"
+        if solver is not None:
+            solver_config['solver'] = solver
+
+        selected_solver = solver_config.get('solver', cvxpy_defaults['solver'])
+
+        if selected_solver not in cvxpy_allowed_solvers:
+            msg = f"Solver '{selected_solver}' not supported by current CVXPY " \
+                f"version. Available solvers: {cvxpy_allowed_solvers}"
             self.logger.error(msg)
             raise exc.SettingsError(msg)
+
+        solver_settings = solver_config.copy()
+        solver_settings['solver'] = selected_solver
+        solver_settings['verbose'] = solver_verbose
 
         if sub_problems == 0:
             msg = "Numerical problem not found. Initialize problem first."
@@ -576,36 +610,36 @@ class Model:
         problem_count = '1' if sub_problems == 1 else f'{sub_problems}'
 
         self.logger.info(
-            f"Model run summary: "
-            f"\n\tNumber of problems: {problem_count} "
-            f"\n\tSolution mode: '{solution_type}' "
-            f"\n\tScenarios number: {problem_scenarios} "
-            f"\n\tSolver: '{solver}'\n")
+            f"Model run | Solution mode: {solution_type}' | Solver: '{solver}' | "
+            f"Problems: {problem_count} | Scenarios: {problem_scenarios}")
 
-        if verbose:
-            self.logger.info("="*30)
-            self.logger.info("cvxpy logs below.")
+        if solver_verbose:
+            self.logger.info("Model run | CVXPY logs below")
 
         with self.logger.log_timing(
             message=f"Solving numerical problems...",
             level='info',
         ):
             self.core.solve_numerical_problems(
-                solver=solver,
-                solver_verbose=verbose,
                 force_overwrite=force_overwrite,
                 integrated_problems=integrated_problems,
-                numerical_tolerance=numerical_tolerance,
+                convergence_monitoring=convergence_monitoring,
+                convergence_norm=convergence_norm,
+                convergence_tables=convergence_tables,
+                numerical_tolerance_max=numerical_tolerance_max,
+                numerical_tolerance_avg=numerical_tolerance_avg,
                 maximum_iterations=maximum_iterations,
-                canon_backend=cp.SCIPY_CANON_BACKEND,
-                ignore_dpp=True,
-                **kwargs,
+                **solver_settings,
             )
 
-        self.logger.info("="*30)
-        self.logger.info("Numerical problems status report:")
+        msg = "Numerical problems status report:"
+        self.logger.info("="*len(msg))
+        self.logger.info(msg)
+
         for info, status in self.core.problem.problem_status.items():
-            self.logger.info(f"{info}: {status}")
+            self.logger.info(
+                f"{info}: {status}" if info else f"{status}"
+            )
 
     def load_results_to_database(
         self,
@@ -638,12 +672,13 @@ class Model:
                 self.logger.warning(
                     "Numerical problem has not solved yet and results "
                     "cannot be exported.")
-            else:
-                self.core.cvxpy_endogenous_data_to_database(
-                    scenarios_idx=scenarios_idx,
-                    force_overwrite=force_overwrite,
-                    suppress_warnings=suppress_warnings
-                )
+                return
+
+            self.core.cvxpy_endogenous_data_to_database(
+                scenarios_idx=scenarios_idx,
+                force_overwrite=force_overwrite,
+                suppress_warnings=suppress_warnings
+            )
 
     def update_database_and_problem(self, force_overwrite: bool = False) -> None:
         """Update SQLite database with exogenous data and initialize problems.
@@ -800,32 +835,42 @@ class Model:
     def variable(
             self,
             name: str,
-            problem_key: Optional[str | int] = None,
             scenario_key: Optional[int] = None,
+            intra_problem_key: Optional[int] = None,
+            if_hybrid_var: Literal['endogenous', 'exogenous'] = 'endogenous',
     ) -> Optional[pd.DataFrame]:
         """Fetch variable data.
 
-        This method fetches data for a specific variable. In case the model is 
-        defined by multiple numerical problmes and for multiple scenarios (linear 
-        combination of inter-problem sets), the related keys must be passed to
-        univocally identify the values of the variable.
-        Useful for inspecting variables data during model generation and debugging.
+        This method retrieves the data for a specified variable based on optional 
+        inter-problem and intra-problem sets cardinality, supporting the data 
+        inspection process after a model has run, but before data has exported to the 
+        database. This is particularly useful in case multiple runs of the model, 
+        to facilitate the control of the numerical data from the user.
+        In case a variable is defined as both endogeous and exogenous, depending on 
+        the numerical problem, the user can specify the one to inspect (default 
+        as the endogenous one).
+        If the variable is specified for multiple inter- and intra-problem sets,
+        scenario_key defines the cardinality of inter-problem sets, while 
+        intra_problem_key defines the cardinality of intra-problem sets.
 
         Args:
-            name (str): The name of the variable.
-            problem_key (Optional[str | int], optional): The symbolic problem key. 
-                Defaults to None.
-            scenario_key (Optional[int], optional): The scenario index, corresponding
-                to a problem identified by the linear combination of inter-problem
-                sets. Defaults to None.
+            name (str): The key of the variable in the variables dictionary.
+            scenario_key (Optional[int]): Defines the cardinality of inter-problem 
+                sets. Default to None.
+            intra_problem_key (Optional[int]): Defines the cardinality of intra-problem
+                sets. Default to None.
+            if_hybrid_var (Literal['endogenous', 'exogenous']): Defines the type 
+                of variable data to inspect in case variable type depends on the 
+                problem.
 
         Returns:
             Optional[pd.DataFrame]: The data for the specified variable.
         """
         return self.core.index.fetch_variable_data(
             var_key=name,
-            problem_key=problem_key,
             scenario_key=scenario_key,
+            intra_problem_key=intra_problem_key,
+            if_hybrid_var=if_hybrid_var,
         )
 
     def set(self, name: str) -> Optional[pd.DataFrame]:

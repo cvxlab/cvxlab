@@ -95,8 +95,6 @@ class SQLManager:
             try:
                 self.connection = sqlite3.connect(f'{self.database_sql_path}')
                 self.cursor = self.connection.cursor()
-                self.logger.debug(
-                    f"Connection to '{self.database_name}' opened.")
             except sqlite3.Error as error:
                 msg = f"Error opening connection to '{self.database_name}'."
                 self.logger.error(msg)
@@ -120,8 +118,6 @@ class SQLManager:
             try:
                 self.connection.close()
                 self.connection = None
-                self.logger.debug(
-                    f"Connection to '{self.database_name}' closed.")
             except sqlite3.Error as error:
                 msg = f"Error closing connection to '{self.database_name}'."
                 self.logger.error(msg)
@@ -650,7 +646,7 @@ class SQLManager:
         # convert all entries to strings except for id and values field
         for col in dataframe.columns:
             if col not in (id_field, values_field):
-                dataframe.loc[:, col] = dataframe[col].astype(str)
+                dataframe[col] = dataframe[col].astype(str)
 
         # case of no entries in existing table or case of 'overwrite' action
         if table_existing_entries == 0 or action == 'overwrite':
@@ -668,7 +664,7 @@ class SQLManager:
                     return
 
             if id_field not in dataframe.columns:
-                util.add_column_to_dataframe(
+                dataframe = util.add_column_to_dataframe(
                     dataframe=dataframe,
                     column_header=id_field,
                     column_values=range(len(dataframe)),
@@ -1163,22 +1159,20 @@ class SQLManager:
         finally:
             other_db_connection.close()
 
-    def get_tables_values_relative_difference(
+    def get_tables_values_norm_changes(
             self,
             other_db_dir_path: Path | str,
             other_db_name: str,
+            norm_type: Defaults.NumericalSettings.NormType,
             tables_names: Optional[List[str]] = None,
     ) -> Dict[str, float]:
-        """Get maximum relative difference of values between two databases.
+        """Get data tables norm changes between two SQLite databases.
 
         This method compares the values in specified tables of two SQLite databases 
-        and returns the maximum relative difference for each table. 
+        and returns the norm changes for each table. 
         This method is used to check the convergence of subsequent iterations in 
         running the alternate optimization algorithm to solve integrated models.
-        The relative difference is calculated as the absolute difference between 
-        the values divided by the absolute value of the 'other database' values:
-
-            relative_difference = |value_db - value_other| / |value_other|
+        The norm type can be specified to calculate the differences.
 
         Args:
             other_db_dir_path (Path | str): The directory path of the other
@@ -1186,6 +1180,8 @@ class SQLManager:
             other_db_name (str): The name of the other SQLite database.
             tables_names (Optional[List[str]], optional): Specific tables to
                 compare; if None, all tables are compared.
+            norm_type (Literal['max_relative', 'max_absolute', 'l1', 'l2', 'linf'], 
+                optional): The type of norm to use for calculating differences.
 
         Returns:
             Dict[str, float]: A dictionary where the keys are the table names
@@ -1231,7 +1227,7 @@ class SQLManager:
                 self.logger.error(msg)
                 raise exc.TableNotFoundError(msg)
 
-        max_relative_difference = {}
+        changes: Dict[str, float] = {}
 
         try:
             for table in tables_names:
@@ -1241,23 +1237,17 @@ class SQLManager:
                 other_db_cursor.execute(f"SELECT \"values\" FROM \"{table}\"")
                 other_values = [row[0] for row in other_db_cursor.fetchall()]
 
-                relative_differences = [
-                    util.calculate_values_difference(
-                        value_1=cv,
-                        value_2=ov,
-                        modules_difference=True,
-                        ignore_nan=True,
-                    )
-                    for cv, ov in zip(current_values, other_values)
-                ]
+                changes[table] = util.calculate_change_norm(
+                    seq1=current_values,
+                    seq2=other_values,
+                    metric=norm_type,
+                    ignore_nan=True,
+                )
 
-                max_relative_difference[table] = max(relative_differences)
-
-            return max_relative_difference
+            return changes
 
         finally:
-            del other_db_connection
-            del other_db_cursor
+            other_db_connection.close()
 
     def __repr__(self):
         """Return a string representation of the SQLManager instance."""

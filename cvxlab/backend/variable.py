@@ -8,6 +8,7 @@ that may include dimensions, mapping of related tables, and operations that
 convert SQL data to formats usable by optimization tools like cvxpy.
 """
 from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing_extensions import Literal
 
 import cvxpy as cp
 import pandas as pd
@@ -81,6 +82,7 @@ class Variable:
         self.blank_fill: Optional[float] = None
         self.related_table: Optional[str] = None
         self.var_info: Optional[Dict[str, Any]] = None
+        self.nonneg: Optional[bool] = False
 
         self.fetch_attributes(variable_info)
         self.rearrange_var_info()
@@ -115,40 +117,66 @@ class Variable:
         filter_key = Defaults.Labels.FILTERS
         set_key = Defaults.Labels.SET
         dim_key = Defaults.Labels.DIM
-        allowed_constants = Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS
+        sign_key = Defaults.Labels.NONNEG_KEY
         dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if self.var_info is None:
             return
 
-        constant_value = self.var_info.get(value_key, None)
-        if constant_value and constant_value in allowed_constants:
-            self.value = constant_value
+        self.value = self.var_info.get(value_key, None)
+        self.blank_fill = self.var_info.get(blank_fill_key, None)
+        self.nonneg = self.var_info.get(sign_key, False)
 
-        blank_fill_value = self.var_info.get(blank_fill_key, None)
-        if blank_fill_value is not None and \
-                isinstance(blank_fill_value, (int, float)):
-            self.blank_fill = blank_fill_value
-
+        # get rows and cols information
         for dimension in [dimensions['ROWS'], dimensions['COLS']]:
             shape_set = util.fetch_dict_primary_key(
                 dictionary=self.var_info,
                 second_level_key=dim_key,
                 second_level_value=dimension,
             )
-            dim_info_yml: dict | None = self.var_info.get(shape_set, None)
-            if not dim_info_yml:
+
+            if not shape_set:
                 continue
 
-            dim_info = {
-                set_key: shape_set,
-                filter_key: dim_info_yml.get(filter_key, None),
-            }
+            dim_info = []
+
+            # multiple sets may define each dimension
+            for shape in shape_set:
+                dim_info_data: dict = self.var_info.get(shape, None)
+                dim_info.append({
+                    set_key: shape,
+                    filter_key: dim_info_data.get(filter_key, None),
+                })
 
             if dimension == dimensions['ROWS']:
                 self.rows = dim_info
             elif dimension == dimensions['COLS']:
                 self.cols = dim_info
+
+    def _get_variable_shape(self, dimension_data: List[Dict[str, Any]]) -> str:
+        """Extract compound set keys from dimension data.
+
+        Args:
+            dimension_data (List[Dict[str, Any]]): List of dictionaries containing
+                set information for a dimension.
+
+        Returns:
+            Union[str, int]: Compound set key joined with ' | ' separator, or 1 
+                if dimension is empty/undefined.
+        """
+        set_key = Defaults.Labels.SET
+
+        if isinstance(dimension_data, list) and len(dimension_data) > 0:
+            sets = [
+                dim.get(set_key)
+                for dim in dimension_data
+                if dim.get(set_key)
+            ]
+            if len(sets) >= 1:
+                return sets
+            else:
+                return 1
+        return 1
 
     @property
     def shape_sets(self) -> List[str | int]:
@@ -156,16 +184,15 @@ class Variable:
 
         Returns:
             List[Union[str, int]]: A list containing set identifiers or 
-                rows and cols of the variable. In of a monodimensional variable,
-                the missing dimension is represented by 1.
+                rows and cols of the variable. In case of multiple sets defining
+                a dimension, the sets are returned as a list. If a dimension is
+                not defined, it returns 1.
         """
-        set_key = Defaults.Labels.SET
-
         if self.rows is None and self.cols is None:
             return []
 
-        rows_shape = self.rows.get(set_key, 1)
-        cols_shape = self.cols.get(set_key, 1)
+        rows_shape = self._get_variable_shape(self.rows)
+        cols_shape = self._get_variable_shape(self.cols)
         return [rows_shape, cols_shape]
 
     @property
@@ -173,20 +200,23 @@ class Variable:
         """Return a list of intra-problem sets of the variable.
 
         Returns:
-            List[Union[str, int]]: A list containing the intra-problem sets keys.
+            List[str]: A list containing the intra-problem sets keys.
         """
         intra_dim_key = Defaults.SymbolicDefinitions.DIMENSIONS['INTRA']
+        intra_dim_dict: dict = self.coordinates_info.get(intra_dim_key, None)
 
-        if self.coordinates_info[intra_dim_key] is None:
+        if intra_dim_dict is None:
             return []
 
-        return list(self.coordinates_info[intra_dim_key].keys())
+        return list(intra_dim_dict.keys())
 
     @property
-    def shape_size(self) -> Tuple[int]:
+    def shape_size(self) -> List[int]:
         """Return the rows-cols dimension size of the variable.
 
         Computes and returns the size of each dimension in the variable. 
+        For compound dimensions (multiple sets), the size is the Cartesian product
+        of all set lengths in that dimension.
         This is useful for determining the dimensionality of the data associated 
         with the variable. If a dimension is not defined, it is considered to have
         a size of 1.
@@ -197,38 +227,46 @@ class Variable:
         dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
 
         if not self.coordinates:
-            return ()
+            return []
 
         shape_size = []
 
         for dimension in [dimensions['ROWS'], dimensions['COLS']]:
             if self.coordinates[dimension]:
-                shape_size.append(len(*self.coordinates[dimension].values()))
+                coord_length = util.dict_values_cartesian_product(
+                    self.coordinates[dimension]
+                )
+                shape_size.append(coord_length)
             else:
                 shape_size.append(1)
 
-        return tuple(shape_size)
+        return shape_size
 
     @property
-    def dims_labels(self) -> List[Optional[str]]:
+    def dims_labels(self) -> List[str | List[str] | None]:
         """Return the tables headers defining the variable dimensions.
 
         This property retrieves the name labels for each dimension of the variable, 
         typically used for identifying matrix dimensions.
 
         Returns:
-            List[str]: A list containing labels for each dimension of the variable.
+            List[Union[str, List[str], None]]: A list containing labels for each 
+                dimension of the variable. Single-label dimensions return a string,
+                multi-label dimensions return a list of strings, undefined dimensions
+                return None.
         """
         dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
+        dims_labels = []
 
-        if not self.coordinates_info:
-            return []
+        for dim in [dimensions['ROWS'], dimensions['COLS']]:
+            if self.coordinates_info.get(dim):
+                dims_labels.append(
+                    list(self.coordinates_info[dim].values())
+                )
+            else:
+                dims_labels.append(None)
 
-        return [
-            next(iter(self.coordinates_info[dim].values()), None)
-            if self.coordinates_info[dim] else None
-            for dim in [dimensions['ROWS'], dimensions['COLS']]
-        ]
+        return dims_labels
 
     @property
     def dims_items(self) -> List[Optional[List[str]]]:
@@ -241,57 +279,15 @@ class Variable:
             List[List[str]]: Lists of items for each dimension.
         """
         dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
-
-        if not self.coordinates:
-            return []
-
-        return [
-            list(*self.coordinates[dim].values())
-            if self.coordinates[dim] else None
-            for dim in [dimensions['ROWS'], dimensions['COLS']]
-        ]
-
-    @property
-    def dims_labels_items(self) -> Dict[str, List[str]]:
-        """Return a dictionary combining dimension labels and items.
-
-        This property returns a dictionary of keys as labels of the set dimensions
-        and values as the related list of items. 
-
-        Returns:
-            Dict[str, List[str]]: Dictionary with dimension labels as keys and 
-            the corresponding items as values.
-        """
-        return {
-            self.dims_labels[dim]: self.dims_items[dim]
-            for dim in [0, 1]
-        }
-
-    @property
-    def dims_sets(self) -> Dict[str, str]:
-        """Return a dictionary associating variable dimension with set key.
-
-        Returns:
-            Dict[str]: A dictionary containing dimension name as keys and 
-                corresponding set name as values.
-        """
-        dimensions = Defaults.SymbolicDefinitions.DIMENSIONS
-
-        if not self.coordinates_info:
-            return []
-
-        dims_sets = {}
+        dims_items = []
 
         for dim in [dimensions['ROWS'], dimensions['COLS']]:
-            if dim in self.coordinates_info:
-                dim_set: dict = self.coordinates_info[dim]
+            if self.coordinates.get(dim):
+                dims_items.append(list(self.coordinates[dim].values()))
+            else:
+                dims_items.append(None)
 
-                if dim_set:
-                    dims_sets[dim] = next(iter(dim_set.keys()), None)
-                else:
-                    dims_sets[dim] = None
-
-        return dims_sets
+        return dims_items
 
     @property
     def is_square(self) -> bool:
@@ -484,16 +480,51 @@ class Variable:
 
         return None
 
-    def reshaping_sqlite_table_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Reshape SQLite table data to match cvxpy variable shape.
+    @staticmethod
+    def build_axis(
+        target_labels: List[str] | None,
+        target_items: List[List[str]] | None,
+    ) -> pd.Index | pd.MultiIndex | None:
+        """Build a pandas Index or MultiIndex from labels/items.
+
+        Args:
+            target_labels: List of dimension labels (single or multiple) or None.
+            target_items: List of lists of items matching labels, or None.
+
+        Returns:
+            pd.Index | pd.MultiIndex | None: Constructed index; None if insufficient data.
+        """
+        if not target_labels or not target_items:
+            return None
+
+        # Multi-level
+        if len(target_labels) > 1:
+            levels = [list(lvl) for lvl in target_items]
+            idx = pd.MultiIndex.from_product(levels, names=target_labels)
+            # enforce str type on each level
+            idx = idx.set_levels([lvl.map(str) for lvl in idx.levels])
+            return idx
+
+        # Single level
+        items = target_items[0]
+        idx = pd.Index(items, name=target_labels[0])
+        return idx.map(str)
+
+    def reshaping_normalized_table_data(
+            self,
+            data: pd.DataFrame,
+            var_key: str | None = None,
+    ) -> pd.DataFrame:
+        """Reshape normalized table data to match cvxpy variable shape.
 
         This method takes a Dataframe with data fetched from SQLite database variable
-        table, and elaborate it to get the shape required by the cvxpy variable 
-        (two-dimensions matrix).
+        table as a normalized table, and elaborate it to get the shape required by 
+        the cvxpy variable (two-dimensions matrix).
 
         Args:
             data (pd.DataFrame): data filtered from the SQLite variable table,
-            related to a unique cvxpy variable.
+                related to a unique cvxpy variable.
+            var_key (Optional[str]): The variable key for logging purposes.
 
         Returns:
             pd.DataFrame: data reshaped and pivoted to be used as cvxpy values.
@@ -503,10 +534,11 @@ class Variable:
         index_label, columns_label = self.dims_labels
         index_items, columns_items = self.dims_items
 
-        # case of a scalar with no rows/cols labels (scalars)
+        # Case of a scalar with no rows/cols labels (scalars)
         if all(item is None for item in self.dims_labels):
             index_label = ''
 
+        # Pivot the data to reshape it according to variable dimensions
         pivoted_data = data.pivot_table(
             index=index_label,
             columns=columns_label,
@@ -514,22 +546,25 @@ class Variable:
             aggfunc='first'
         )
 
-        # ensure matching data types for reindexing
-        if columns_items is not None:
-            columns_items = [
-                type(pivoted_data.columns[0])(item) for item in columns_items
-            ]
-
-        if index_items is not None:
-            index_items = [
-                type(pivoted_data.index[0])(item) for item in index_items
-            ]
+        # Build target index and columns
+        target_index = self.build_axis(index_label, index_items)
+        target_columns = self.build_axis(columns_label, columns_items)
 
         # Reindex to ensure the correct order of the data
         pivoted_data = pivoted_data.reindex(
-            index=index_items,
-            columns=columns_items,
+            index=target_index,
+            columns=target_columns,
         )
+
+        if pivoted_data.isna().any().any():
+            msg = (
+                "Reshaping variable data failed | "
+                f"Variable '{var_key}' | NaN values after pivot/reindex."
+                if var_key else
+                "Reshaping variable data failed | NaN values after pivot/reindex."
+            )
+            self.logger.error(msg)
+            raise exc.OperationalError(msg)
 
         return pivoted_data
 
@@ -554,15 +589,23 @@ class Variable:
         """
         allowed_constants = Defaults.SymbolicDefinitions.ALLOWED_CONSTANTS
 
-        factory_function = allowed_constants[value_type]
-
         if value_type not in allowed_constants:
             msg = f"Constant definition | type: '{value_type}' not supported. " \
                 f"Supported value types: {allowed_constants.keys()}"
             self.logger.error(msg)
             raise exc.SettingsError(msg)
 
-        return factory_function(self.shape_size)
+        factory_function = allowed_constants[value_type]
+
+        try:
+            return factory_function(self.shape_size)
+        except Exception as e:
+            msg = (
+                f"Constant generation failed | Variable: '{self.symbol}' | "
+                f"Type: '{value_type}' | Error: {type(e).__name__}: {str(e)}"
+            )
+            self.logger.error(msg)
+            raise exc.OperationalError(msg) from e
 
     def __repr__(self) -> str:
         """Provide a string representation of the Variable object."""

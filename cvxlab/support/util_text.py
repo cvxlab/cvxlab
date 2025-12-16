@@ -8,6 +8,8 @@ import ast
 import re
 from typing import Any, Iterable, List, Optional
 
+from cvxlab.defaults import Defaults
+
 
 def is_iterable(value: str) -> bool:
     """Check if a string represents an iterable (list, tuple, or dict).
