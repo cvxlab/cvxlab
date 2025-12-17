@@ -1,6 +1,6 @@
 ![CVXlab Logo](docs/source/_static/CVXlab_logo_dark.png)
 
-[![PyPI version](https://badge.fury.io/py/cvxlab.svg)](https://badge.fury.io/py/cvxlab)
+[![PyPI version](https://img.shields.io/pypi/v/cvxlab?include_prereleases&label=PyPI&logo=pypi)](https://pypi.org/project/cvxlab/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/cvxlab)](https://pypi.org/project/cvxlab/)
 [![Documentation Status](https://readthedocs.org/projects/cvxlab/badge/?version=latest)](https://cvxlab.readthedocs.io/en/latest/?badge=latest)
 
