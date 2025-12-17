@@ -8,9 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Stable 1.0.0 release
+- Stable 1.0.1 release
 - API stabilization
 - Complete documentation coverage
+
+## [1.0.1b1] - 17 December 2025
+
+### Fixed
+- Bug fix following 1.0.0b1 (incremented beta to 1.0.1b1)
 
 ## [1.0.0b1] - 14 November 2025
 
@@ -36,6 +41,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API subject to change before 1.0.0 stable
 - Limited tutorial coverage
 - Limited test converage
-
-[Unreleased]: https://github.com/cvxlab/cvxlab/compare/v1.0.0b1...HEAD
-[1.0.0b1]: https://github.com/cvxlab/cvxlab/releases/tag/v1.0.0b1

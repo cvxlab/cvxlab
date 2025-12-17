@@ -1,12 +1,12 @@
 CVXlab documentation
 ====================
 
-.. warning::
-   **Beta Release Notice**
-   
-   CVXlab is currently in beta (|version|). The API is subject to change before 
-   the stable 1.0.0 release. Documentation is under active development. We welcome 
-   feedback and bug reports via `GitHub Issues <https://github.com/cvxlab/cvxlab/issues>`_.
+.. warning:: 
+  **Beta Release Notice**
+
+  CVXlab is currently in beta (|version|). The API is subject to change before 
+  the stable 1.0.1 release. Documentation is under active development. We welcome 
+  feedback and bug reports via `GitHub Issues <https://github.com/cvxlab/cvxlab/issues>`_.
 
 **CVXlab - Open-source Python laboratory for convex algebraic modeling**
 
@@ -110,7 +110,8 @@ activities summarized below:
 .. note::
    - CVXlab has conceived and developed by *Matteo V. Rocco*, Associate Professor 
      at *SESAM group*, `Department of Energy, Politecnico di Milano 
-     <https://www.energia.polimi.it/en/>`_, Italy.
+     <https://www.energia.polimi.it/en/>`_, Italy. For any questions, suggestions
+     or feedback, feel free to reach out via email: |author_email|.
    - CVXlab is an open-source project based on the `Apache License Version 2.0, 
      (January 2004) <http://www.apache.org/licenses/>`_. Contributions and feedback 
      are welcome!

@@ -46,6 +46,7 @@ docs = [
     "sphinxcontrib-mermaid",
     # "myst-parser>=2.0.0",
     "myst-nb>=1.0.0",
+    
 ]
 solvers = [
     "gurobipy>=9.5.0",

@@ -19,17 +19,23 @@ try:
 except Exception:
     version = "nd"
 
+# Variables for rst files
+rst_prolog = """
+.. |author_email| replace:: matteovincenzo.rocco@polimi.it
+"""
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",   # For Google or NumPy style
-    "sphinx.ext.viewcode",   # Link to source code
-    "sphinx.ext.mathjax",    # Add this for math rendering
+    "sphinx.ext.napoleon",  # For Google or NumPy style
+    "sphinx.ext.viewcode",  # Link to source code
+    "sphinx.ext.mathjax",  # Add this for math rendering
     "sphinxcontrib.mermaid",  # For mermaid diagrams
-    # 'myst_parser',           # For Markdown files (.md)
-    'myst_nb',             # For Jupyter Notebook support
+    'sphinx_tabs.tabs',  # For tabbed content
+    'myst_nb',  # For Jupyter Notebook support
+    # 'myst_parser',  # For Markdown files (.md)
 ]
 
 source_suffix = {
