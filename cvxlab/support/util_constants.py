@@ -65,26 +65,32 @@ def identity_matrix(dimension: List[int]) -> np.array:
     """Generate a square identity matrix of size n x n.
 
     Args:
-        dimension (List[int]): A list [n, n] with two equal positive integers.
+        dimension (List[int]): Either [n, n] for an n by n matrix, or [n, 1] or 
+            [1, n] for a vector.
 
     Returns:
         np.ndarray: An n x n identity matrix.
 
     Raises:
-        exc.SettingsError: If 'dimension' is not [n, n] with equal positive ints.
+        exc.SettingsError: If 'dimension' is not [n, n] with equal positive ints,
+            or a vector [n, 1] or [1, n].
     """
     if not isinstance(dimension, list) or len(dimension) != 2 \
             or not all(isinstance(i, int) for i in dimension):
         raise exc.SettingsError(
             "Constant definition | Identity matrix expects a list of two integers "
-            "[n, n].")
+            "[n, n] or a vector [n, 1] or [1, n].")
 
-    if dimension[0] != dimension[1]:
-        raise exc.SettingsError(
-            "Constant definition | Identity matrix requires two equal positive "
-            f"integers [n, n]. Passed dimension: {dimension}")
+    if dimension[0] == dimension[1]:
+        return np.eye(dimension[0])
 
-    return np.eye(dimension[0])
+    if 1 in dimension:
+        size = max(dimension)
+        return np.eye(size)
+
+    raise exc.SettingsError(
+        "Constant definition | Identity matrix requires either two equal integers "
+        f"[n, n] or a vector [n, 1] or [1, n]. Passed dimension: {dimension}")
 
 
 @constant('set_length')

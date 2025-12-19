@@ -28,7 +28,7 @@ def test_identity_matrix():
     test_cases = [
         ([3, 3], np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), None),
         ([1, 1], np.array([[1]]), None),
-        ([1, 3], None, exc.SettingsError),
+        ([1, 3], np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), None),
         ([2, 3], None, exc.SettingsError),
         ('invalid type', None, exc.SettingsError),
         ([2, 2, 3], None, exc.SettingsError),
