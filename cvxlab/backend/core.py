@@ -271,6 +271,7 @@ class Core:
             allow_none_values: bool = True,
             var_list_to_update: List[str] = [],
             filter_negative_values: bool = False,
+            warnings_on_negatives: bool = False,
     ) -> None:
         """Fetch data from the database and assign it to cvxpy exogenous variables.
 
@@ -336,6 +337,7 @@ class Core:
                     variable: Variable
 
                     var_sing_data_update = False
+                    var_has_negatives = False
 
                     if var_key not in var_list_to_update:
                         continue
@@ -473,6 +475,12 @@ class Core:
                                 else:
                                     pass
 
+                            # optionally, log warnings on negative values found
+                            if warnings_on_negatives:
+                                if values_header in raw_data.columns:
+                                    if (raw_data[values_header] < 0).any():
+                                        var_has_negatives = True
+
                             # pivoting and reshaping data to fit variables
                             pivoted_data = variable.reshaping_normalized_table_data(
                                 var_key=var_key,
@@ -488,6 +496,10 @@ class Core:
                     if var_sing_data_update:
                         self.logger.warning(
                             f"Negative values set to zero for variable '{var_key}'")
+
+                    if var_has_negatives:
+                        self.logger.warning(
+                            f"Negative values found for variable '{var_key}'")
 
     def cvxpy_endogenous_data_to_database(
             self,
@@ -1012,6 +1024,7 @@ class Core:
                                 self.data_to_cvxpy_exogenous_vars(
                                     scenarios_idx=scenario_idx,
                                     filter_negative_values=True,
+                                    warnings_on_negatives=True,
                                 )
 
                             self.files.copy_file_to_destination(
