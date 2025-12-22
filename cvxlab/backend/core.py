@@ -542,6 +542,12 @@ class Core:
         else:
             if isinstance(scenarios_idx, int):
                 scenarios_list = [scenarios_idx]
+            elif isinstance(scenarios_idx, list):
+                scenarios_list = scenarios_idx
+            else:
+                msg = "'scenarios_idx' parameter must be an int or a list of ints."
+                self.logger.error(msg)
+                raise TypeError(msg)
 
         with db_handler(self.sqltools):
             for data_table_key, data_table in self.index.data.items():
@@ -586,17 +592,52 @@ class Core:
                             f"No data available in cvxpy variable '{data_table_key}'")
                     continue
 
+                cvxpy_var_with_nones = False
+
                 if isinstance(data_table.cvxpy_var, dict):
                     cvxpy_var_values_list = []
+
                     for cvxpy_var_key, cvxpy_var in data_table.cvxpy_var.items():
                         cvxpy_var: cp.Variable
-                        if cvxpy_var_key in scenarios_list:
-                            cvxpy_var_values_list.append(cvxpy_var.value)
 
+                        if cvxpy_var_key not in scenarios_list:
+                            continue
+
+                        if cvxpy_var.value is None:
+                            cvxpy_var_with_nones = True
+                            value_to_append = np.zeros((cvxpy_var.shape[0], 1))
+                        else:
+                            value_to_append = cvxpy_var.value
+
+                        cvxpy_var_values_list.append(value_to_append)
                     cvxpy_var_data = np.vstack(cvxpy_var_values_list)
 
                 else:
-                    cvxpy_var_data = data_table.cvxpy_var.value
+                    if data_table.cvxpy_var.value is None:
+                        cvxpy_var_with_nones = True
+                        value_to_append = np.zeros(
+                            (data_table.cvxpy_var.shape[0], 1))
+                    else:
+                        value_to_append = data_table.cvxpy_var.value
+
+                    cvxpy_var_data = value_to_append
+
+                if cvxpy_var_with_nones:
+                    self.logger.warning(
+                        f"Data table '{data_table_key}' | "
+                        "No data available in cvxpy variable (probably not "
+                        "used in model expressions). Exporting zeros to corresponding "
+                        "SQLite data table."
+                    )
+
+                if len(data_table_dataframe) != cvxpy_var_data.shape[0]:
+                    self.logger.error(
+                        f"Length mismatch exporting '{data_table_key}': "
+                        f"dataframe rows={len(data_table_dataframe)}, "
+                        f"cvxpy rows={cvxpy_var_data.shape[0]}"
+                    )
+                    raise exc.OperationalError(
+                        "Mismatch between coordinates and cvxpy values length.")
 
                 data_table_dataframe[values_headers] = cvxpy_var_data
 
