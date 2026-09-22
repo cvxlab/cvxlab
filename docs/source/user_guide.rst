@@ -31,7 +31,6 @@ the :ref:`guided_interface`. That page explains interactive prompts,
 preconfiguration settings, the available actions, and how each action maps to the 
 modeling steps and public APIs documented below.
 
-
 .. _model_generation_from_scratch:
 
 Model generation from scratch
@@ -377,6 +376,12 @@ and on the SQLite database, summarized in the table below.
       coordinates, for example to add aggregation categories.
 
 
+.. toctree::
+  :maxdepth: 1
+  :hidden:
+
+  Guided Interface <guided_interface>
+  
 .. toctree::
   :maxdepth: 1
   :hidden:
