@@ -22,7 +22,7 @@ maximize their total value while respecting two resource limits:
 .. math::
 
    \begin{aligned}
-   \operatorname{maximize}\quad & \sum_i c_i x_{i,s} \\
+   \text{maximize}\quad & \sum_i c_i x_{i,s} \\
    \text{subject to}\quad & \sum_i A_{r,i}x_{i,s} \leq b_{r,s}
    && \forall r, s, \\
    & x_{i,s} \geq 0 && \forall i, s.
