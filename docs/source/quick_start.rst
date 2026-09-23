@@ -16,21 +16,36 @@ provides the complete reference for creating your own models.
 The model
 ---------
 
-For each scenario :math:`s`, choose non-negative quantities :math:`x_i` that
-maximize their total value while respecting two resource limits:
+For each scenario :math:`s`, solve the following independent problem in vector form:
 
 .. math::
 
    \begin{aligned}
-   \text{maximize}\quad & \sum_i c_i x_{i,s} \\
-   \text{subject to}\quad & \sum_i A_{r,i}x_{i,s} \leq b_{r,s}
-   && \forall r, s, \\
-   & x_{i,s} \geq 0 && \forall i, s.
+   \text{maximize}\quad & c x^{\mathsf{T}} \\
+   \text{subject to}\quad & e x^{\mathsf{T}} \leq E_{\text{max}}, \\
+   & m x^{\mathsf{T}} \leq M_{\text{max}}, \\
+   & x \geq 0.
    \end{aligned}
+
+Here :math:`x`, :math:`c`, :math:`e`, and :math:`m` are row vectors over
+products: production, unit profit, energy requirements, and material requirements,
+respectively. The scalars :math:`E_{\text{max}}` and :math:`M_{\text{max}}`
+are energy and material availability. Non-negativity
+applies to every component of :math:`x`.
+
+This matches the YAML formulation below: ``dim: cols`` places products along
+the columns, ``@`` denotes matrix multiplication, and ``tran(x)`` denotes the
+transpose. CVXlab handles the scenario index automatically, so the same symbolic
+expressions apply to both scenarios.
 
 There are two products, two resources, and two availability scenarios. The
 numbers are intentionally small; the separation between data tables and
 symbolic variables is representative of a larger model.
+
+Product 1 uses less energy, while product 2 uses less material. Energy availability
+changes across scenarios; material availability stays fixed. Filtered variables
+``e`` and ``m`` select energy and material coefficients from the same data table.
+Energy availability is ``E_max``; material availability is ``M_max``.
 
 1. Create the model directory
 -------------------------------
@@ -59,7 +74,9 @@ content with the following definitions.
        description: products whose optimal production volumes are to be determined | dimension set
 
    Resources:
-       description: resources that constrain production | dimension set
+       description: resources consumed in production | dimension set
+       filters:
+           type: [energy, material]
 
    Scenarios:
        description: alternative resource-availability conditions | inter-problem set
@@ -92,24 +109,44 @@ content with the following definitions.
        type: exogenous
        coordinates: [Resources, Products]
        variables_info:
-           A:
+           e:
                Resources:
                    dim: rows
+                   filters: {type: energy}
+               Products:
+                   dim: cols
+           m:
+               Resources:
+                   dim: rows
+                   filters: {type: material}
                Products:
                    dim: cols
 
-   resource_availability:
-       description: available amount of each resource in each scenario
+   energy_availability:
+       description: available energy in each scenario
        type: exogenous
        coordinates: [Resources, Scenarios]
        variables_info:
-           b:
+           E_max:
                Resources:
                    dim: rows
+                   filters: {type: energy}
 
-The names on the left (for example ``unit_profit``) identify *data tables*.
-The shorter names inside ``variables_info`` (``x``, ``c``, ``A``, and ``b``)
-identify the symbolic variables used in the mathematical problem.
+   material_availability:
+       description: available material shared by all scenarios
+       type: exogenous
+       coordinates: [Resources]
+       variables_info:
+           M_max:
+               Resources:
+                   dim: rows
+                   filters: {type: material}
+
+
+Data tables organize stored data; the names inside ``variables_info`` identify
+symbolic variables. Here ``e`` and ``m`` select energy and material coefficients
+from ``resource_requirements``. Energy availability ``E_max`` varies by scenario;
+material availability ``M_max`` has no scenario dimension and is shared by all runs.
 
 ``problem.yml``
 
@@ -119,12 +156,14 @@ identify the symbolic variables used in the mathematical problem.
        - Maximize(c @ tran(x))
 
    expressions:
-       - A @ tran(x) - b <= 0
+       - e @ tran(x) <= E_max
+       - m @ tran(x) <= M_max
        - x >= 0
 
    description:
        - maximize total profit
-       - respect the available amount of every resource
+       - respect energy availability in each scenario
+       - respect material availability shared by all scenarios
        - define non-negative production volumes
 
 2. Create the model and fill its sets
@@ -140,8 +179,8 @@ Create the :class:`cvxlab.Model` instance:
        model_settings_from="yml",
    )
 
-The constructor generates ``quick_start/sets.xlsx``. Fill the sole
-``*_Name`` column in each sheet with the following coordinates:
+The constructor generates ``quick_start/sets.xlsx``. Fill the
+``*_Name`` column in each sheet with the following coordinates, one per row:
 
 .. list-table:: Set coordinates
    :header-rows: 1
@@ -149,12 +188,28 @@ The constructor generates ``quick_start/sets.xlsx``. Fill the sole
 
    * - Sheet
      - Coordinates
-   * - ``_set_Products``
+   * - ``_set_PRODUCTS``
      - ``product_1``, ``product_2``
-   * - ``_set_Resources``
+   * - ``_set_RESOURCES``
      - ``resource_1``, ``resource_2``
-   * - ``_set_Scenarios``
+   * - ``_set_SCENARIOS``
      - ``low``, ``high``
+
+In ``_set_RESOURCES``, also fill the generated ``Resources_type`` column:
+
+.. list-table:: Resource filters
+   :header-rows: 1
+
+   * - ``Resources_Name``
+     - ``Resources_type``
+   * - ``resource_1``
+     - ``energy``
+   * - ``resource_2``
+     - ``material``
+
+These labels select the rows used by ``e``, ``m``, ``E_max``, and ``M_max``. The filter labels alone
+do not impose constraints: the availability limit is defined in ``problem.yml``.
+Save and close the workbook before continuing.
 
 3. Generate and fill the numerical input data
 ----------------------------------------------
@@ -184,10 +239,18 @@ the generated rows using their coordinate columns:
      - (``resource_1``, ``product_1``); (``resource_1``, ``product_2``);
        (``resource_2``, ``product_1``); (``resource_2``, ``product_2``)
      - 1; 2; 3; 1
-   * - ``resource_availability``
+   * - ``energy_availability``
      - (``resource_1``, ``low``); (``resource_1``, ``high``);
-       (``resource_2``, ``low``); (``resource_2``, ``high``)
-     - 4; 8; 3; 6
+     - 2; 8;
+   * - ``material_availability``
+     - ``resource_2``
+     - 6
+
+``E_max`` selects only the energy rows of ``energy_availability``; ``M_max``
+selects only the material row of ``material_availability``. Fill unused rows
+with 0; they do not enter the constraints. Both tables are indexed by resource,
+but only energy availability also has a scenario dimension.
+Save and close the workbook before solving.
 
 4. Solve and inspect the results
 ---------------------------------
@@ -202,15 +265,30 @@ and export the endogenous results to SQLite:
    model.load_results_to_database()
 
    for scenario_key, scenario in model.scenarios.iterrows():
-       print(f"\nScenario {scenario_key}:")
-       print(scenario)
-       print(model.variable(name="x", scenario_key=scenario_key))
+       print(f"\nScenario: {scenario.iloc[0]}")
+       print(model.variable(name="x", scenario_key=scenario_key).round(2))
 
-The ``production`` table in ``quick_start/database.db`` now contains the
-optimal production volumes for both scenarios. The corresponding objective
-values are 10.2 for ``low`` and 20.4 for ``high``. The loop uses
-:meth:`cvxlab.Model.variable` to print the endogenous variable ``x`` for each
-scenario.
+:meth:`cvxlab.Model.variable` returns the optimal production volumes as a
+DataFrame for each scenario. The results are also exported to the
+``production`` table in ``quick_start/database.db``.
+
+.. list-table:: Expected production volumes (up to solver tolerances)
+   :header-rows: 1
+
+   * - Scenario
+     - ``product_1``
+     - ``product_2``
+   * - low
+     - 2
+     - 0
+   * - high
+     - 0.8
+     - 3.6
+
+With scarce energy, production concentrates on product 1, which earns more
+profit per unit of energy. With more energy available, the optimal mix shifts
+towards product 2, which uses less material. Both scenarios fully use the
+available resources.
 
 Next steps
 ----------

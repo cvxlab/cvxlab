@@ -79,21 +79,32 @@ This small model is deliberately abstract, but it uses the same workflow that
 scales to larger applications: model structure is separate from numerical data,
 one problem is generated for each scenario, and results are stored in SQLite.
 
-For every scenario $s$, choose the non-negative quantities $x_i$ that maximize
-their value while respecting two resource limits:
+For each scenario $s$, solve the following independent problem in vector form:
 
 $$
 \begin{aligned}
-\text{maximize}\quad & \sum_i c_i x_{i,s} \\
-\text{subject to}\quad & \sum_i A_{r,i}x_{i,s} \leq b_{r,s}
-&& \forall r, s, \\
-& x_{i,s} \geq 0 && \forall i, s.
+\text{maximize}\quad & c x^{\mathsf{T}} \\
+\text{subject to}\quad & e x^{\mathsf{T}} \leq E_{\text{max}}, \\
+& m x^{\mathsf{T}} \leq M_{\text{max}}, \\
+& x \geq 0.
 \end{aligned}
 $$
+
+Here $x$, $c$, $e$, and $m$ are row vectors over products: production,
+unit profit, energy requirements, and material requirements, respectively.
+The scalars $E_{\text{max}}$ and $M_{\text{max}}$ are energy
+and material availability. Non-negativity applies to every component of $x$.
+In the YAML below, `@` denotes matrix multiplication and `tran(x)` denotes
+the transpose. CVXlab handles the scenario index automatically.
 
 The model has two products, two resources, and two scenarios. Its size is small;
 its structure--separate data, indexed variables, scenarios, and persistent
 results--is the same used by a larger CVXlab model.
+
+Product 1 uses less energy, while product 2 uses less material. Energy availability
+changes across scenarios; material availability stays fixed. Filtered variables
+`e` and `m` select energy and material coefficients from the same data table.
+Energy availability is `E_max`; material availability is `M_max`.
 
 ### 1. Create the model directory
 
@@ -117,7 +128,9 @@ Products:
     description: products whose optimal production volumes are to be determined | dimension set
 
 Resources:
-    description: resources that constrain production | dimension set
+    description: resources consumed in production | dimension set
+    filters:
+        type: [energy, material]
 
 Scenarios:
     description: alternative resource-availability conditions | inter-problem set
@@ -150,20 +163,39 @@ resource_requirements:
     type: exogenous
     coordinates: [Resources, Products]
     variables_info:
-        A:
+        e:
             Resources:
                 dim: rows
+                filters: {type: energy}
+            Products:
+                dim: cols
+        m:
+            Resources:
+                dim: rows
+                filters: {type: material}
             Products:
                 dim: cols
 
-resource_availability:
-    description: available amount of each resource in each scenario
+energy_availability:
+    description: available energy in each scenario
     type: exogenous
     coordinates: [Resources, Scenarios]
     variables_info:
-        b:
+        E_max:
             Resources:
                 dim: rows
+                filters: {type: energy}
+
+material_availability:
+    description: available material shared by all scenarios
+    type: exogenous
+    coordinates: [Resources]
+    variables_info:
+        M_max:
+            Resources:
+                dim: rows
+                filters: {type: material}
+
 ```
 
 `problem.yml`
@@ -173,12 +205,14 @@ objective:
     - Maximize(c @ tran(x))
 
 expressions:
-    - A @ tran(x) - b <= 0
+    - e @ tran(x) <= E_max
+    - m @ tran(x) <= M_max
     - x >= 0
 
 description:
     - maximize total profit
-    - respect the available amount of every resource
+    - respect energy availability in each scenario
+    - respect material availability shared by all scenarios
     - define non-negative production volumes
 ```
 
@@ -193,13 +227,17 @@ model = cvxlab.Model(
 ```
 
 The constructor creates `quick_start/sets.xlsx`. In that workbook, fill the
-sole `*_Name` column in each sheet with:
+`*_Name` column in each sheet with one coordinate per row:
 
 | Sheet | Coordinates |
 | --- | --- |
-| `_set_Products` | `product_1`, `product_2` |
-| `_set_Resources` | `resource_1`, `resource_2` |
-| `_set_Scenarios` | `low`, `high` |
+| `_set_PRODUCTS` | `product_1`, `product_2` |
+| `_set_RESOURCES` | `resource_1`, `resource_2` |
+| `_set_SCENARIOS` | `low`, `high` |
+
+In `_set_RESOURCES`, also fill the generated `Resources_type` column: enter
+`energy` for `resource_1` and `material` for `resource_2`. These labels select
+the rows used by `e`, `m`, `E_max`, and `M_max`. Save and close the workbook before continuing.
 
 ### 3. Generate and fill the numerical input data
 
@@ -215,7 +253,13 @@ these values, matching the generated rows by their coordinate columns:
 | --- | --- | ---: |
 | `unit_profit` | `product_1`; `product_2` | 3; 5 |
 | `resource_requirements` | `(resource_1, product_1)`; `(resource_1, product_2)`; `(resource_2, product_1)`; `(resource_2, product_2)` | 1; 2; 3; 1 |
-| `resource_availability` | `(resource_1, low)`; `(resource_1, high)`; `(resource_2, low)`; `(resource_2, high)` | 4; 8; 3; 6 |
+| `energy_availability` | `(resource_1, low)`; `(resource_1, high)` | 2; 8 |
+| `material_availability` | `resource_2` | 6 |
+
+`E_max` selects only the energy rows of `energy_availability`; `M_max` selects
+only the material row of `material_availability`. Fill unused rows with 0;
+they do not enter the constraints. Material availability has no scenario dimension.
+Save and close the workbook before solving.
 
 ### 4. Solve and inspect the results
 
@@ -225,16 +269,25 @@ model.run_model(solver="CLARABEL")
 model.load_results_to_database()
 
 for scenario_key, scenario in model.scenarios.iterrows():
-    print(f"\nScenario {scenario_key}:")
-    print(scenario)
-    print(model.variable(name="x", scenario_key=scenario_key))
+    print(f"\nScenario: {scenario.iloc[0]}")
+    print(model.variable(name="x", scenario_key=scenario_key).round(2))
 ```
 
-CVXlab generates and solves one optimization problem for each scenario, then
-writes the values of `production` to `quick_start/database.db`. Open that SQLite
-file with a database browser, Excel, or a BI tool to inspect the solution. The
-loop uses `Model.variable()` to print the endogenous variable `x` for each
-scenario. The optimal objective values are 10.2 for `low` and 20.4 for `high`.
+`model.variable()` returns the optimal production volumes as a DataFrame
+for each scenario. The results are also exported to the `production` table
+in `quick_start/database.db`.
+
+Expected production volumes (up to solver tolerances):
+
+| Scenario | `product_1` | `product_2` |
+| --- | ---: | ---: |
+| low | 2 | 0 |
+| high | 0.8 | 3.6 |
+
+With scarce energy, production concentrates on product 1, which earns more
+profit per unit of energy. With more energy available, the optimal mix shifts
+towards product 2, which uses less material. Both scenarios fully use the
+available resources.
 
 This example is intentionally compact. Continue with the
 [production planning tutorial](https://cvxlab.readthedocs.io/en/latest/resources.html)
