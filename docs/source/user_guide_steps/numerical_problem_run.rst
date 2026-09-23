@@ -145,11 +145,16 @@ the solution status for each problem and scenario.
 
 The solution process proceeds as follows based on the value of ``solution_mode``.
 
-.. _fig:solution_modes:
-
-.. figure:: ../_static/solution_mode.png
+.. image:: ../_static/solution_mode_light.svg
   :alt: solution modes available in ``solution_mode`` argument
   :align: center
+  :class: only-light
+
+.. image:: ../_static/solution_mode_dark.svg
+  :alt: solution modes available in ``solution_mode`` argument
+  :align: center
+  :class: only-dark
+
 
 .. rubric:: ``solution_mode="parallel"``
 

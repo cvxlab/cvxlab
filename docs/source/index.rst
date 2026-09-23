@@ -25,11 +25,15 @@ The figure below summarizes the package workflow. The detailed step-by-step
 explanation is in the :ref:`user_guide`, while runnable examples are collected
 in the :ref:`resources` section.
 
-.. _fig:cvxlab_in_a_nutshell:
-
-.. figure:: _static/CVXlab_nutshell.png
+.. image:: _static/CVXlab_nutshell_light.svg
   :alt: CVXlab modeling process in a nutshell
   :align: center
+  :class: only-light
+
+.. image:: _static/CVXlab_nutshell_dark.svg
+  :alt: CVXlab modeling process in a nutshell
+  :align: center
+  :class: only-dark
 
 
 Why CVXlab

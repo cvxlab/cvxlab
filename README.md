@@ -48,7 +48,14 @@ CVXlab allows you to define optimization problems using:
 The figure below provides a synthetic and simplified overview of the CVXlab modeling 
 process.
 
-![CVXlab workflow](https://raw.githubusercontent.com/cvxlab/cvxlab/main/docs/source/_static/CVXlab_nutshell.png)
+<picture>
+    <source
+        media="(prefers-color-scheme: dark)"
+        srcset="docs/source/_static/CVXlab_nutshell_dark.svg">
+    <img
+        src="docs/source/_static/CVXlab_nutshell_light.svg"
+        alt="CVXlab modeling process in a nutshell">
+</picture>
 
 In generating and handling a CVXlab model, the user must follow the five fundamental
 activities summarized below:

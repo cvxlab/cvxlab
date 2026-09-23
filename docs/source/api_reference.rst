@@ -17,11 +17,17 @@ and ``Variable``), while settings classes (``ModelSettings`` and ``RunSettings``
 centralize configuration, and support classes (``FileManager``, ``SQLManager``, 
 and utility functions) provide shared operational services.
 
-.. _fig:package_structure:
 
-.. figure:: _static/package_structure.png
+.. image:: _static/package_structure_light.svg
   :alt: package structure
   :align: center
+  :class: only-light
+
+.. image:: _static/package_structure_dark.svg
+  :alt: package structure
+  :align: center
+  :class: only-dark
+
 
 The classes and functions documented in this section are those imported into the 
 *CVXlab* namespace. The documentation is grouped in the following sections:
