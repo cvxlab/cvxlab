@@ -474,6 +474,9 @@ class Uncertainty:
         save_samples = settings.save_samples
         file_format = settings.file_format
 
+        self.logger.info(
+            "Sampling data..."
+        )
         if not resume:
 
             (
@@ -493,7 +496,9 @@ class Uncertainty:
                     file_format=file_format
                 )
         elif resume:
-
+            self.logger.info(
+                "Loading existing data samples..."
+            )
             (
                 self.par_mapping,
                 self.sampling_problem,
@@ -613,12 +618,25 @@ class Uncertainty:
             table_name=table_name,
         )
 
+    def collect_run_results(
+        self,
+        run_id: int,
+        statuses_by_scenario: dict[int | None, str],
+    ) -> tuple[pd.DataFrame, dict[int | None, str]]:
+        """Collect uncertainty results for one completed model run."""
+
+        return self._collect_measure_records_for_run(
+            run_id=run_id,
+            statuses_by_scenario=statuses_by_scenario,
+        )
+
     def update_run_results(
         self,
         run_id: int,
-        statuses_by_scenario: dict,
         temp_save: bool,
         file_format: str | None,
+        run_records,
+        failed_scenarios,
     ) -> None:
         """Update the accumulated results of an uncertainty run.
 
@@ -634,12 +652,6 @@ class Uncertainty:
             file_format: File format used for temporary result storage. This
                 argument is ignored when ``temp_save`` is ``False``.
         """
-        run_records, failed_scenarios = (
-            self._collect_measure_records_for_run(
-                run_id=run_id,
-                statuses_by_scenario=statuses_by_scenario,
-            )
-        )
 
         if not run_records.empty:
             self.uncertainty_measure_records.append(run_records)

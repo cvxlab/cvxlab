@@ -1020,12 +1020,13 @@ class Model():
 
     def run_uncertainty(
         self,
-        existing_data: bool | bool = False,
-        resume: bool | bool = False,
+        existing_data: bool = False,
+        resume: bool = False,
         temp_file_format: str = "xlsx",
         force_overwrite: bool = False,
         solution_mode: Defaults.LiteralTypes.SolutionMode = 'parallel',
         scenarios_idx: Optional[List[int] | int] = None,
+        n_parallel: int = 1,
         # arguments for solver settings
         solver: Optional[str | dict[str, str]] = None,
         solver_verbose: bool | dict[str, bool] = False,
@@ -1078,6 +1079,7 @@ class Model():
               Defaults to "parallel".
           scenarios_idx: Scenario indices to solve. If None, all available
               scenarios are considered.
+          n_parallel: how many model instances run in parallel, defaults to 1
           solver: CVXPY solver name, or solver mapping for multiple sub-problems.
           solver_verbose: Whether solver output is displayed.
           solver_settings: Additional solver-specific settings.
@@ -1100,6 +1102,11 @@ class Model():
           exc.SettingsError: If uncertain input data or uncertainty measures are
               inconsistent with the model configuration.
       """
+
+        if not isinstance(n_parallel, int) or n_parallel < 1:
+            raise ValueError(
+                "'n_parallel' must be an integer greater than or equal to 1."
+            )
 
         uncertainty_cfg = self._uncertainty_settings
 
@@ -1128,32 +1135,30 @@ class Model():
 
         for run_id in run_ids:
 
-            self.logger.info(
-                f"Running uncertainty-analysis run {run_id}."
+            run_records, failed_scenarios = (
+                self._run_uncertainty_sample(
+                    run_id=run_id,
+                    force_overwrite=force_overwrite,
+                    solution_mode=solution_mode,
+                    scenarios_idx=scenarios_idx,
+                    convergence_monitoring=convergence_monitoring,
+                    solver=solver,
+                    sequential_solution_chain=sequential_solution_chain,
+                    solver_verbose=solver_verbose,
+                    solver_settings=solver_settings,
+                    convergence_norm=convergence_norm,
+                    convergence_tables_to_check=convergence_tables_to_check,
+                    convergence_tables_to_skip=convergence_tables_to_skip,
+                    relative_tolerance=relative_tolerance,
+                    maximum_iterations=maximum_iterations,
+                    keep_previous_iteration_db=keep_previous_iteration_db,
+                )
             )
 
-            self.core.load_uncertain_data_and_generate_numerical_problems(
-                run_id)
-
-            self.run_model(
-                force_overwrite=force_overwrite,
-                solution_mode=solution_mode,
-                scenarios_idx=scenarios_idx,
-                convergence_monitoring=convergence_monitoring,
-                solver=solver,
-                sequential_solution_chain=sequential_solution_chain,
-                solver_verbose=solver_verbose,
-                solver_settings=solver_settings,
-                convergence_norm=convergence_norm,
-                convergence_tables_to_check=convergence_tables_to_check,
-                convergence_tables_to_skip=convergence_tables_to_skip,
-                relative_tolerance=relative_tolerance,
-                maximum_iterations=maximum_iterations,
-                keep_previous_iteration_db=keep_previous_iteration_db,
-            )
-
-            self.core.update_uncertainty_run_results(
+            self.core.uncertainty.update_run_results(
                 run_id=run_id,
+                run_records=run_records,
+                failed_scenarios=failed_scenarios,
                 temp_save=uncertainty_cfg.temp_save,
                 file_format=uncertainty_cfg.file_format,
             )
@@ -1167,6 +1172,62 @@ class Model():
             self.core.uncertainty.compute_gsa(
                 settings=uncertainty_cfg,
             )
+
+    def _run_uncertainty_sample(
+        self,
+        run_id: int,
+        force_overwrite: bool,
+        solution_mode,
+        scenarios_idx,
+        convergence_monitoring,
+        solver,
+        sequential_solution_chain,
+        solver_verbose,
+        solver_settings,
+        convergence_norm,
+        convergence_tables_to_check,
+        convergence_tables_to_skip,
+        relative_tolerance,
+        maximum_iterations,
+        keep_previous_iteration_db,
+    ) -> None:
+        """performs a single model run for the specified run_id"""
+
+        uncertainty_cfg = self._uncertainty_settings
+
+        self.logger.info(
+            f"Running uncertainty-analysis run {run_id}."
+        )
+
+        self.core.load_uncertain_data_and_generate_numerical_problems(
+            run_id
+        )
+
+        self.run_model(
+            force_overwrite=force_overwrite,
+            solution_mode=solution_mode,
+            scenarios_idx=scenarios_idx,
+            convergence_monitoring=convergence_monitoring,
+            solver=solver,
+            sequential_solution_chain=sequential_solution_chain,
+            solver_verbose=solver_verbose,
+            solver_settings=solver_settings,
+            convergence_norm=convergence_norm,
+            convergence_tables_to_check=convergence_tables_to_check,
+            convergence_tables_to_skip=convergence_tables_to_skip,
+            relative_tolerance=relative_tolerance,
+            maximum_iterations=maximum_iterations,
+            keep_previous_iteration_db=keep_previous_iteration_db,
+        )
+
+        run_records, failed_scenarios = (
+            self.core.uncertainty.collect_run_results(
+                run_id=run_id,
+                statuses_by_scenario=self.core.get_current_problem_status_by_scenario(),
+            )
+        )
+
+        return run_records, failed_scenarios
 
     def __repr__(self):
         """Return a string representation of the Model instance."""

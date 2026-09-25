@@ -1,0 +1,133 @@
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any
+import shutil
+
+import pandas as pd
+
+
+class ParallelUncertaintyRunner:
+    """Manage parallel execution of uncertainty-analysis model runs.
+
+    The class handles the internal orchestration required to execute uncertainty
+    runs in separate processes. Each worker uses an isolated copy of the model
+    SQLite database while sharing the same model structure and input files.
+
+    The runner is responsible for:
+    - creating worker directories and database copies;
+    - distributing uncertainty run IDs among workers;
+    - starting worker processes;
+    - collecting completed run results;
+    - registering results in the main model instance;
+    - cleaning temporary worker files.
+
+    The class is intended for internal use by ``Model.run_uncertainty()``.
+    """
+
+    def __init__(
+        self,
+        model,
+        n_parallel: int,
+    ) -> None:
+        """Initialize the parallel uncertainty runner.
+
+        Args:
+            model: Main Model instance controlling the uncertainty analysis.
+            n_parallel: Maximum number of uncertainty workers executed in parallel.
+
+        Raises:
+            ValueError: If ``n_parallel`` is smaller than one.
+        """
+        if n_parallel < 1:
+            raise ValueError(
+                "'n_parallel' must be greater than or equal to 1."
+            )
+
+        self.model = model
+        self.n_parallel = n_parallel
+
+        self.workers_dir = (
+            self.model.paths.model_dir
+            / "parallel_workers"
+        )
+
+        self.worker_dirs: list[Path] = []
+
+    def _create_worker_dirs(
+        self,
+    ) -> list[Path]:
+        """Create isolated directories and database copies for parallel workers.
+
+        A ``parallel_workers`` directory is created inside the model directory.
+        Each worker receives its own sub-directory containing a copy of the main
+        SQLite database.
+
+        Existing worker directories from a previous execution are removed before
+        creating the new ones.
+
+        Returns:
+            List of paths corresponding to the generated worker directories.
+        """
+
+        if self.workers_dir.exists():
+            shutil.rmtree(self.workers_dir)
+
+        self.workers_dir.mkdir()
+
+        self.worker_dirs = []
+
+        for worker_id in range(self.n_parallel):
+
+            worker_dir = (
+                self.workers_dir
+                / f"worker_{worker_id}"
+            )
+
+            worker_dir.mkdir()
+
+            shutil.copy2(
+                self.model.paths.sqlite_database,
+                worker_dir
+                / self.model.paths.sqlite_database.name,
+            )
+
+            self.worker_dirs.append(worker_dir)
+
+        return self.worker_dirs
+
+    def _split_run_ids(
+        self,
+        run_ids,
+    ) -> list[list[int]]:
+        """Distribute uncertainty run IDs among available workers.
+
+        Run IDs are distributed using a round-robin strategy so that consecutive
+        runs are spread across different workers.
+
+        Args:
+            run_ids: Iterable containing the uncertainty run IDs to execute.
+
+        Returns:
+            List containing one list of run IDs for each worker.
+        """
+
+        run_ids = list(run_ids)
+
+        return [
+            run_ids[i::self.n_parallel]
+            for i in range(self.n_parallel)
+        ]
+
+    def cleanup_worker_dirs(
+        self,
+    ) -> None:
+        """Remove temporary directories created for parallel workers.
+
+        The complete ``parallel_workers`` directory is deleted after the parallel
+        uncertainty execution has completed or when execution is interrupted.
+        """
+
+        if self.workers_dir.exists():
+            shutil.rmtree(self.workers_dir)
+
+        self.worker_dirs = []

@@ -1844,12 +1844,18 @@ class Core:
     ) -> None:
         """Load symbolic problem, validate uncertain exogenous data, and initialize CVXPY structures."""
 
+        self.logger.info(
+            "Loading symbolic problem..."
+        )
         self.load_and_validate_symbolic_problem(
             force_overwrite=force_overwrite,
         )
 
         self.check_exogenous_data_coherence()
 
+        self.logger.info(
+            "Initializing problem and loading deterministic data..."
+        )
         self._initialize_problems_variables()
 
         self._load_deterministic_data()
@@ -1879,24 +1885,24 @@ class Core:
             run_id=run_id,
         )
 
-    def update_uncertainty_run_results(
-        self,
-        run_id: int,
-        temp_save: bool,
-        file_format: str,
-    ) -> None:
-        """Collect current problem statuses and update uncertainty-run results."""
+    # def update_uncertainty_run_results(
+    #     self,
+    #     run_id: int,
+    #     temp_save: bool,
+    #     file_format: str,
+    # ) -> None:
+    #     """Collect current problem statuses and update uncertainty-run results."""
 
-        statuses_by_scenario = (
-            self.get_current_problem_status_by_scenario()
-        )
+    #     statuses_by_scenario = (
+    #         self.get_current_problem_status_by_scenario()
+    #     )
 
-        self.uncertainty.update_run_results(
-            run_id=run_id,
-            statuses_by_scenario=statuses_by_scenario,
-            temp_save=temp_save,
-            file_format=file_format,
-        )
+    #     self.uncertainty.update_run_results(
+    #         run_id=run_id,
+    #         statuses_by_scenario=statuses_by_scenario,
+    #         temp_save=temp_save,
+    #         file_format=file_format,
+    #     )
 
     def load_uncertain_data_and_generate_numerical_problems(
         self,
