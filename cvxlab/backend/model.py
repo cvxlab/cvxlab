@@ -21,7 +21,7 @@ import pandas as pd
 from cvxlab.defaults import Defaults
 from cvxlab.backend.core import Core
 from cvxlab.backend.model_settings import ModelSettings, ModelPaths
-from cvxlab.backend.uncertainty.uncertainty_settings import SamplingSettings, GSASettings
+from cvxlab.backend.uncertainty.uncertainty_settings import UncertaintySettings
 from cvxlab.backend.run_settings import RunSettings
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
@@ -151,8 +151,7 @@ class Model():
                 paths=self.paths,
             )
 
-            self._sampling_settings: SamplingSettings | None = None
-            self._gsa_settings: GSASettings | None = None
+            self._uncertainty_settings: UncertaintySettings | None = None
 
             if self.settings.use_existing_data:
                 self._load_model_coordinates()
@@ -446,7 +445,7 @@ class Model():
                 table_key_list=table_key_list,
             )
 
-    def load_data(
+    def _load_and_validate_uncertain_data_to_sqlite_database(
             self,
             force_overwrite: bool = False,
             table_key_list: Optional[list[str]] = None,
@@ -969,94 +968,59 @@ class Model():
         """
         return self.core.index.fetch_set_data(set_key=name)
 
-    def __repr__(self):
-        """Return a string representation of the Model instance."""
-        class_name = type(self).__name__
-        return f'{class_name}'
-
-    def sampling_settings(
+    def uncertainty_settings(
         self,
-        method: str,
+        sampling_method: str,
+        gsa_method: str,
         groups: bool = False,
+        sampling_kwargs: dict[str, Any] | None = None,
+        gsa_kwargs: dict[str, Any] | None = None,
+        measures: list[str] | None = None,
+        scenarios: list[str] | None = None,
         save_samples: bool = True,
         save_measures: bool = True,
+        save_gsa: bool = True,
         temp_save: bool = True,
         file_format: str = "xlsx",
-        **method_kwargs: Any,
-    ):
-        """Common validation utilities for uncertainty settings."""
+    ) -> None:
+        """Configure uncertainty sampling and global sensitivity analysis.
 
-        self._sampling_settings = SamplingSettings(
-            is_uncertainty_analysis=self.is_uncertainty_analysis,
-            logger=self.logger,
-            method=method.lower(),
-            groups=groups,
-            method_kwargs=method_kwargs,
-            save_samples=save_samples,
-            save_measures=save_measures,
-            temp_save=temp_save,
-            file_format=file_format,
+        Validates the selected sampling/GSA configuration and stores it in an
+        :class:`UncertaintySettings` instance.
 
-        )
-
-    def gsa_settings(
-        self,
-        method: str,
-        save_analysis: bool = True,
-        measures: list[str] | str | None = None,
-        scenarios: list[str] | str | None = None,
-        file_format: str = "xlsx",
-        **method_kwargs: Any,
-    ):
-        """Configure the global sensitivity analysis.
-
-        The method validates the selected SALib analyzer, checks its compatibility
-        with the previously configured sampling design, normalizes optional measure
-        and scenario selections, and stores the configuration selected by the user
-
-        Args:
-            method(str): GSA analysis method name. Supported analyzers are defined in
-                ``Uncertainty.ANALYZERS``.
-            save_analysis(Optional[bool]): Whether the resulting sensitivity indices must be
-                exported to file.
-            measures(list): Uncertainty-measure variables to analyze. A single name may
-                be passed as a string. If None, all available measures are analyzed.
-            scenarios(list): Scenario names to analyze. A single scenario may be passed
-                as a string. If None, all available scenarios are analyzed.
-            file_format(str): File format used to export the GSA result dataframe.
-            **method_kwargs: Keyword arguments passed to the selected SALib
-                analyzer, such as ``num_resamples``, ``conf_level``, ``seed`` or
-                ``print_to_console``.
-
-        Returns:
-            GSASettingsConfig: Stored GSA configuration.
+        See :class:`UncertaintySettings` for the detailed description of the
+        available settings.
 
         Raises:
-            ValueError: If uncertainty analysis is disabled, the method is
-                unsupported, or it is incompatible with the configured sampler.
-            TypeError: If ``measures`` or ``scenarios`` have an invalid type, or if
-                invalid analyzer keyword arguments are supplied.
+            ValueError: If the uncertainty-analysis configuration is invalid.
+            TypeError: If one or more settings have an invalid type.
         """
-
         self.core.uncertainty.validate_gsa_configuration(
-            sampling_method=self._sampling_settings.method,
-            analysis_method=method.lower(),
-            method_kwargs=method_kwargs,
+            sampling_method=sampling_method.lower(),
+            gsa_method=gsa_method.lower(),
+            method_kwargs=gsa_kwargs or {},
         )
 
-        self._gsa_settings = GSASettings(
+        self._uncertainty_settings = UncertaintySettings(
             logger=self.logger,
             uncertainty_enabled=self.is_uncertainty_analysis,
-            method=method,
-            method_kwargs=method_kwargs,
+            sampling_method=sampling_method,
+            gsa_method=gsa_method,
+            groups=groups,
+            sampling_kwargs=sampling_kwargs,
+            gsa_kwargs=gsa_kwargs,
             measures=measures,
             scenarios=scenarios,
-            save_analysis=save_analysis,
+            save_samples=save_samples,
+            save_measures=save_measures,
+            save_gsa=save_gsa,
+            temp_save=temp_save,
             file_format=file_format,
         )
 
     def run_uncertainty(
         self,
+        existing_data: bool | bool = False,
         resume: bool | bool = False,
         temp_file_format: str = "xlsx",
         force_overwrite: bool = False,
@@ -1083,73 +1047,79 @@ class Model():
         keep_previous_iteration_db: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Execute the model for all generated uncertainty samples.
+        """Run the model over the configured uncertainty samples.
 
-        The method validates the uncertainty configuration, sapmples the data
-        according to user's selection, initializes the symbolic and numerical problem structures,
-        loads deterministic exogenous values, and solves the model for each set of
-        sampled data
+      The method executes the full uncertainty-analysis workflow using the
+      configuration previously defined through ``Model.uncertainty_settings()``.
 
-        Scalar variables marked as uncertainty measures are collected for every
-        successfully solved scenario. Failed scenario-runs are represented by NaN
-        measure records and their solver status is retained.
+      Unless ``existing_data=True``, the input data from xlsx files are loaded and validated.
+      The sampling design is then initialized, the model problem structure is
+      prepared, and the model is solved once for each generated sample.
 
+      For each run, sampled uncertain data are loaded, numerical problems are
+      regenerated, the model is solved according to the selected solution mode,
+      and uncertainty measures and problem statuses are collected.
 
-        Args:
-            resume: Whether to resume a previously interrupted uncertainty
-                run. If ``False``, a new run is initialized. If ``True``,
-                existing uncertainty samples and temporary uncertainty measures
-                are loaded and execution continues from the last saved run.
-            temp_file_format: File format used to load the temporary uncertainty 
-            measures when ``resume=True``. Defaults to "xlsx"``.
-            force_overwrite: Whether existing generated problem structures may be
-                overwritten.
-            integrated_problems: Whether linked sub-problems must be solved
-                iteratively.
-            convergence_monitoring: Whether convergence must be checked for integrated
-                problems.
-            solver: CVXPY solver name.
-            solver_verbose: Whether solver output must be displayed.
-            solver_settings: Solver-specific keyword arguments.
-            convergence_norm: Norm used to evaluate convergence.
-            convergence_tables_to_check: Tables included in convergence monitoring.
-            convergence_tables_to_skip: Tables excluded from convergence monitoring.
-            relative_tolerance: Relative convergence tolerance.
-            maximum_iterations: Maximum number of integrated-problem iterations.
-            keep_previous_iteration_db: Whether the database from the previous
-                iteration must be retained.
-            **kwargs: Additional arguments currently reserved for compatibility.
+      After all runs are completed, uncertainty results are finalized and exported
+      according to the configured settings. If a GSA method is configured, global
+      sensitivity indices are computed automatically from the collected results.
 
-        Raises:
-            ValueError: If uncertainty is disabled, sampling is not configured, or no
-                samples can be generated.
-            exc.SettingsError: If no scalar uncertainty measure is configured or
-                uncertain input data are inconsistent.
+      Args:
+          existing_data: If True, reuse the existing database content and skip
+              loading and validating uncertain input data. Defaults to False.
+          resume: Whether to resume a previously interrupted uncertainty run.
+              If True, existing samples and temporary run results are reused where
+              available. Defaults to False.
+          temp_file_format: File format used to load temporary uncertainty results
+              when resuming a run. Defaults to "xlsx".
+          force_overwrite: Whether generated numerical problem structures and
+              model results may be overwritten. Defaults to False.
+          solution_mode: Solution strategy used for the model runs.
+              Defaults to "parallel".
+          scenarios_idx: Scenario indices to solve. If None, all available
+              scenarios are considered.
+          solver: CVXPY solver name, or solver mapping for multiple sub-problems.
+          solver_verbose: Whether solver output is displayed.
+          solver_settings: Additional solver-specific settings.
+          sequential_solution_chain: Ordered sequence of sub-problems used when
+              ``solution_mode="sequential"``.
+          convergence_monitoring: Whether convergence is monitored for integrated
+              problem solution.
+          convergence_norm: Norm used to evaluate convergence.
+          convergence_tables_to_check: Data tables included in convergence checks.
+          convergence_tables_to_skip: Data tables excluded from convergence checks.
+          relative_tolerance: Relative convergence tolerance.
+          maximum_iterations: Maximum number of iterations for integrated solution.
+          keep_previous_iteration_db: Whether the database from the previous
+              integrated-solution iteration is retained.
+          **kwargs: Additional arguments reserved for backward compatibility.
 
-        Notes:
-            Deterministic exogenous values are loaded once before the run loop.
-            Values from uncertainty-enabled tables are updated for every run.
-"""
-        sampling_cfg = self._sampling_settings
+      Raises:
+          ValueError: If uncertainty settings have not been configured or if the
+              uncertainty sampling workflow cannot be initialized.
+          exc.SettingsError: If uncertain input data or uncertainty measures are
+              inconsistent with the model configuration.
+      """
 
-        if sampling_cfg is None:
+        uncertainty_cfg = self._uncertainty_settings
+
+        if uncertainty_cfg is None:
             raise ValueError(
                 "No uncertainty analysis configured. "
-                "Call model.sampling_settings(...) before model.run_uncertainty()."
+                "Call model.uncertainty_settings(...) before analyze_uncertainty()."
             )
 
+        if not existing_data:
+
+            self._load_and_validate_uncertain_data_to_sqlite_database()
+
         self.core.uncertainty.initialize_sampling(
+            settings=uncertainty_cfg,
             resume=resume,
-            method=sampling_cfg.method,
-            groups=sampling_cfg.groups,
-            save_samples=sampling_cfg.save_samples,
-            file_format=sampling_cfg.file_format,
-            **sampling_cfg.method_kwargs,
         )
 
-        self.core.initialize_uncertain_problem_structure(force_overwrite=True)
-
-        self.core.load_deterministic_data()
+        self.core.initialize_problem_structure_and_load_deterministic_data(
+            force_overwrite=True)
 
         run_ids = self.core.uncertainty.initialize_run_results(
             resume=resume,
@@ -1162,9 +1132,8 @@ class Model():
                 f"Running uncertainty-analysis run {run_id}."
             )
 
-            self.core.load_uncertain_data(run_id)
-
-            self.core.problem.generate_numerical_problems(force_overwrite=True)
+            self.core.load_uncertain_data_and_generate_numerical_problems(
+                run_id)
 
             self.run_model(
                 force_overwrite=force_overwrite,
@@ -1183,307 +1152,23 @@ class Model():
                 keep_previous_iteration_db=keep_previous_iteration_db,
             )
 
-            statuses_by_scenario = self.core.get_current_problem_status_by_scenario()
-
-            self.core.uncertainty.update_run_results(
+            self.core.update_uncertainty_run_results(
                 run_id=run_id,
-                statuses_by_scenario=statuses_by_scenario,
-                temp_save=sampling_cfg.temp_save,
-                file_format=sampling_cfg.file_format,
+                temp_save=uncertainty_cfg.temp_save,
+                file_format=uncertainty_cfg.file_format,
             )
 
         self.core.uncertainty.finalize_run_results(
-            save_measures=sampling_cfg.save_measures,
-            file_format=sampling_cfg.file_format,
+            settings=uncertainty_cfg,
             scenarios=self.core.index.sets_split_problem_dict,
         )
 
-    def analyze(
-        self,
-        # **analysis_kwargs: Any,
-    ):
-        """Compute global sensitivity indices from the latest uncertainty run.
-
-        The method analyzes the samples stored in ``self.uncertainty_samples`` and
-        the model outputs stored in ``self.uncertainty_measures`` using the
-        configuration defined by :meth:`GSA_settings`.
-
-        Results are converted to a long-format dataframe, optionally enriched with
-        parameter metadata, stored in ``self.gsa_results`` and optionally exported.
-
-        Args:
-            method: Deprecated or optional analyzer override. The effective method is
-                currently taken from ``self._GSA_settings.method``.
-            **analysis_kwargs: Analyzer arguments that override values stored in the
-                GSA configuration.
-
-        Returns:
-            pd.DataFrame: global sensitivity-analysis results.
-
-        Raises:
-            ValueError: If uncertainty is disabled or required sampling, measure or
-        GSA configuration data are unavailable.
-        """
-
-        sampling_cfg = self._sampling_settings
-        gsa_cfg = self._gsa_settings
-
-        if gsa_cfg is None:
-            raise ValueError(
-                "No uncertainty analysis configured. "
-                "Call model.GSA_settings(...) before analyze_uncertainty()."
+        if uncertainty_cfg.gsa_method:
+            self.core.uncertainty.compute_gsa(
+                settings=uncertainty_cfg,
             )
 
-        if self.sampling_problem is None:
-            raise ValueError(
-                "No SALib problem found. "
-                "Call model.run_uncertainty_analysis() before analyze_uncertainty()."
-            )
-
-        if self.uncertainty_samples is None:
-            raise ValueError(
-                "No uncertainty samples found. "
-                "Call model.run_uncertainty_analysis() before analyze_uncertainty()."
-            )
-
-        self.core.uncertainty.get_results_analysis(
-            method=gsa_cfg.method,
-            groups=sampling_cfg.groups,
-            measures=gsa_cfg.measures,
-            scenarios=gsa_cfg.scenarios,
-            save_analysis=gsa_cfg.save_analysis,
-            file_format=gsa_cfg.file_format,
-            **gsa_cfg.method_kwargs,
-        )
-
-
-# def single_run(
-#     self,
-#     run_id: int,
-#     samples_df: Optional[pd.DataFrame] = None,
-#     force_overwrite: bool = False,
-#     integrated_problems: bool = False,
-#     convergence_monitoring: bool = True,
-#     solver: Optional[str] = None,
-#     solver_verbose: bool = False,
-#     solver_settings: Optional[dict[str, Any]] = None,
-#     convergence_norm: Defaults.LiteralTypes.NormType = "l2",
-#     convergence_tables_to_check: (
-#         Defaults.LiteralTypes.ConvergenceTables | List[str]
-#     ) = "all_endogenous",
-#     convergence_tables_to_skip: Optional[List[str]] = None,
-#     relative_tolerance: Optional[float] = None,
-#     maximum_iterations: Optional[int] = None,
-#     keep_previous_iteration_db: bool = False,
-#     db_name: Optional[str] = None,
-# ) -> Path:
-#     """Run the model for one uncertainty sample and save its results to a DB.
-
-#     The selected sample is loaded into the uncertain CVXPY parameters, the
-#     corresponding numerical problem is generated and solved, and the sampled
-#     inputs and solved endogenous results are written to the model database.
-
-#     A copy of the resulting database is then saved in the results directory.
-
-#     Args:
-#         run_id: Identifier of the uncertainty sample to run.
-#         samples_df: Dataframe containing uncertainty samples. If None,
-#             ``self.uncertainty_samples`` is used.
-#         force_overwrite: Whether existing numerical problems and output files
-#             may be overwritten.
-#         integrated_problems: Whether linked sub-problems must be solved
-#             iteratively.
-#         convergence_monitoring: Whether convergence must be monitored for
-#             integrated problems.
-#         solver: CVXPY solver name.
-#         solver_verbose: Whether solver output must be printed.
-#         solver_settings: Additional solver-specific options.
-#         convergence_norm: Norm used for convergence monitoring.
-#         convergence_tables_to_check: Tables used to assess convergence.
-#         convergence_tables_to_skip: Tables excluded from convergence checks.
-#         relative_tolerance: Relative convergence tolerance.
-#         maximum_iterations: Maximum number of integrated-problem iterations.
-#         keep_previous_iteration_db: Whether the previous iteration database
-#             must be retained.
-#         db_name: Name of the run-specific database. If None, the database is
-#             named ``database_run_<run_id>.db``.
-
-#     Raises:
-#         ValueError: If uncertainty is disabled, samples are unavailable, or
-#             the selected run_id does not exist.
-#         RuntimeError: If no scenario reaches an optimal solution.
-#         FileExistsError: If the destination database already exists and
-#             ``force_overwrite`` is False.
-#     """
-
-#     if not self.is_uncertainty_analysis:
-#         raise ValueError(
-#             "Uncertainty analysis is not enabled. "
-#             f"Create the model with "
-#             f"{Defaults.Labels.UNCERTAINTY_SETTING_KEY}=True."
-#         )
-
-#     if isinstance(run_id, bool) or not isinstance(run_id, int):
-#         raise TypeError(
-#             f"'run_id' must be an integer. Received: {type(run_id).__name__}."
-#         )
-
-#     # 1. Resolve and validate the samples dataframe.
-#     if samples_df is None:
-#         samples_df = self.uncertainty_samples
-
-#     if samples_df is None:
-#         raise ValueError(
-#             "No uncertainty samples are available, generate the samples first."
-#         )
-
-#     run_id_col = Defaults.UncertaintySettings.RUN_ID
-
-#     if run_id_col not in samples_df.columns:
-#         raise ValueError(
-#             f"run '{run_id_col}' not available, available run ids: '{self.uncertainty_samples[run_id_col].values.tolist()}'."
-#         )
-
-#     matching_rows = samples_df.loc[
-#         samples_df[run_id_col] == run_id
-#     ]
-
-#     # 2. Initialize the symbolic and CVXPY problem structures.
-#     self._initialize_problem_structure(
-#         force_overwrite=force_overwrite,
-#     )
-
-#     deterministic_vars, uncertain_vars = self._sort_variables()
-
-#     # 3. Load deterministic and sampled exogenous values.
-#     self.core.data_to_cvxpy_exogenous_vars(
-#         allow_none_values=False,
-#         var_list_to_update=deterministic_vars,
-#     )
-
-#     self.core.data_to_cvxpy_exogenous_vars(
-#         allow_none_values=False,
-#         var_list_to_update=uncertain_vars,
-#         is_hybrid=True,
-#         samples_df=samples_df,
-#         run_id=run_id,
-#     )
-
-#     self.logger.info(
-#         f"Single uncertainty run | Running model for run_id={run_id}."
-#     )
-
-#     # 4. Generate and solve the selected numerical problem.
-#     self.core.problem.generate_numerical_problems(
-#         force_overwrite=True,
-#     )
-
-#     self.run_model(
-#         force_overwrite=force_overwrite,
-#         integrated_problems=integrated_problems,
-#         convergence_monitoring=convergence_monitoring,
-#         solver=solver,
-#         solver_verbose=solver_verbose,
-#         solver_settings=solver_settings,
-#         convergence_norm=convergence_norm,
-#         convergence_tables_to_check=convergence_tables_to_check,
-#         convergence_tables_to_skip=convergence_tables_to_skip,
-#         relative_tolerance=relative_tolerance,
-#         maximum_iterations=maximum_iterations,
-#         keep_previous_iteration_db=keep_previous_iteration_db,
-#     )
-
-#     # 5. Identify which scenarios were successfully solved.
-#     statuses_by_scenario = (
-#         self.core.get_current_problem_status_by_scenario()
-#     )
-
-#     solved_scenarios = [
-#         scenario_key
-#         for scenario_key, status in statuses_by_scenario.items()
-#         if status == "optimal"
-#     ]
-
-#     failed_scenarios = {
-#         scenario_key: status
-#         for scenario_key, status in statuses_by_scenario.items()
-#         if status != "optimal"
-#     }
-
-#     if not solved_scenarios:
-#         raise RuntimeError(
-#             f"Single uncertainty run failed | run_id={run_id}. "
-#             f"Problem statuses: {statuses_by_scenario}. "
-#             "No result database was saved."
-#         )
-
-#     # 6. Write the sampled uncertain inputs to the database.
-#     self.core.cvxpy_uncertain_exogenous_data_to_database(
-#         force_overwrite=True,
-#         suppress_warnings=True,
-#     )
-
-#     # 7. Write only successfully solved endogenous scenarios.
-#     #
-#     # For a model without split scenarios, the status key is None and
-#     # scenarios_idx must remain None.
-#     has_split_scenarios = bool(
-#         self.core.index.sets_split_problem_dict
-#     )
-
-#     scenarios_idx = (
-#         solved_scenarios
-#         if has_split_scenarios
-#         else None
-#     )
-
-#     self.load_results_to_database(
-#         scenarios_idx=scenarios_idx,
-#         force_overwrite=True,
-#         suppress_warnings=True,
-#     )
-
-#     # 8. Define the destination database path.
-#     results_dir = (
-#         self.paths["model_dir"]
-#         / Defaults.UncertaintySettings.RESULTS_DIR
-#     )
-#     results_dir.mkdir(parents=True, exist_ok=True)
-
-#     if db_name is None:
-#         db_name = f"database_run_{run_id}.db"
-
-#     db_name = Path(db_name).name
-
-#     if not db_name.lower().endswith(".db"):
-#         db_name = f"{db_name}.db"
-
-#     source_db_path = Path(self.paths["sqlite_database"])
-#     destination_db_path = results_dir / db_name
-
-#     if destination_db_path.exists():
-#         if not force_overwrite:
-#             raise FileExistsError(
-#                 f"Database '{destination_db_path}' already exists. "
-#                 "Set force_overwrite=True to overwrite it."
-#             )
-
-#         destination_db_path.unlink()
-
-#     shutil.copy2(
-#         source_db_path,
-#         destination_db_path,
-#     )
-
-#     self.logger.info(
-#         "Single uncertainty run | "
-#         f"Database saved to '{destination_db_path}'."
-#     )
-
-#     if failed_scenarios:
-#         self.logger.warning(
-#             "Single uncertainty run | "
-#             f"run_id={run_id} was only partially solved. "
-#             f"Failed scenarios: {failed_scenarios}. "
-#             "Only optimal scenarios were exported."
-#         )
+    def __repr__(self):
+        """Return a string representation of the Model instance."""
+        class_name = type(self).__name__
+        return f'{class_name}'

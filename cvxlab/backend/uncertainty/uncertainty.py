@@ -17,6 +17,7 @@ from cvxlab.log_exc.logger import Logger
 from cvxlab.backend.uncertainty.uncertainty_datahandler import UncertaintyData
 from cvxlab.backend.uncertainty.uncertainty_datasampler import UncertaintySampler
 from cvxlab.backend.uncertainty.uncertainty_analyzer import UncertaintyAnalyzer
+from cvxlab.backend.uncertainty.uncertainty_settings import UncertaintySettings
 
 
 class Uncertainty:
@@ -452,12 +453,8 @@ class Uncertainty:
 
     def initialize_sampling(
         self,
+        settings: UncertaintySettings,
         resume: bool,
-        method: str,
-        groups: bool,
-        save_samples: bool,
-        file_format: str | None,
-        **method_kwargs: Any,
     ) -> None:
         """Initialize the uncertainty sampling workflow.
 
@@ -466,16 +463,16 @@ class Uncertainty:
         optionally save the generated samples to file.
 
         Args:
-            method: Name of the SALib sampling method.
-            groups: Whether uncertainty groups are included in the sampling
-                problem.
-            save_samples: Whether the generated uncertainty samples are saved to
-                file.
-            file_format: Output file format used when saving the samples. This
-                argument is ignored when ``save_samples`` is ``False``.
-            **method_kwargs: Method-specific arguments passed to the selected
-                SALib sampler.
+            settings: Uncertainty-analysis configuration containing the sampling
+            method, grouping option, sampler-specific arguments, sample export
+            settings, and output file format.
+        resume: Whether to resume a previously initialized uncertainty run.
+            If True, existing sampling data are reused where available.
         """
+        method = settings.sampling_method
+        groups = settings.groups
+        save_samples = settings.save_samples
+        file_format = settings.file_format
 
         if not resume:
 
@@ -486,7 +483,7 @@ class Uncertainty:
             ) = self.uncertainty_sampler.generate_samples(
                 method=method,
                 groups=groups,
-                **method_kwargs,
+                **settings.sampling_kwargs
             )
 
             if save_samples:
@@ -505,7 +502,7 @@ class Uncertainty:
                 file_format=file_format,
                 method=method,
                 groups=groups,
-                ** method_kwargs
+                **settings.sampling_kwargs
             )
 
     def get_deterministic_vars(self):
@@ -665,8 +662,7 @@ class Uncertainty:
 
     def finalize_run_results(
         self,
-        save_measures: bool,
-        file_format: str | None,
+        settings: UncertaintySettings,
         scenarios: dict[Any, Any],
     ) -> None:
         """Finalize and store the results of an uncertainty campaign.
@@ -675,13 +671,17 @@ class Uncertainty:
         optionally save it to file, and report failed scenario-runs.
 
         Args:
-            save_measures: Whether final uncertainty measures are saved to file.
-            file_format: File format used for final measure storage.
+            settings: Uncertainty-analysis configuration containing the sampling
+            method, grouping option, sampler-specific arguments, sample export
+            settings, and output file format.
             scenarios: Scenario metadata used to report failed scenario-runs.
 
         Raises:
             exc.MissingDataError: If no uncertainty-measure records were collected.
         """
+        save_measures = settings.save_measures
+        file_format = settings.file_format
+
         if not self.uncertainty_measure_records:
             msg = (
                 "Uncertainty analysis completed without producing "
@@ -713,29 +713,40 @@ class Uncertainty:
         self,
         *,
         sampling_method: str,
-        analysis_method: str,
+        gsa_method: str,
         method_kwargs: dict[str, Any],
     ) -> None:
-        """Validate the GSA analysis configuration."""
-        self.uncertainty_analyzer.validate_analysis_config(
-            method=analysis_method,
+        """Validate the configured global sensitivity analysis.
+
+        The method validates the selected GSA method and its method-specific
+        arguments, then checks its compatibility with the configured sampling
+        method.
+
+        Args:
+            sampling_method: Sampling method used to generate uncertainty samples.
+            gsa_method: Global sensitivity analysis method used to compute
+                sensitivity indices.
+            method_kwargs: Method-specific keyword arguments passed to the selected
+                GSA analyzer.
+
+        Raises:
+            ValueError: If the selected GSA method is unsupported, its configuration
+                is invalid, or it is incompatible with the sampling method.
+            TypeError: If one or more GSA method arguments have an invalid type.
+        """
+        self.uncertainty_analyzer.validate_gsa_config(
+            method=gsa_method,
             kwargs=method_kwargs,
         )
 
-        self.uncertainty_analyzer.validate_sampling_analysis_compatibility(
+        self.uncertainty_analyzer.validate_sampling_gsa_compatibility(
             sampling_method=sampling_method,
-            analysis_method=analysis_method,
+            gsa_method=gsa_method,
         )
 
-    def get_results_analysis(
+    def compute_gsa(
             self,
-            method: str,
-            groups: bool,
-            measures: list[str] | None = None,
-            scenarios: list[str] | None = None,
-            save_analysis: bool = True,
-            file_format: str | None = None,
-            **method_kwargs: Any,
+            settings: UncertaintySettings,
     ) -> None:
         """Perform and optionally save global sensitivity analysis.
 
@@ -744,18 +755,9 @@ class Uncertainty:
         it to file.
 
         Args:
-            method: Name of the SALib sensitivity-analysis method.
-            groups: Whether the sampling problem was generated using uncertainty
-                groups.
-            measures: Uncertainty measures to analyze. If omitted, all available
-                measures are analyzed.
-            scenarios: Scenarios to analyze. If omitted, all available scenarios
-                are analyzed.
-            save_analysis: Whether the computed GSA results are saved to file.
-            file_format: Output file format used when saving the results. This
-                argument is ignored when ``save_analysis`` is ``False``.
-            **method_kwargs: Method-specific arguments passed to the selected
-                SALib analyzer.
+            settings: Uncertainty-analysis configuration containing the sampling
+            method, grouping option, sampler-specific arguments, sample export
+            settings, and output file format.
 
         Returns:
             Global sensitivity analysis results in long-format tabular form.
@@ -764,6 +766,15 @@ class Uncertainty:
             exc.MissingDataError: If the sampling problem, uncertainty samples,
                 uncertainty measures, or parameter mapping are unavailable.
         """
+
+        method = settings.gsa_method
+        groups = settings.groups
+        measures = settings.measures
+        scenarios = settings.scenarios
+        save_gsa = settings.save_gsa
+        file_format = settings.file_format
+        gsa_kwargs = settings.gsa_kwargs
+
         self.gsa_results = self.uncertainty_analyzer.analyze_results(
             sampling_problem=self.sampling_problem,
             samples_df=self.uncertainty_samples,
@@ -773,10 +784,10 @@ class Uncertainty:
             groups=groups,
             measures=measures,
             scenarios=scenarios,
-            **method_kwargs,
+            **gsa_kwargs,
         )
 
-        if save_analysis:
+        if save_gsa:
             self.uncertainty_datahandler.save_uncertainty_result(
                 dataframe=self.gsa_results,
                 result_type=self.uncertainty_defaults.GSA_RESULTS,
