@@ -57,7 +57,7 @@ class UncertaintyAnalyzer:
         self.logger = logger.get_child(__name__)
         self.uncertainty_defaults = Defaults.UncertaintySettings
 
-    def _validate_analysis_kwargs(
+    def _validate_gsa_kwargs(
         self,
         function: Callable,
         kwargs: dict[str, Any],
@@ -106,7 +106,7 @@ class UncertaintyAnalyzer:
                 f"Required arguments: {required_args}."
             )
 
-    def _prepare_gsa_analysis_targets(
+    def _prepare_gsa_targets(
         self,
         samples_df: pd.DataFrame,
         measures_df: pd.DataFrame,
@@ -432,10 +432,10 @@ class UncertaintyAnalyzer:
 
         return result_df[first_cols + last_cols]
 
-    def validate_sampling_analysis_compatibility(
+    def validate_sampling_gsa_compatibility(
         self,
         sampling_method: str,
-        analysis_method: str,
+        gsa_method: str,
     ) -> None:
         """Validate methodological compatibility between sampler and GSA analyzer.
 
@@ -447,18 +447,18 @@ class UncertaintyAnalyzer:
         """
         compatibility_map = self.uncertainty_defaults.ANALYSIS_COMPATIBILITY
 
-        compatible_sampling_methods = compatibility_map.get(analysis_method)
+        compatible_sampling_methods = compatibility_map.get(gsa_method)
 
         if sampling_method not in compatible_sampling_methods:
             raise ValueError(
                 "Sampling-analysis compatibility validation failed | "
-                f"GSA analysis method '{analysis_method}' is not compatible "
+                f"GSA analysis method '{gsa_method}' is not compatible "
                 f"with sampling method '{sampling_method}'. "
-                f"Compatible sampling methods for '{analysis_method}': "
+                f"Compatible sampling methods for '{gsa_method}': "
                 f"{sorted(compatible_sampling_methods)}."
             )
 
-    def validate_analysis_config(
+    def validate_gsa_config(
         self,
         method: str,
         kwargs: dict[str, Any],
@@ -473,7 +473,7 @@ class UncertaintyAnalyzer:
 
         excluded_args = self.uncertainty_defaults.ANALYZER_REQUIRED_INPUTS[method]
 
-        self._validate_analysis_kwargs(
+        self._validate_gsa_kwargs(
             function=self.ANALYZERS[method],
             kwargs=kwargs,
             excluded_args=excluded_args,
@@ -504,7 +504,7 @@ class UncertaintyAnalyzer:
                 "No uncertainty-measure outputs found. "
                 "Call model.run_uncertainty_analysis() before analyze_uncertainty()."
             )
-        targets = self._prepare_gsa_analysis_targets(
+        targets = self._prepare_gsa_targets(
             samples_df=samples_df,
             measures_df=measures_df,
             method=method,

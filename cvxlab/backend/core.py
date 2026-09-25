@@ -1838,7 +1838,7 @@ class Core:
 
         return {None: "unknown"}
 
-    def initialize_uncertain_problem_structure(
+    def initialize_problem_structure_and_load_deterministic_data(
             self,
             force_overwrite: bool = False,
     ) -> None:
@@ -1852,7 +1852,9 @@ class Core:
 
         self._initialize_problems_variables()
 
-    def load_deterministic_data(
+        self._load_deterministic_data()
+
+    def _load_deterministic_data(
         self,
     ) -> None:
         """Load exogenous values that remain fixed across uncertainty runs."""
@@ -1863,7 +1865,7 @@ class Core:
             var_list_to_update=deterministic_variables
         )
 
-    def load_uncertain_data(
+    def _load_uncertain_data(
         self,
         run_id: int,
     ) -> None:
@@ -1875,4 +1877,35 @@ class Core:
             var_list_to_update=uncertain_variables,
             uncertain_var=True,
             run_id=run_id,
+        )
+
+    def update_uncertainty_run_results(
+        self,
+        run_id: int,
+        temp_save: bool,
+        file_format: str,
+    ) -> None:
+        """Collect current problem statuses and update uncertainty-run results."""
+
+        statuses_by_scenario = (
+            self.get_current_problem_status_by_scenario()
+        )
+
+        self.uncertainty.update_run_results(
+            run_id=run_id,
+            statuses_by_scenario=statuses_by_scenario,
+            temp_save=temp_save,
+            file_format=file_format,
+        )
+
+    def load_uncertain_data_and_generate_numerical_problems(
+        self,
+        run_id: int,
+    ) -> None:
+        """Load sampled uncertain data and regenerate numerical problems."""
+
+        self._load_uncertain_data(run_id)
+
+        self.problem.generate_numerical_problems(
+            force_overwrite=True,
         )
