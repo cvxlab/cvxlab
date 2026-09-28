@@ -72,7 +72,6 @@ class ModelSettings:
                 data table instead of a single multi-tab file.
             input_data_files_type: Format of input data files ('xlsx' or 'csv').
             detailed_validation: Whether to emit verbose validation logs.
-
         Raises:
             exc.SettingsError: If any settings combination is invalid.
         """
@@ -132,6 +131,7 @@ class ModelPaths:
         model_dir_path: Path,
         model_settings_from: Defaults.LiteralTypes.SettingsSource,
         use_existing_data: bool,
+        sqlite_database_path: Path | None = None,
     ) -> None:
         """Compute paths and validate the model directory layout.
 
@@ -142,7 +142,7 @@ class ModelPaths:
                 which setup files must be present ('yml' or 'xlsx').
             use_existing_data: When ``True``, also checks for the sets Excel
                 file, SQLite database, and input-data directory.
-
+            sqlite_database_path: SQLite database path  
         Raises:
             exc.SettingsError: If the model directory or a required file /
                 sub-directory is missing.
@@ -152,7 +152,11 @@ class ModelPaths:
         self.model_dir = model_dir_path
         self.input_data_dir = model_dir_path / config.INPUT_DATA_DIR
         self.sets_excel_file = model_dir_path / config.SETS_FILE
-        self.sqlite_database = model_dir_path / config.SQLITE_DATABASE_FILE
+        self.sqlite_database = (
+            sqlite_database_path
+            if sqlite_database_path is not None
+            else model_dir_path / config.SQLITE_DATABASE_FILE
+        )
 
         # Validate the settings-source selection before checking files
         util.validate_selection(

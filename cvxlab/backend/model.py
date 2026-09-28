@@ -13,15 +13,13 @@ and solution through cvxpy package.
 """
 from pathlib import Path
 from typing import Any, List, Optional
-from dataclasses import dataclass, field
-import shutil
-
 import pandas as pd
 
 from cvxlab.defaults import Defaults
 from cvxlab.backend.core import Core
 from cvxlab.backend.model_settings import ModelSettings, ModelPaths
 from cvxlab.backend.uncertainty.uncertainty_settings import UncertaintySettings
+from cvxlab.backend.uncertainty.uncertainty_parallel_runner import UncertaintyParallelRunner
 from cvxlab.backend.run_settings import RunSettings
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
@@ -65,6 +63,7 @@ class Model():
             input_data_files_type: Defaults.LiteralTypes.DataFileType = 'xlsx',
             log_level: Defaults.LiteralTypes.LogLevel = 'info',
             log_format: Defaults.LiteralTypes.LogFormat = 'standard',
+            _sqlite_database_path: Path | None = None,
     ):
         """Initialize the Model instance with specified configurations.
 
@@ -106,6 +105,7 @@ class Model():
                 The logging level for the logger. Defaults to 'info'.
             log_format (Defaults.LiteralTypes.LogFormat, optional): The logging
                 format for the logger. Defaults to 'standard'.
+            _sqlite_database_path: Internal SQLite database path override 
         """
         if main_dir_path is None:
             main_dir_path = str(Path.cwd())
@@ -141,6 +141,7 @@ class Model():
                 model_dir_path=model_dir_path,
                 model_settings_from=model_settings_from,
                 use_existing_data=use_existing_data,
+                sqlite_database_path=_sqlite_database_path,
             )
             self._import_custom_scripts()
 
@@ -155,7 +156,8 @@ class Model():
 
             if self.settings.use_existing_data:
                 self._load_model_coordinates()
-                self._initialize_problems()
+                if not self.is_uncertainty_analysis:
+                    self._initialize_problems()
 
     @property
     def sets(self) -> List[str]:
@@ -1020,7 +1022,6 @@ class Model():
 
     def run_uncertainty(
         self,
-        existing_data: bool = False,
         resume: bool = False,
         temp_file_format: str = "xlsx",
         force_overwrite: bool = False,
@@ -1103,11 +1104,6 @@ class Model():
               inconsistent with the model configuration.
       """
 
-        if not isinstance(n_parallel, int) or n_parallel < 1:
-            raise ValueError(
-                "'n_parallel' must be an integer greater than or equal to 1."
-            )
-
         uncertainty_cfg = self._uncertainty_settings
 
         if uncertainty_cfg is None:
@@ -1116,7 +1112,7 @@ class Model():
                 "Call model.uncertainty_settings(...) before analyze_uncertainty()."
             )
 
-        if not existing_data:
+        if not self.settings.use_existing_data:
 
             self._load_and_validate_uncertain_data_to_sqlite_database()
 
@@ -1125,43 +1121,83 @@ class Model():
             resume=resume,
         )
 
-        self.core.initialize_problem_structure_and_load_deterministic_data(
-            force_overwrite=True)
-
         run_ids = self.core.uncertainty.initialize_run_results(
             resume=resume,
             file_format=temp_file_format,
         )
 
-        for run_id in run_ids:
+        # prova - start
+        run_kwargs = {
+            "force_overwrite": force_overwrite,
+            "solution_mode": solution_mode,
+            "scenarios_idx": scenarios_idx,
+            "convergence_monitoring": convergence_monitoring,
+            "solver": solver,
+            "sequential_solution_chain": sequential_solution_chain,
+            "solver_verbose": solver_verbose,
+            "solver_settings": solver_settings,
+            "convergence_norm": convergence_norm,
+            "convergence_tables_to_check": convergence_tables_to_check,
+            "convergence_tables_to_skip": convergence_tables_to_skip,
+            "relative_tolerance": relative_tolerance,
+            "maximum_iterations": maximum_iterations,
+            "keep_previous_iteration_db": keep_previous_iteration_db,
+        }
+        if n_parallel > 1:
 
-            run_records, failed_scenarios = (
-                self._run_uncertainty_sample(
+            parallel_runner = UncertaintyParallelRunner(
+                model=self,
+                n_parallel=n_parallel,
+            )
+
+            parallel_results = parallel_runner.run_parallel(
+                run_ids=run_ids,
+                run_kwargs=run_kwargs,
+            )
+
+            for run_id, run_records, failed_scenarios in parallel_results:
+
+                self.core.uncertainty.update_run_results(
                     run_id=run_id,
-                    force_overwrite=force_overwrite,
-                    solution_mode=solution_mode,
-                    scenarios_idx=scenarios_idx,
-                    convergence_monitoring=convergence_monitoring,
-                    solver=solver,
-                    sequential_solution_chain=sequential_solution_chain,
-                    solver_verbose=solver_verbose,
-                    solver_settings=solver_settings,
-                    convergence_norm=convergence_norm,
-                    convergence_tables_to_check=convergence_tables_to_check,
-                    convergence_tables_to_skip=convergence_tables_to_skip,
-                    relative_tolerance=relative_tolerance,
-                    maximum_iterations=maximum_iterations,
-                    keep_previous_iteration_db=keep_previous_iteration_db,
+                    run_records=run_records,
+                    failed_scenarios=failed_scenarios,
+                    temp_save=uncertainty_cfg.temp_save,
+                    file_format=uncertainty_cfg.file_format,
                 )
-            )
 
-            self.core.uncertainty.update_run_results(
-                run_id=run_id,
-                run_records=run_records,
-                failed_scenarios=failed_scenarios,
-                temp_save=uncertainty_cfg.temp_save,
-                file_format=uncertainty_cfg.file_format,
+        else:
+            self.core.initialize_problem_structure_and_load_deterministic_data(
+                force_overwrite=True,
             )
+            for run_id in run_ids:
+
+                run_records, failed_scenarios = (
+                    self._run_uncertainty_sample(
+                        run_id=run_id,
+                        force_overwrite=force_overwrite,
+                        solution_mode=solution_mode,
+                        scenarios_idx=scenarios_idx,
+                        convergence_monitoring=convergence_monitoring,
+                        solver=solver,
+                        sequential_solution_chain=sequential_solution_chain,
+                        solver_verbose=solver_verbose,
+                        solver_settings=solver_settings,
+                        convergence_norm=convergence_norm,
+                        convergence_tables_to_check=convergence_tables_to_check,
+                        convergence_tables_to_skip=convergence_tables_to_skip,
+                        relative_tolerance=relative_tolerance,
+                        maximum_iterations=maximum_iterations,
+                        keep_previous_iteration_db=keep_previous_iteration_db,
+                    )
+                )
+
+                self.core.uncertainty.update_run_results(
+                    run_id=run_id,
+                    run_records=run_records,
+                    failed_scenarios=failed_scenarios,
+                    temp_save=uncertainty_cfg.temp_save,
+                    file_format=uncertainty_cfg.file_format,
+                )
 
         self.core.uncertainty.finalize_run_results(
             settings=uncertainty_cfg,
