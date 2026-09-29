@@ -1,4 +1,4 @@
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 import shutil
 from multiprocessing import Manager
@@ -115,7 +115,7 @@ class UncertaintyParallelRunner:
             for i in range(self.n_parallel)
         ]
 
-    def cleanup_worker_dirs(
+    def _cleanup_worker_dirs(
         self,
     ) -> None:
         """Remove temporary directories created for parallel workers.
@@ -228,21 +228,18 @@ class UncertaintyParallelRunner:
             "use_existing_data": True,
             "log_level": self.model.settings.log_level,
         }
-
+    
     def run_parallel(
         self,
         run_ids,
         run_kwargs: dict,
-    ) -> list[tuple]:
+        temp_save: bool,
+    ) -> None:
         """Execute uncertainty runs using multiple worker processes."""
-
-        from multiprocessing import Manager
-        import queue
 
         self._create_worker_dirs()
 
         run_ids = list(run_ids)
-        total_runs = len(run_ids)
 
         worker_configs = self._build_workers_configs(
             run_ids=run_ids,
@@ -250,12 +247,18 @@ class UncertaintyParallelRunner:
 
         model_init_kwargs = self._get_model_init_kwargs()
 
-        results = []
-        completed_runs = 0
+        total_runs = len(
+            self.model.core.uncertainty.uncertainty_samples[
+                self.model.core.uncertainty.uncertainty_defaults.RUN_ID
+            ].unique()
+        )
+
+        pending_runs = len(run_ids)
+        completed_runs = total_runs - pending_runs
 
         with Manager() as manager:
 
-            progress_queue = manager.Queue()
+            result_queue = manager.Queue()
 
             with ProcessPoolExecutor(
                 max_workers=len(worker_configs)
@@ -267,56 +270,54 @@ class UncertaintyParallelRunner:
                         config,
                         model_init_kwargs,
                         run_kwargs,
-                        progress_queue,
+                        result_queue,
                     )
                     for config in worker_configs
                 ]
 
-                while not all(future.done() for future in futures):
+                while completed_runs < total_runs:
 
                     try:
-                        progress_queue.get(
-                            timeout=0.2,
+                        (
+                            run_id,
+                            run_records,
+                            failed_scenarios,
+                        ) = result_queue.get(timeout=0.2)
+
+                        # Results are always registered by the parent process.
+                        # This avoids concurrent writes to the temporary file.
+                        self.model.core.uncertainty.update_run_results(
+                            run_id=run_id,
+                            run_records=run_records,
+                            failed_scenarios=failed_scenarios,
+                            temp_save=temp_save,
                         )
 
                         completed_runs += 1
 
                         self.model.logger.info(
-                            f"Running uncertainty-analysis run "
-                            f"{completed_runs}/{total_runs}."
+                            "Uncertainty analysis | "
+                            f"Completed run {completed_runs}/{total_runs}."
                         )
 
                     except queue.Empty:
-                        pass
 
-                # Read any progress messages added just before workers completed.
-                while not progress_queue.empty():
+                        # Check whether any worker failed unexpectedly.
+                        for future in futures:
+                            if future.done():
+                                future.result()
 
-                    progress_queue.get()
-                    completed_runs += 1
-
-                    self.model.logger.info(
-                        f"Running uncertainty-analysis run "
-                        f"{completed_runs}/{total_runs}."
-                    )
-
+                # Ensure all workers terminated correctly and propagate
+                # possible exceptions.
                 for future in futures:
-                    results.extend(
-                        future.result()
-                    )
-
-        results.sort(
-            key=lambda result: result[0]
-        )
-
-        return results
+                    future.result()
 
 def _run_uncertainty_worker(
     config: dict,
     model_init_kwargs: dict,
     run_kwargs: dict,
-    progress_queue,
-) -> list[tuple]:
+    results_queue,
+) -> None:
     """Execute uncertainty runs assigned to one worker process."""
 
     from cvxlab.backend.model import Model
@@ -326,15 +327,11 @@ def _run_uncertainty_worker(
         _sqlite_database_path=config["database_path"],
     )
 
-    worker_model.core.uncertainty.uncertainty_samples = (
-        config["samples"]
-    )
+    worker_model.core.uncertainty.uncertainty_samples = config["samples"]
 
     worker_model.core.initialize_problem_structure_and_load_deterministic_data(
         force_overwrite=True,
     )
-
-    results = []
 
     for run_id in config["run_ids"]:
 
@@ -345,14 +342,10 @@ def _run_uncertainty_worker(
             )
         )
 
-        results.append(
+        results_queue.put(
             (
                 run_id,
                 run_records,
                 failed_scenarios,
             )
         )
-
-        progress_queue.put(1)
-
-    return results

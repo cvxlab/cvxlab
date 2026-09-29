@@ -1126,8 +1126,7 @@ class Model():
 
         run_ids = self.core.uncertainty.initialize_run_results(
             resume=resume,
-            file_format=temp_file_format,
-        )
+            )
 
         # prova - start
         run_kwargs = {
@@ -1146,6 +1145,7 @@ class Model():
             "maximum_iterations": maximum_iterations,
             "keep_previous_iteration_db": keep_previous_iteration_db,
         }
+
         if n_parallel > 1:
 
             parallel_runner = UncertaintyParallelRunner(
@@ -1153,21 +1153,26 @@ class Model():
                 n_parallel=n_parallel,
             )
 
-            parallel_results = parallel_runner.run_parallel(
+            # parallel_results = parallel_runner.run_parallel(
+            #     run_ids=run_ids,
+            #     run_kwargs=run_kwargs,
+            # )
+
+            # for run_id, run_records, failed_scenarios in parallel_results:
+
+            #     self.core.uncertainty.update_run_results(
+            #         run_id=run_id,
+            #         run_records=run_records,
+            #         failed_scenarios=failed_scenarios,
+            #         temp_save=uncertainty_cfg.temp_save,
+            #         file_format=uncertainty_cfg.file_format,
+            #     )
+            parallel_runner.run_parallel(
                 run_ids=run_ids,
                 run_kwargs=run_kwargs,
+                temp_save=uncertainty_cfg.temp_save,
+                file_format=uncertainty_cfg.file_format,
             )
-
-            for run_id, run_records, failed_scenarios in parallel_results:
-
-                self.core.uncertainty.update_run_results(
-                    run_id=run_id,
-                    run_records=run_records,
-                    failed_scenarios=failed_scenarios,
-                    temp_save=uncertainty_cfg.temp_save,
-                    file_format=uncertainty_cfg.file_format,
-                )
-
         else:
             self.core.initialize_problem_structure_and_load_deterministic_data(
                 force_overwrite=True,
@@ -1175,7 +1180,7 @@ class Model():
             for run_id in run_ids:
 
                 self.logger.info(
-                    f"Running uncertainty-analysis run {run_id}/{len(run_ids)}."
+                    f"Running uncertainty-analysis run {run_id+1}/{len(run_ids)}."
                     )
 
                 run_records, failed_scenarios = (
@@ -1203,7 +1208,6 @@ class Model():
                     run_records=run_records,
                     failed_scenarios=failed_scenarios,
                     temp_save=uncertainty_cfg.temp_save,
-                    file_format=uncertainty_cfg.file_format,
                 )
 
         self.core.uncertainty.finalize_run_results(

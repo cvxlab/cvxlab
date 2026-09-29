@@ -704,3 +704,16 @@ class UncertaintyData:
             file_format=file_format,
             sheet_name=file_name
         )
+
+    def delete_temp_measures_file(
+        self,
+    ) -> None:
+        """Delete the temporary uncertainty measures file."""
+        
+        temp_file_path = (
+            self.paths.model_dir
+            / self.uncertainty_defaults.RESULTS_DIR
+            / f"{self.uncertainty_defaults.MEASURES_TEMP_FILE_NAME}.{self.uncertainty_defaults.MEASURES_TEMP_FILE_FORMAT}"
+        )
+        print(temp_file_path)
+        temp_file_path.unlink()

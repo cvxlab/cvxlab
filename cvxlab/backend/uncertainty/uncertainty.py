@@ -549,48 +549,49 @@ class Uncertainty:
         )
 
     def initialize_run_results(
-            self,
-            resume: bool,
-            file_format: str,
-    ) -> None:
-        """Initialize result containers for an uncertainty campaign.
+        self,
+        resume: bool,
+    ) -> list[int]:
+        """Initialize result containers and return run IDs to execute."""
 
-        When resuming a previous campaign, previously collected temporary
-        uncertainty measures are loaded and restored in the result container.
+        run_id_col = self.uncertainty_defaults.RUN_ID
 
-        Args:
-            resume: Whether to resume a previously interrupted uncertainty campaign.
-            file_format: File format used for temporary uncertainty results.
-
-        Returns:
-            First run ID to execute.
-        """
-
-        run_ids = self.uncertainty_samples[Defaults.UncertaintySettings.RUN_ID]
+        all_run_ids = (
+            self.uncertainty_samples[run_id_col]
+            .astype(int)
+            .tolist()
+        )
 
         if not resume:
             self.uncertainty_measure_records = []
             self.failed_runs_report = {}
 
-        elif resume:
+            return all_run_ids
 
-            temporary_measures = self.uncertainty_datahandler.load_temp_measures_files(
-                file_format=file_format,
+        temporary_measures = (
+            self.uncertainty_datahandler.load_temp_measures_files(
+                file_format=self.uncertainty_defaults.MEASURES_TEMP_FILE_FORMAT,
             )
+        )
 
-            self.uncertainty_measure_records = [temporary_measures]
+        self.uncertainty_measure_records = [temporary_measures]
 
-            run_id_col = self.uncertainty_defaults.RUN_ID
+        self.failed_runs_report = self._rebuild_failed_runs_report(
+            temporary_measures
+        )
 
-            run_id_start = int(temporary_measures[run_id_col].max() + 1)
+        completed_run_ids = set(
+            temporary_measures[run_id_col]
+            .dropna()
+            .astype(int)
+            .unique()
+        )
 
-            self.failed_runs_report = (
-                self._rebuild_failed_runs_report(
-                    temporary_measures
-                )
-            )
-
-            run_ids = range(run_id_start, int(run_ids.max()) + 1)
+        run_ids = [
+            run_id
+            for run_id in all_run_ids
+            if run_id not in completed_run_ids
+        ]
 
         return run_ids
 
@@ -634,7 +635,6 @@ class Uncertainty:
         self,
         run_id: int,
         temp_save: bool,
-        file_format: str | None,
         run_records,
         failed_scenarios,
     ) -> None:
@@ -669,7 +669,7 @@ class Uncertainty:
             self.uncertainty_datahandler.save_uncertainty_result(
                 dataframe=temporary_measures,
                 result_type=self.uncertainty_defaults.TEMP_MEASURES,
-                file_format=file_format,
+                file_format=self.uncertainty_defaults.MEASURES_TEMP_FILE_FORMAT,
             )
 
     def finalize_run_results(
@@ -693,6 +693,7 @@ class Uncertainty:
         """
         save_measures = settings.save_measures
         file_format = settings.file_format
+        temp_save = settings.temp_save
 
         if not self.uncertainty_measure_records:
             msg = (
@@ -715,11 +716,17 @@ class Uncertainty:
                 result_type=Defaults.UncertaintySettings.MEASURES,
                 file_format=file_format,
             )
+ 
+        if temp_save:
+            self.uncertainty_datahandler.delete_temp_measures_file()
+
         if self.failed_runs_report:
             self._warn_failed_model_runs(
                 scenarios=scenarios,
                 failed_runs_report=self.failed_runs_report,
             )
+
+
 
     def validate_gsa_configuration(
         self,

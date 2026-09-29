@@ -788,6 +788,7 @@ class Defaults:
         SAMPLES_FILE_NAME = "uncertainty_samples"
         MEASURES_FILE_NAME = "uncertainty_measures"
         MEASURES_TEMP_FILE_NAME = "uncertainty_measures_temp"
+        MEASURES_TEMP_FILE_FORMAT = "csv"
         GSA_FILE_NAME = "GSA_analysis"
         RESULTS_DIR = "results"
 
