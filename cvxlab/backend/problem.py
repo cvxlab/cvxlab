@@ -14,6 +14,7 @@ data related to the optimization models.
 import warnings
 
 from typing import Any, Dict, List, Optional, Tuple
+from cvxlab.backend import uncertainty
 from scipy.sparse import csr_matrix
 
 import pandas as pd
@@ -210,7 +211,12 @@ class Problem:
             problem_tables_variables[problem_key] = tables_variables
 
         return problem_tables_variables
-
+    
+    @property
+    def is_uncertainty_analysis(self) -> bool:
+        """Return whether uncertainty-analysis functionality is enabled."""
+        return self.settings.uncertainty
+    
     def create_cvxpy_variable(
         self,
         var_type: str,
@@ -1456,6 +1462,7 @@ class Problem:
         with self.logger.log_timing(
             message="Generating cvxpy numerical problem/s...",
             level='info',
+            enabled= not self.is_uncertainty_analysis,
         ):
             if self.symbolic_problem is None:
                 msg = "Symbolic problem must be loaded before generating numerical problems."
@@ -1466,10 +1473,17 @@ class Problem:
                 if not force_overwrite:
                     self.logger.warning("Numerical problem already defined.")
                     if not util.get_user_confirmation("Overwrite numerical problem?"):
-                        self.logger.info("Numerical problem NOT overwritten.")
+                        self.logger.info(
+                            message="Numerical problem NOT overwritten.",
+                            enabled=not self.is_uncertainty_analysis,
+                        )
+ 
                         return
                 else:
-                    self.logger.info("Numerical problem overwritten.")
+                    self.logger.info(
+                        message = "Numerical problem overwritten.",
+                        enabled = not self.is_uncertainty_analysis,
+                        )
             else:
                 self.logger.debug(
                     "Defining cvxpy numerical problems based on symbolic problems.")
@@ -2000,7 +2014,10 @@ class Problem:
             if scenario_info:
                 msg += f" | Scenario '{scenario}' | Coordinates {scenario_info}."
 
-            self.logger.info(msg)
+            self.logger.info(
+                msg, 
+                enabled = not self.is_uncertainty_analysis
+                )
 
             if solver_settings.get('verbose'):
                 self.logger.solver_banner(f" SOLVER OUTPUT | {msg}")
@@ -2008,9 +2025,12 @@ class Problem:
             cvxpy_problem.solve(**solver_settings)
 
             if solver_settings.get('verbose'):
-                self.logger.solver_banner(f" END SOLVER OUTPUT")
+                self.logger.solver_banner(" END SOLVER OUTPUT")
 
-            self.logger.info(f"Problem status: '{cvxpy_problem.status}'")
+            self.logger.info(
+                message = f"Problem status: '{cvxpy_problem.status}'",
+                enabled = not self.is_uncertainty_analysis,
+                )
 
             problem_dataframe.at[scenario, status_header] = \
                 cvxpy_problem.status

@@ -11,6 +11,7 @@ from SALib.sample import latin, morris, sobol
 
 from cvxlab.backend.uncertainty.uncertainty_datahandler import UncertaintyData
 from cvxlab.defaults import Defaults
+from cvxlab.log_exc.exceptions import SettingsError
 from cvxlab.log_exc.logger import Logger
 
 
@@ -131,7 +132,7 @@ class UncertaintySampler:
                     parameter_name_col,
                 ].tolist()
 
-                raise exc.SettingsError(
+                raise SettingsError(
                     "Grouped sampling requires every uncertain parameter "
                     "to belong to a group. "
                     f"Missing group name for parameters: {missing_parameters}."
@@ -150,7 +151,7 @@ class UncertaintySampler:
             )
 
             if len(unique_group_names) < 2:
-                raise exc.SettingsError(
+                raise SettingsError(
                     "Grouped sampling requires at least two distinct groups. "
                     f"Found groups: {unique_group_names}."
                 )

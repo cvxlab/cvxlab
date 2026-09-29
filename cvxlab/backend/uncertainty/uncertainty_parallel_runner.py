@@ -1,6 +1,8 @@
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 import shutil
+from multiprocessing import Manager
+import queue
 
 # import pandas as pd
 
@@ -234,7 +236,13 @@ class UncertaintyParallelRunner:
     ) -> list[tuple]:
         """Execute uncertainty runs using multiple worker processes."""
 
+        from multiprocessing import Manager
+        import queue
+
         self._create_worker_dirs()
+
+        run_ids = list(run_ids)
+        total_runs = len(run_ids)
 
         worker_configs = self._build_workers_configs(
             run_ids=run_ids,
@@ -243,46 +251,74 @@ class UncertaintyParallelRunner:
         model_init_kwargs = self._get_model_init_kwargs()
 
         results = []
+        completed_runs = 0
 
-        with ProcessPoolExecutor(
-            max_workers=len(worker_configs)
-        ) as executor:
+        with Manager() as manager:
 
-            futures = [
-                executor.submit(
-                    _run_uncertainty_worker,
-                    config,
-                    model_init_kwargs,
-                    run_kwargs,
-                )
-                for config in worker_configs
-            ]
+            progress_queue = manager.Queue()
 
-            for future in as_completed(futures):
-                results.extend(future.result())
+            with ProcessPoolExecutor(
+                max_workers=len(worker_configs)
+            ) as executor:
 
-        results.sort(key=lambda result: result[0])
+                futures = [
+                    executor.submit(
+                        _run_uncertainty_worker,
+                        config,
+                        model_init_kwargs,
+                        run_kwargs,
+                        progress_queue,
+                    )
+                    for config in worker_configs
+                ]
+
+                while not all(future.done() for future in futures):
+
+                    try:
+                        progress_queue.get(
+                            timeout=0.2,
+                        )
+
+                        completed_runs += 1
+
+                        self.model.logger.info(
+                            f"Running uncertainty-analysis run "
+                            f"{completed_runs}/{total_runs}."
+                        )
+
+                    except queue.Empty:
+                        pass
+
+                # Read any progress messages added just before workers completed.
+                while not progress_queue.empty():
+
+                    progress_queue.get()
+                    completed_runs += 1
+
+                    self.model.logger.info(
+                        f"Running uncertainty-analysis run "
+                        f"{completed_runs}/{total_runs}."
+                    )
+
+                for future in futures:
+                    results.extend(
+                        future.result()
+                    )
+
+        results.sort(
+            key=lambda result: result[0]
+        )
 
         return results
-
 
 def _run_uncertainty_worker(
     config: dict,
     model_init_kwargs: dict,
     run_kwargs: dict,
+    progress_queue,
 ) -> list[tuple]:
-    """Execute uncertainty runs assigned to one worker process.
+    """Execute uncertainty runs assigned to one worker process."""
 
-    Args:
-        config: Worker-specific configuration containing run IDs,
-            uncertainty samples, and database path.
-        model_init_kwargs: Common arguments required to initialize
-            the worker Model.
-        run_kwargs: Arguments required to execute each uncertainty run.
-
-    Returns:
-        List of tuples containing run ID, measure records, and failed scenarios.
-    """
     from cvxlab.backend.model import Model
 
     worker_model = Model(
@@ -303,7 +339,7 @@ def _run_uncertainty_worker(
     for run_id in config["run_ids"]:
 
         run_records, failed_scenarios = (
-            worker_model._run_uncertainty_sample(
+            worker_model.run_uncertainty_sample(
                 run_id=run_id,
                 **run_kwargs,
             )
@@ -316,5 +352,7 @@ def _run_uncertainty_worker(
                 failed_scenarios,
             )
         )
+
+        progress_queue.put(1)
 
     return results

@@ -10,13 +10,15 @@ from types import NoneType
 from typing import List, Dict, Any, Literal, Optional
 from pathlib import Path
 
+import pandas as pd
 import importlib.util
 import os
 import shutil
 import json
+import time
+
 import yaml
 
-import pandas as pd
 
 from cvxlab.defaults import Defaults
 from cvxlab.log_exc import exceptions as exc
@@ -397,8 +399,25 @@ class FileManager:
             raise FileExistsError(
                 f"A file named '{name_new}' already exists. Operation aborted.")
 
+        # if force_overwrite:
+        #     os.replace(file_path, new_file_path)
         if force_overwrite:
-            os.replace(file_path, new_file_path)
+            max_attempts = 10
+            retry_delay = 0.2
+
+            for attempt in range(max_attempts):
+                try:
+                    os.replace(
+                        file_path,
+                        new_file_path,
+                    )
+                    break
+
+                except PermissionError:
+                    if attempt == max_attempts - 1:
+                        raise
+
+                    time.sleep(retry_delay)
         else:
             file_path.rename(new_file_path)
 

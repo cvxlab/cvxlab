@@ -141,6 +141,7 @@ class Core:
         with self.logger.log_timing(
             message="Generating data structures for endogenous data tables...",
             level='info',
+            enabled= not self.is_uncertainty_analysis,
         ):
             # generate dataframes and cvxpy var for endogenous data tables
             # and for variables with type defined by problem linking logic
@@ -232,6 +233,7 @@ class Core:
         with self.logger.log_timing(
             message="Generating data structures for all variables and constants...",
             level='info',
+            enabled= not self.is_uncertainty_analysis,
         ):
             for var_key, variable in self.index.variables.items():
                 variable: Variable
@@ -338,6 +340,7 @@ class Core:
             message=f"Fetching data from '{Defaults.ConfigFiles.SQLITE_DATABASE_FILE}' "
                 "to cvxpy exogenous variables...",
             level='info',
+            enabled= not self.is_uncertainty_analysis,
         ):
             filter_header = Defaults.Labels.FILTER_DICT_KEY
             cvxpy_var_header = Defaults.Labels.CVXPY_VAR
@@ -703,13 +706,13 @@ class Core:
             sequential_solution_chain (List[int | str]): Ordered list of problem keys
                 defining the solution sequence, as produced by RunSettings.
         """
-        sqlite_db_file_name = Defaults.ConfigFiles.SQLITE_DATABASE_FILE
+        sqlite_db_file_name = self.paths.sqlite_database.name
         sqlite_db_file_name_bkp = Defaults.ConfigFiles.SQLITE_DATABASE_FILE_BKP
         scenarios_header = Defaults.Labels.SCENARIO_COORDINATES
         problem_status_header = Defaults.Labels.PROBLEM_STATUS
         data_table_types = Defaults.SymbolicDefinitions.VARIABLE_TYPES
 
-        sqlite_db_path = self.paths.model_dir
+        sqlite_db_path = self.paths.sqlite_database.parent
         scenarios_df = self.index.scenarios_info
         problems_expressions = self.problem.collect_problems_expressions()
 
@@ -744,7 +747,10 @@ class Core:
                 else:
                     scenario_label = None
 
-                self.logger.info(msg)
+                self.logger.info(
+                    msg,
+                    enabled= not self.is_uncertainty_analysis,
+                    )
 
                 if self.is_uncertainty_analysis:
                     self.cvxpy_uncertain_exogenous_data_to_database(
@@ -804,7 +810,9 @@ class Core:
                     if scenario_coords:
                         msg += f"| Scenario {scenario_coords} "
                     msg += f"| Exporting endogenous data to database."
-                    self.logger.info(msg)
+                    self.logger.info(
+                        msg,
+                        enabled=not self.is_uncertainty_analysis)
 
                     # only endogenous data tables that are actually used in the
                     # problem are exported to avoid that data are overwritten in
@@ -916,12 +924,12 @@ class Core:
                 database of the previous iteration for debugging purposes. 
                 Defaults to False.
         """
-        sqlite_db_file_name = Defaults.ConfigFiles.SQLITE_DATABASE_FILE
+        sqlite_db_file_name = self.paths.sqlite_database.name
         sqlite_db_file_name_bkp = Defaults.ConfigFiles.SQLITE_DATABASE_FILE_BKP
         scenarios_header = Defaults.Labels.SCENARIO_COORDINATES
         problem_status_header = Defaults.Labels.PROBLEM_STATUS
 
-        sqlite_db_path = self.paths.model_dir
+        sqlite_db_path = self.paths.sqlite_database.parent
         base_name, extension = os.path.splitext(sqlite_db_file_name)
         sqlite_db_file_name_previous = f"{base_name}_previous{extension}"
         scenarios_df = self.index.scenarios_info
@@ -961,9 +969,12 @@ class Core:
                 if scenario_coords:
                     scenario_label = '-'.join(map(str, scenario_coords))
                     self.logger.info(
-                        f"Solving integrated problems | Scenario {scenario_coords}")
+                        message = f"Solving integrated problems | Scenario {scenario_coords}",
+                        enabled = not self.is_uncertainty_analysis)
                 else:
-                    self.logger.info("Solving integrated problems")
+                    self.logger.info(
+                        message="Solving integrated problems",
+                        enabled=not self.is_uncertainty_analysis)
 
                 iter_count = 0
                 all_errors = {table: [] for table in tables_to_check}
@@ -982,13 +993,17 @@ class Core:
                     while True:
                         try:
                             self.logger.info(
-                                f"Iteration count: {iter_count} | "
-                                f"iterations limit: {maximum_iterations}")
+                                message = f"Iteration count: {iter_count} | "
+                                f"iterations limit: {maximum_iterations}",
+                                enabled = not self.is_uncertainty_analysis,
+                                )
 
                             if iter_count >= 1:
 
                                 self.logger.info(
-                                    "Creating copy of database from previous iteration.")
+                                    message = "Creating copy of database from previous iteration.",
+                                    enabled = not self.is_uncertainty_analysis
+                                    )
 
                                 self.files.copy_file_to_destination(
                                     path_destination=sqlite_db_path,
@@ -999,7 +1014,9 @@ class Core:
                                 )
 
                                 self.logger.info(
-                                    "Updating exogenous variables data from previous iteration.")
+                                    message = "Updating exogenous variables data from previous iteration.",
+                                    enabled = not self.is_uncertainty_analysis
+                                    )
 
                                 self._data_to_cvxpy_exogenous_vars(
                                     scenarios_idx=scenario,
@@ -1038,8 +1055,9 @@ class Core:
                                 break
 
                             self.logger.info(
-                                "Problems solved successfully. Exporting data to "
-                                "SQLite database.")
+                                message = "Problems solved successfully. Exporting data to "
+                                "SQLite database.",
+                                enabled = not self.is_uncertainty_analysis)
 
                             self.cvxpy_endogenous_data_to_database(
                                 scenarios_idx=scenario,
@@ -1050,8 +1068,9 @@ class Core:
                             # first solution: compute tolerances
                             if iter_count == 0:
                                 self.logger.info(
-                                    "Setting convergence thresholds as relative "
-                                    "tolerances of tables scales.")
+                                    message = "Setting convergence thresholds as relative "
+                                    "tolerances of tables scales.",
+                                    enabled = not self.is_uncertainty_analysis)
 
                                 # must be done for scenarios_idx only
                                 with db_handler(self.sqltools):
@@ -1108,7 +1127,9 @@ class Core:
 
                             if tables_above_max:
                                 self.logger.info(
-                                    "Numerical convergence NOT reached")
+                                    message = "Numerical convergence NOT reached",
+                                    enabled = not self.is_uncertainty_analysis,
+                                    )
                                 conv_log("\n".join(lines))
                             else:
                                 lines.append("")
@@ -1116,9 +1137,11 @@ class Core:
                                 conv_log("\n".join(lines))
 
                                 self.logger.info(
-                                    f"Numerical convergence reached | "
+                                    message= f"Numerical convergence reached | "
                                     f"Scenario {scenario_coords} | "
-                                    f"Iterations: {iter_count} ")
+                                    f"Iterations: {iter_count} ",
+                                    enabled = not self.is_uncertainty_analysis,
+                                    )
                                 break
 
                             if iter_count == maximum_iterations:
@@ -1142,7 +1165,7 @@ class Core:
                             iter_count += 1
 
                         finally:
-                            if iter_count >= 1 and \
+                            if iter_count > 1 and \
                                     not keep_previous_iteration_db:
                                 self.sqltools.close_connection(
                                     suppress_warning=True)
@@ -1546,6 +1569,7 @@ class Core:
         with self.logger.log_timing(
             message="Checking exogenous data coherence...",
             level='info',
+            enabled= not self.is_uncertainty_analysis,
         ):
             null_entries = {}
             column_to_inspect = Defaults.Labels.VALUES_FIELD['values'][0]
@@ -1620,6 +1644,7 @@ class Core:
         with self.logger.log_timing(
             message="Loading and validating symbolic problem...",
             level='info',
+            enabled= not self.is_uncertainty_analysis,
         ):
             self.problem.load_symbolic_problem_from_file(force_overwrite)
             self.problem.add_implicit_symbolic_expressions()
@@ -1844,18 +1869,12 @@ class Core:
     ) -> None:
         """Load symbolic problem, validate uncertain exogenous data, and initialize CVXPY structures."""
 
-        self.logger.info(
-            "Loading symbolic problem..."
-        )
         self.load_and_validate_symbolic_problem(
             force_overwrite=force_overwrite,
         )
 
         self.check_exogenous_data_coherence()
 
-        self.logger.info(
-            "Initializing problem and loading deterministic data..."
-        )
         self._initialize_problems_variables()
 
         self._load_deterministic_data()

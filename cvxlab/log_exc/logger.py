@@ -129,13 +129,21 @@ class Logger:
         """
         self.logger.log(msg=message, level=level)
 
-    def info(self, message: str):
-        """Log a message at INFO level.
+    def info(
+        self,
+        message: str,
+        enabled: bool = True,
+    ) -> None:
+        """Log an informational message when enabled.
 
         Args:
-            message (str): Message to log.
+            message: Message to log.
+            enabled: Whether the message should be emitted.
         """
-        self.logger.log(msg=message, level=logging.INFO)
+        if not enabled:
+            return
+
+        self.logger.info(message)
 
     def debug(self, message: str):
         """Log a message at DEBUG level.
@@ -186,6 +194,7 @@ class Logger:
             level: str = 'info',
             log_format: str = None,
             success: bool = True,
+            enabled: bool = True,
     ):
         """Context manager to log timing and status of a code block.
 
@@ -200,6 +209,10 @@ class Logger:
         Yields:
             dict: Status dictionary with 'success' key.
         """
+        if not enabled:
+            yield
+            return
+
         log_level = self.LEVELS.get(level.upper(), logging.INFO)
         log_function = getattr(
             self.logger,

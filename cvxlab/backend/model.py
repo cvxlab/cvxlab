@@ -688,11 +688,14 @@ class Model():
         if self.core.index.scenarios_info.index is not None:
             msg += f"| Scenarios count: {len(self.core.index.scenarios_info.index)}"
 
-        self.logger.info(msg)
+        self.logger.info(
+            msg,
+            enabled=not self.is_uncertainty_analysis)
 
         with self.logger.log_timing(
             message="Solving numerical problems...",
             level='info',
+            enabled= not self.is_uncertainty_analysis,
         ):
             self.core.solve_numerical_problems(
                 force_overwrite=force_overwrite,
@@ -1171,8 +1174,12 @@ class Model():
             )
             for run_id in run_ids:
 
+                self.logger.info(
+                    f"Running uncertainty-analysis run {run_id}/{len(run_ids)}."
+                    )
+
                 run_records, failed_scenarios = (
-                    self._run_uncertainty_sample(
+                    self.run_uncertainty_sample(
                         run_id=run_id,
                         force_overwrite=force_overwrite,
                         solution_mode=solution_mode,
@@ -1209,7 +1216,7 @@ class Model():
                 settings=uncertainty_cfg,
             )
 
-    def _run_uncertainty_sample(
+    def run_uncertainty_sample(
         self,
         run_id: int,
         force_overwrite: bool,
@@ -1228,12 +1235,6 @@ class Model():
         keep_previous_iteration_db,
     ) -> None:
         """performs a single model run for the specified run_id"""
-
-        uncertainty_cfg = self._uncertainty_settings
-
-        self.logger.info(
-            f"Running uncertainty-analysis run {run_id}."
-        )
 
         self.core.load_uncertain_data_and_generate_numerical_problems(
             run_id
