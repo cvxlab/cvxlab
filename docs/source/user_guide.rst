@@ -413,8 +413,12 @@ and on the SQLite database, summarized in the table below.
   user_guide_steps/numerical_problem_run
   user_guide_steps/export_model_results
 
+.. toctree::
+  :maxdepth: 2
+  :hidden:
+  :caption: Advanced features
 
-
+  advanced_features/sensitivity_analysis/index
 
 
 

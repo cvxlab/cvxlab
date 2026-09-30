@@ -18,6 +18,8 @@ Model initialization and setup
 .. automethod:: cvxlab.Model.initialize_model_environment
 .. automethod:: cvxlab.Model.refresh_database_and_initialize_problem
 .. automethod:: cvxlab.Model.run_model
+.. automethod:: cvxlab.Model.uncertainty_settings
+.. automethod:: cvxlab.Model.run_uncertainty
 
 
 Model data management methods
