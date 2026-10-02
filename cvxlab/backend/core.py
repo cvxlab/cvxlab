@@ -141,7 +141,7 @@ class Core:
         with self.logger.log_timing(
             message="Generating data structures for endogenous data tables...",
             level='info',
-            enabled= not self.is_uncertainty_analysis,
+            enabled=not self.is_uncertainty_analysis,
         ):
             # generate dataframes and cvxpy var for endogenous data tables
             # and for variables with type defined by problem linking logic
@@ -233,7 +233,7 @@ class Core:
         with self.logger.log_timing(
             message="Generating data structures for all variables and constants...",
             level='info',
-            enabled= not self.is_uncertainty_analysis,
+            enabled=not self.is_uncertainty_analysis,
         ):
             for var_key, variable in self.index.variables.items():
                 variable: Variable
@@ -340,7 +340,7 @@ class Core:
             message=f"Fetching data from '{Defaults.ConfigFiles.SQLITE_DATABASE_FILE}' "
                 "to cvxpy exogenous variables...",
             level='info',
-            enabled= not self.is_uncertainty_analysis,
+            enabled=not self.is_uncertainty_analysis,
         ):
             filter_header = Defaults.Labels.FILTER_DICT_KEY
             cvxpy_var_header = Defaults.Labels.CVXPY_VAR
@@ -749,8 +749,8 @@ class Core:
 
                 self.logger.info(
                     msg,
-                    enabled= not self.is_uncertainty_analysis,
-                    )
+                    enabled=not self.is_uncertainty_analysis,
+                )
 
                 if self.is_uncertainty_analysis:
                     self.cvxpy_uncertain_exogenous_data_to_database(
@@ -969,8 +969,8 @@ class Core:
                 if scenario_coords:
                     scenario_label = '-'.join(map(str, scenario_coords))
                     self.logger.info(
-                        message = f"Solving integrated problems | Scenario {scenario_coords}",
-                        enabled = not self.is_uncertainty_analysis)
+                        message=f"Solving integrated problems | Scenario {scenario_coords}",
+                        enabled=not self.is_uncertainty_analysis)
                 else:
                     self.logger.info(
                         message="Solving integrated problems",
@@ -993,17 +993,17 @@ class Core:
                     while True:
                         try:
                             self.logger.info(
-                                message = f"Iteration count: {iter_count} | "
+                                message=f"Iteration count: {iter_count} | "
                                 f"iterations limit: {maximum_iterations}",
-                                enabled = not self.is_uncertainty_analysis,
-                                )
+                                enabled=not self.is_uncertainty_analysis,
+                            )
 
                             if iter_count >= 1:
 
                                 self.logger.info(
-                                    message = "Creating copy of database from previous iteration.",
-                                    enabled = not self.is_uncertainty_analysis
-                                    )
+                                    message="Creating copy of database from previous iteration.",
+                                    enabled=not self.is_uncertainty_analysis
+                                )
 
                                 self.files.copy_file_to_destination(
                                     path_destination=sqlite_db_path,
@@ -1014,9 +1014,9 @@ class Core:
                                 )
 
                                 self.logger.info(
-                                    message = "Updating exogenous variables data from previous iteration.",
-                                    enabled = not self.is_uncertainty_analysis
-                                    )
+                                    message="Updating exogenous variables data from previous iteration.",
+                                    enabled=not self.is_uncertainty_analysis
+                                )
 
                                 self._data_to_cvxpy_exogenous_vars(
                                     scenarios_idx=scenario,
@@ -1055,9 +1055,9 @@ class Core:
                                 break
 
                             self.logger.info(
-                                message = "Problems solved successfully. Exporting data to "
+                                message="Problems solved successfully. Exporting data to "
                                 "SQLite database.",
-                                enabled = not self.is_uncertainty_analysis)
+                                enabled=not self.is_uncertainty_analysis)
 
                             self.cvxpy_endogenous_data_to_database(
                                 scenarios_idx=scenario,
@@ -1068,9 +1068,9 @@ class Core:
                             # first solution: compute tolerances
                             if iter_count == 0:
                                 self.logger.info(
-                                    message = "Setting convergence thresholds as relative "
+                                    message="Setting convergence thresholds as relative "
                                     "tolerances of tables scales.",
-                                    enabled = not self.is_uncertainty_analysis)
+                                    enabled=not self.is_uncertainty_analysis)
 
                                 # must be done for scenarios_idx only
                                 with db_handler(self.sqltools):
@@ -1127,9 +1127,9 @@ class Core:
 
                             if tables_above_max:
                                 self.logger.info(
-                                    message = "Numerical convergence NOT reached",
-                                    enabled = not self.is_uncertainty_analysis,
-                                    )
+                                    message="Numerical convergence NOT reached",
+                                    enabled=not self.is_uncertainty_analysis,
+                                )
                                 conv_log("\n".join(lines))
                             else:
                                 lines.append("")
@@ -1137,11 +1137,11 @@ class Core:
                                 conv_log("\n".join(lines))
 
                                 self.logger.info(
-                                    message= f"Numerical convergence reached | "
+                                    message=f"Numerical convergence reached | "
                                     f"Scenario {scenario_coords} | "
                                     f"Iterations: {iter_count} ",
-                                    enabled = not self.is_uncertainty_analysis,
-                                    )
+                                    enabled=not self.is_uncertainty_analysis,
+                                )
                                 break
 
                             if iter_count == maximum_iterations:
@@ -1364,7 +1364,7 @@ class Core:
 
         # Header: Table | Thresholds | Iter columns
         header = f"{'Table':<{table_col_width}}" \
-                 f"{'Thresholds':<{thresholds_col_width}}" + \
+            f"{'Thresholds':<{thresholds_col_width}}" + \
             "".join(f"{lbl:^{value_col_width}}" for lbl in iter_labels)
         lines.append(header)
         lines.append("-" * len(header))
@@ -1569,7 +1569,7 @@ class Core:
         with self.logger.log_timing(
             message="Checking exogenous data coherence...",
             level='info',
-            enabled= not self.is_uncertainty_analysis,
+            enabled=not self.is_uncertainty_analysis,
         ):
             null_entries = {}
             column_to_inspect = Defaults.Labels.VALUES_FIELD['values'][0]
@@ -1644,7 +1644,7 @@ class Core:
         with self.logger.log_timing(
             message="Loading and validating symbolic problem...",
             level='info',
-            enabled= not self.is_uncertainty_analysis,
+            enabled=not self.is_uncertainty_analysis,
         ):
             self.problem.load_symbolic_problem_from_file(force_overwrite)
             self.problem.add_implicit_symbolic_expressions()
@@ -1904,24 +1904,48 @@ class Core:
             run_id=run_id,
         )
 
-    # def update_uncertainty_run_results(
-    #     self,
-    #     run_id: int,
-    #     temp_save: bool,
-    #     file_format: str,
-    # ) -> None:
-    #     """Collect current problem statuses and update uncertainty-run results."""
+    def run_uncertainty_sample(
+        self,
+        run_id: int,
+        force_overwrite: bool,
+        run_settings: RunSettings,
+    ) -> None:
+        """Execute a single uncertainty-analysis model run.
 
-    #     statuses_by_scenario = (
-    #         self.get_current_problem_status_by_scenario()
-    #     )
+        Loads the uncertain data associated with the specified run, generates
+        the corresponding numerical problems, solves them using the provided
+        run configuration, and collects uncertainty measures and solution
+        statuses.
 
-    #     self.uncertainty.update_run_results(
-    #         run_id=run_id,
-    #         statuses_by_scenario=statuses_by_scenario,
-    #         temp_save=temp_save,
-    #         file_format=file_format,
-    #     )
+        Args:
+            run_id: Identifier of the uncertainty sample to execute.
+            force_overwrite: Whether existing numerical problem results may be
+                overwritten.
+            run_settings: Validated configuration defining the model solution
+                strategy and solver settings.
+
+        Returns:
+            tuple: Collected uncertainty run records and failed-scenario
+            information.
+        """
+
+        self.load_uncertain_data_and_generate_numerical_problems(
+            run_id
+        )
+
+        self.solve_numerical_problems(
+            force_overwrite=force_overwrite,
+            run_settings=run_settings,
+        )
+
+        run_records, failed_scenarios = (
+            self.uncertainty.collect_run_results(
+                run_id=run_id,
+                statuses_by_scenario=self.get_current_problem_status_by_scenario(),
+            )
+        )
+
+        return run_records, failed_scenarios
 
     def load_uncertain_data_and_generate_numerical_problems(
         self,

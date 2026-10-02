@@ -1,10 +1,10 @@
 from concurrent.futures import ProcessPoolExecutor
-from pathlib import Path
-import shutil
 from multiprocessing import Manager
+from pathlib import Path
 import queue
+import shutil
 
-# import pandas as pd
+from cvxlab.backend.run_settings import RunSettings
 
 
 class UncertaintyParallelRunner:
@@ -39,9 +39,9 @@ class UncertaintyParallelRunner:
         Raises:
             ValueError: If ``n_parallel`` is smaller than one.
         """
-        if n_parallel < 1:
+        if n_parallel < 2:
             raise ValueError(
-                "'n_parallel' must be greater than or equal to 1."
+                "'n_parallel' must be greater than or equal to 2."
             )
 
         self.model = model
@@ -228,11 +228,12 @@ class UncertaintyParallelRunner:
             "use_existing_data": True,
             "log_level": self.model.settings.log_level,
         }
-    
+
     def run_parallel(
         self,
-        run_ids,
-        run_kwargs: dict,
+        run_ids: int,
+        run_settings: RunSettings,
+        force_overwrite: bool,
         temp_save: bool,
     ) -> None:
         """Execute uncertainty runs using multiple worker processes."""
@@ -269,7 +270,8 @@ class UncertaintyParallelRunner:
                         _run_uncertainty_worker,
                         config,
                         model_init_kwargs,
-                        run_kwargs,
+                        run_settings,
+                        force_overwrite,
                         result_queue,
                     )
                     for config in worker_configs
@@ -312,10 +314,12 @@ class UncertaintyParallelRunner:
                 for future in futures:
                     future.result()
 
+
 def _run_uncertainty_worker(
     config: dict,
     model_init_kwargs: dict,
-    run_kwargs: dict,
+    run_settings: RunSettings,
+    force_overwrite: bool,
     results_queue,
 ) -> None:
     """Execute uncertainty runs assigned to one worker process."""
@@ -336,9 +340,10 @@ def _run_uncertainty_worker(
     for run_id in config["run_ids"]:
 
         run_records, failed_scenarios = (
-            worker_model.run_uncertainty_sample(
+            worker_model.core.run_uncertainty_sample(
                 run_id=run_id,
-                **run_kwargs,
+                force_overwrite=force_overwrite,
+                run_settings=run_settings,
             )
         )
 

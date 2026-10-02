@@ -9,24 +9,33 @@ from cvxlab.log_exc.logger import Logger
 
 
 class UncertaintySettings:
-    """Validated container for uncertainty-analysis configuration.
-
-    The class validates and stores the configuration used for uncertainty
-    sampling, model-output collection, and global sensitivity analysis.
+    """
+    This class validates, normalizes, and stores the configuration required to
+    sample uncertain model inputs, collect model outputs across uncertainty runs,
+    and optionally perform global sensitivity analysis.
 
     Attributes:
-        sampling_method: Selected SALib sampling method.
-        gsa_method: Selected global sensitivity analysis method.
-        sampling_kwargs: Keyword arguments passed to the SALib sampler.
-        gsa_kwargs: Keyword arguments passed to the SALib analyzer.
-        groups: Whether grouped sampling is enabled.
-        measures: Uncertainty measures selected for GSA.
-        scenarios: Scenarios selected for GSA.
-        save_samples: Whether generated samples are exported.
-        save_measures: Whether uncertainty measures are exported.
-        save_analysis: Whether GSA results are exported.
-        temp_save: Whether uncertainty measures are progressively saved.
-        file_format: Output format used for exported dataframes.
+        sampling_method: SALib sampling method used to generate uncertain input
+            configurations.
+        gsa_method: SALib global sensitivity analysis method. If None, uncertainty
+            runs can be performed without computing sensitivity indices.
+        sampling_kwargs: Method-specific keyword arguments passed to the selected
+            SALib sampling function.
+        gsa_kwargs: Method-specific keyword arguments passed to the selected SALib
+            analysis function.
+        groups: Whether uncertainty groups are included in the sampling problem.
+        measures: Model-output measures selected for GSA. If None, all available
+            uncertainty measures are considered.
+        scenarios: Model scenarios selected for GSA. If None, all available
+            scenarios are considered.
+        save_samples: Whether generated uncertainty samples are exported.
+        save_measures: Whether model outputs collected across uncertainty runs are
+            exported.
+        save_gsa: Whether global sensitivity analysis results are exported.
+        temp_save: Whether collected model outputs are progressively saved during
+            uncertainty runs.
+        file_format: File format used to export uncertainty samples, model outputs,
+            and GSA results.
     """
 
     def __init__(

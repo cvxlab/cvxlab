@@ -50,8 +50,8 @@ def create_model_dir(
         settings_file_type (Defaults.LiteralTypes.SettingsSource, optional): The 
             type of template configuration file to generate ('yml' or 'xlsx').
             Defaults to 'yml'.
-        Uncertainty (bool, optional): If True, generate the uncertainty-aware
-            setup template variants for YAML or Excel. Defaults to False.
+        uncertainty (bool, optional): Whether uncertainty-related functionalities
+            and template settings are enabled. Defaults to False
         include_user_defined_templates (bool, optional): If True, copy user-defined
             template files into the new model directory (user-defined operators and
             constants templates). Defaults to False.

@@ -18,8 +18,8 @@ import pandas as pd
 from cvxlab.defaults import Defaults
 from cvxlab.backend.core import Core
 from cvxlab.backend.model_settings import ModelSettings, ModelPaths
-from cvxlab.backend.uncertainty.uncertainty_settings import UncertaintySettings
-from cvxlab.backend.uncertainty.uncertainty_parallel_runner import UncertaintyParallelRunner
+from cvxlab.uncertainty import UncertaintySettings
+from cvxlab.uncertainty import UncertaintyParallelRunner
 from cvxlab.backend.run_settings import RunSettings
 from cvxlab.log_exc import exceptions as exc
 from cvxlab.log_exc.logger import Logger
@@ -452,18 +452,16 @@ class Model():
             force_overwrite: bool = False,
             table_key_list: Optional[list[str]] = None,
     ) -> None:
-        """Load exogenous input data into the SQLite database.
+        """Load and validate uncertain input data in the SQLite database.
 
-        This is the public interface for loading user-filled input data files into
-        the model SQLite database. It wraps the internal data-loading routine, which
-        imports exogenous data and normalizes missing values as SQLite NULL values.
+        Loads user-provided exogenous input data into the SQLite database and
+        validates the uncertainty-specific data configuration.
 
         Args:
-            force_overwrite (bool, optional): If True, overwrite existing table data
-                without asking for user confirmation. Defaults to False.
-            table_key_list (list[str], optional): List of exogenous data table keys
-                to load. If empty, all exogenous input data tables are loaded.
-                Defaults to [].
+            force_overwrite: Whether existing table data may be overwritten
+                without user confirmation. Defaults to False.
+            table_key_list: Exogenous data table keys to load. If None, all
+                exogenous input data tables are loaded.
         """
         if table_key_list is None:
             table_key_list = []
@@ -473,8 +471,7 @@ class Model():
             table_key_list=table_key_list,
         )
 
-        if self.is_uncertainty_analysis:
-            self.core.uncertainty.validate_uncertainty_data()
+        self.core.uncertainty.validate_uncertainty_data()
 
     def _initialize_problems(
             self,
@@ -695,7 +692,7 @@ class Model():
         with self.logger.log_timing(
             message="Solving numerical problems...",
             level='info',
-            enabled= not self.is_uncertainty_analysis,
+            enabled=not self.is_uncertainty_analysis,
         ):
             self.core.solve_numerical_problems(
                 force_overwrite=force_overwrite,
@@ -993,8 +990,28 @@ class Model():
         Validates the selected sampling/GSA configuration and stores it in an
         :class:`UncertaintySettings` instance.
 
-        See :class:`UncertaintySettings` for the detailed description of the
-        available settings.
+        Attributes:
+            sampling_method: SALib sampling method used to generate uncertain input
+                configurations.
+            gsa_method: SALib global sensitivity analysis method. If None, uncertainty
+                runs can be performed without computing sensitivity indices.
+            sampling_kwargs: Method-specific keyword arguments passed to the selected
+                SALib sampling function.
+            gsa_kwargs: Method-specific keyword arguments passed to the selected SALib
+                analysis function.
+            groups: Whether uncertainty groups are included in the sampling problem.
+            measures: Model-output measures selected for GSA. If None, all available
+                uncertainty measures are considered.
+            scenarios: Model scenarios selected for GSA. If None, all available
+                scenarios are considered.
+            save_samples: Whether generated uncertainty samples are exported.
+            save_measures: Whether model outputs collected across uncertainty runs are
+                exported.
+            save_gsa: Whether global sensitivity analysis results are exported.
+            temp_save: Whether collected model outputs are progressively saved during
+                uncertainty runs.
+            file_format: File format used to export uncertainty samples, model outputs,
+                and GSA results.
 
         Raises:
             ValueError: If the uncertainty-analysis configuration is invalid.
@@ -1026,11 +1043,10 @@ class Model():
     def run_uncertainty(
         self,
         resume: bool = False,
-        temp_file_format: str = "xlsx",
         force_overwrite: bool = False,
         solution_mode: Defaults.LiteralTypes.SolutionMode = 'parallel',
         scenarios_idx: Optional[List[int] | int] = None,
-        n_parallel: int = 1,
+        n_parallel: Optional[int] = None,
         # arguments for solver settings
         solver: Optional[str | dict[str, str]] = None,
         solver_verbose: bool | dict[str, bool] = False,
@@ -1070,13 +1086,9 @@ class Model():
       sensitivity indices are computed automatically from the collected results.
 
       Args:
-          existing_data: If True, reuse the existing database content and skip
-              loading and validating uncertain input data. Defaults to False.
           resume: Whether to resume a previously interrupted uncertainty run.
               If True, existing samples and temporary run results are reused where
               available. Defaults to False.
-          temp_file_format: File format used to load temporary uncertainty results
-              when resuming a run. Defaults to "xlsx".
           force_overwrite: Whether generated numerical problem structures and
               model results may be overwritten. Defaults to False.
           solution_mode: Solution strategy used for the model runs.
@@ -1115,6 +1127,31 @@ class Model():
                 "Call model.uncertainty_settings(...) before analyze_uncertainty()."
             )
 
+        # prova
+        self.core.load_and_validate_symbolic_problem(
+            force_overwrite=force_overwrite,
+        )
+
+        run_settings = RunSettings(
+            problems_keys=list(self.core.problem.symbolic_problem.keys()),
+            number_of_sub_problems=len(self.core.problem.symbolic_problem),
+            all_scenarios_idx=list(self.core.index.scenarios_info.index),
+            solution_mode=solution_mode,
+            scenarios_idx=scenarios_idx,
+            solver=solver,
+            solver_verbose=solver_verbose,
+            solver_settings=solver_settings,
+            sequential_solution_chain=sequential_solution_chain,
+            convergence_monitoring=convergence_monitoring,
+            convergence_norm=convergence_norm,
+            convergence_tables_to_check=convergence_tables_to_check,
+            convergence_tables_to_skip=convergence_tables_to_skip,
+            relative_tolerance=relative_tolerance,
+            maximum_iterations=maximum_iterations,
+            keep_previous_iteration_db=keep_previous_iteration_db,
+            logger=self.logger,
+        )
+
         if not self.settings.use_existing_data:
 
             self._load_and_validate_uncertain_data_to_sqlite_database()
@@ -1126,89 +1163,21 @@ class Model():
 
         run_ids = self.core.uncertainty.initialize_run_results(
             resume=resume,
-            )
+        )
 
-        # prova - start
-        run_kwargs = {
-            "force_overwrite": force_overwrite,
-            "solution_mode": solution_mode,
-            "scenarios_idx": scenarios_idx,
-            "convergence_monitoring": convergence_monitoring,
-            "solver": solver,
-            "sequential_solution_chain": sequential_solution_chain,
-            "solver_verbose": solver_verbose,
-            "solver_settings": solver_settings,
-            "convergence_norm": convergence_norm,
-            "convergence_tables_to_check": convergence_tables_to_check,
-            "convergence_tables_to_skip": convergence_tables_to_skip,
-            "relative_tolerance": relative_tolerance,
-            "maximum_iterations": maximum_iterations,
-            "keep_previous_iteration_db": keep_previous_iteration_db,
-        }
-
-        if n_parallel > 1:
-
-            parallel_runner = UncertaintyParallelRunner(
-                model=self,
+        if n_parallel:
+            self._run_uncertainty_parallel(
+                run_ids=run_ids,
+                run_settings=run_settings,
+                force_overwrite=force_overwrite,
                 n_parallel=n_parallel,
             )
-
-            # parallel_results = parallel_runner.run_parallel(
-            #     run_ids=run_ids,
-            #     run_kwargs=run_kwargs,
-            # )
-
-            # for run_id, run_records, failed_scenarios in parallel_results:
-
-            #     self.core.uncertainty.update_run_results(
-            #         run_id=run_id,
-            #         run_records=run_records,
-            #         failed_scenarios=failed_scenarios,
-            #         temp_save=uncertainty_cfg.temp_save,
-            #         file_format=uncertainty_cfg.file_format,
-            #     )
-            parallel_runner.run_parallel(
-                run_ids=run_ids,
-                run_kwargs=run_kwargs,
-                temp_save=uncertainty_cfg.temp_save,
-                file_format=uncertainty_cfg.file_format,
-            )
         else:
-            self.core.initialize_problem_structure_and_load_deterministic_data(
-                force_overwrite=True,
+            self._run_uncertainty_serial(
+                run_ids=run_ids,
+                run_settings=run_settings,
+                force_overwrite=force_overwrite,
             )
-            for run_id in run_ids:
-
-                self.logger.info(
-                    f"Running uncertainty-analysis run {run_id+1}/{len(run_ids)}."
-                    )
-
-                run_records, failed_scenarios = (
-                    self.run_uncertainty_sample(
-                        run_id=run_id,
-                        force_overwrite=force_overwrite,
-                        solution_mode=solution_mode,
-                        scenarios_idx=scenarios_idx,
-                        convergence_monitoring=convergence_monitoring,
-                        solver=solver,
-                        sequential_solution_chain=sequential_solution_chain,
-                        solver_verbose=solver_verbose,
-                        solver_settings=solver_settings,
-                        convergence_norm=convergence_norm,
-                        convergence_tables_to_check=convergence_tables_to_check,
-                        convergence_tables_to_skip=convergence_tables_to_skip,
-                        relative_tolerance=relative_tolerance,
-                        maximum_iterations=maximum_iterations,
-                        keep_previous_iteration_db=keep_previous_iteration_db,
-                    )
-                )
-
-                self.core.uncertainty.update_run_results(
-                    run_id=run_id,
-                    run_records=run_records,
-                    failed_scenarios=failed_scenarios,
-                    temp_save=uncertainty_cfg.temp_save,
-                )
 
         self.core.uncertainty.finalize_run_results(
             settings=uncertainty_cfg,
@@ -1220,55 +1189,83 @@ class Model():
                 settings=uncertainty_cfg,
             )
 
-    def run_uncertainty_sample(
+    def _run_uncertainty_parallel(
         self,
-        run_id: int,
+        run_ids: list[int],
+        run_settings: RunSettings,
         force_overwrite: bool,
-        solution_mode,
-        scenarios_idx,
-        convergence_monitoring,
-        solver,
-        sequential_solution_chain,
-        solver_verbose,
-        solver_settings,
-        convergence_norm,
-        convergence_tables_to_check,
-        convergence_tables_to_skip,
-        relative_tolerance,
-        maximum_iterations,
-        keep_previous_iteration_db,
+        n_parallel: int,
     ) -> None:
-        """performs a single model run for the specified run_id"""
+        """Execute uncertainty-analysis runs using multiple worker processes.
 
-        self.core.load_uncertain_data_and_generate_numerical_problems(
-            run_id
+        The uncertainty runs are delegated to ``UncertaintyParallelRunner``,
+        which distributes the provided run IDs across independent model workers
+        and executes them concurrently.
+
+        Args:
+            run_ids: Run identifiers corresponding to the uncertainty samples
+                to execute.
+            run_settings: Validated model-run configuration shared across the
+                parallel uncertainty runs.
+            n_parallel: Maximum number of worker processes to execute in parallel.
+        """
+        parallel_runner = UncertaintyParallelRunner(
+            model=self,
+            n_parallel=n_parallel,
         )
 
-        self.run_model(
+        parallel_runner.run_parallel(
+            run_ids=run_ids,
+            run_settings=run_settings,
             force_overwrite=force_overwrite,
-            solution_mode=solution_mode,
-            scenarios_idx=scenarios_idx,
-            convergence_monitoring=convergence_monitoring,
-            solver=solver,
-            sequential_solution_chain=sequential_solution_chain,
-            solver_verbose=solver_verbose,
-            solver_settings=solver_settings,
-            convergence_norm=convergence_norm,
-            convergence_tables_to_check=convergence_tables_to_check,
-            convergence_tables_to_skip=convergence_tables_to_skip,
-            relative_tolerance=relative_tolerance,
-            maximum_iterations=maximum_iterations,
-            keep_previous_iteration_db=keep_previous_iteration_db,
+            temp_save=self._uncertainty_settings.temp_save,
         )
 
-        run_records, failed_scenarios = (
-            self.core.uncertainty.collect_run_results(
-                run_id=run_id,
-                statuses_by_scenario=self.core.get_current_problem_status_by_scenario(),
+    def _run_uncertainty_serial(
+        self,
+        run_ids: list[int],
+        run_settings: RunSettings,
+        force_overwrite: bool,
+    ) -> None:
+        """Execute uncertainty-analysis runs sequentially.
+
+        Each uncertainty sample is solved one at a time using the provided
+        ``RunSettings``. After each run, uncertainty measures and failed-scenario
+        information are collected and stored in the main uncertainty results.
+
+        Args:
+            run_ids: Run identifiers corresponding to the uncertainty samples
+                to execute.
+            run_settings: Validated model-run configuration shared across all
+                uncertainty runs.
+            force_overwrite: Whether existing numerical problem results may be
+                overwritten.
+        """
+        for run_id in run_ids:
+
+            self.logger.info(
+                f"Running uncertainty-analysis run "
+                f"{run_id + 1}/{len(run_ids)}."
             )
-        )
 
-        return run_records, failed_scenarios
+            self.core.initialize_problem_structure_and_load_deterministic_data(
+                force_overwrite=True,
+            )
+
+            run_records, failed_scenarios = (
+                self.core.run_uncertainty_sample(
+                    run_id=run_id,
+                    force_overwrite=force_overwrite,
+                    run_settings=run_settings,
+                )
+            )
+
+            self.core.uncertainty.update_run_results(
+                run_id=run_id,
+                run_records=run_records,
+                failed_scenarios=failed_scenarios,
+                temp_save=self._uncertainty_settings.temp_save,
+            )
 
     def __repr__(self):
         """Return a string representation of the Model instance."""

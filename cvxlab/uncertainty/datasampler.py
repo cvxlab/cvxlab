@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from SALib.sample import latin, morris, sobol
 
-from cvxlab.backend.uncertainty.uncertainty_datahandler import UncertaintyData
+from cvxlab.uncertainty import UncertaintyData
 from cvxlab.defaults import Defaults
 from cvxlab.log_exc.exceptions import SettingsError
 from cvxlab.log_exc.logger import Logger
