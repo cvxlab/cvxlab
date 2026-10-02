@@ -79,6 +79,8 @@ html_theme_options = {
     ],
     "navigation_with_keys": True,
     "show_toc_level": 2,
+    "show_nav_level": 3,   # sinistra: navigation tree
+    "navigation_depth": 4,
     "navbar_center": ["navbar-nav"],
     "header_links_before_dropdown": 7,
 }
