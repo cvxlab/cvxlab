@@ -1,5 +1,5 @@
 total_supply_0:
-    description: total products supply, time 0
+    description: total product supply at t=0
 
     type: exogenous
     coordinates: [Products]
@@ -9,7 +9,7 @@ total_supply_0:
                 dim: cols
 
 total_quantities_0:
-    description: total values of profit, energy use, material use, time 0
+    description: total values of profit, energy use, and material use at t=0
     type: exogenous
     coordinates: [Products, Attributes]
     variables_info:

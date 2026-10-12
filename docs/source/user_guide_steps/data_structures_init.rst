@@ -4,22 +4,22 @@ Initialization of data structures
 =================================
 
 This step prepares the fundamental data structures required for a CVXlab model, 
-including loading sets and variable coordinates in the Model instance ``Index``, 
-and generating *blank input files* and *SQLite database*. 
+including loading set and variable coordinates into the Model instance ``Index``, 
+and generating *blank input files* and a *SQLite database*. 
 These actions are typically performed after the model directory and setup files 
-have been created, the model Sets structure has already been defined in the 
+have been created, the model set structure has already been defined in the 
 ``sets.xlsx`` file, and before numerical problem generation and solution.
 
 
 Overview
 --------
 
-- Loads sets structure and related data from ``sets.xlsx`` file, then loads data 
-  tables and variables properties, defining related coordianates and dimensions 
+- Loads the sets structure and related data from the ``sets.xlsx`` file, then loads data 
+  tables and variable properties, defining related coordinates and dimensions 
   in the Model instance ``Index``. During this process, various checks are performed 
   to ensure consistency of the model structure and data.
 - Initializes blank data structures: creates a new blank *SQLite database* and 
-  *input data* file/s, both with filled with sets coordinates, and provided as 
+  *input data* files, both populated with set coordinates and provided as 
   normalized tables. Input data files are ready to be filled with exogenous data 
   by the user.
 
@@ -85,8 +85,8 @@ The generated **SQLite database** contains the following tables:
 - A table is defined for each model *Set*, and populated with the coordinates 
   provided in ``sets.xlsx``. These tables are named as ``_set_<SET_NAME>``, where 
   ``<SET_NAME>`` is the capitalized name of the set, as defined in the model 
-  settings. This naming convention allows to easily identify the Set tables in 
-  the SQLite database (refer to label naming conventions in 
+  settings. This naming convention makes it easy to identify the Set tables in 
+  the SQLite database (refer to the label naming conventions in 
   :class:`cvxlab.defaults.Defaults.Labels`).
 - A table is defined for each model *Data Table*, named as ``<data_table_#>``, 
   and generated with columns derived from the related sets, plus ``id`` and 
@@ -137,8 +137,8 @@ In practice, this means that:
 - data tables reference those coordinates instead of redefining an independent
   structure;
 - SQLite can enforce *referential consistency* between sets and data tables.
-- The SQLite database can be easily imported by other tools (e.g. PowerBI), which 
-  can leverage the relational structure to easily navigate the model data.
+- The SQLite database can be easily imported by other tools (e.g. Power BI), which 
+  can leverage the relational structure to navigate the model data easily.
 
 
 .. rubric:: Input data file(s)

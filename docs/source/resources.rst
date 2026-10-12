@@ -4,7 +4,7 @@ Resources
 =========
 
 This section collects tutorials and example models to help you get started with
-**cvxlab**. Each tutorial walks you through the steps described in the
+**CVXlab**. Each tutorial walks you through the steps described in the
 :ref:`User Guide <user_guide>` for a specific use-case.
 
 Tutorial directories (with supplementary modeling materials such as Jupyter
@@ -25,7 +25,7 @@ Tutorials
       - Description
       - Material
     * - :doc:`Production planning <tutorials/production_planning/production_planning>`
-      - Complete workflow for definining and solving a simple production planning 
+      - Complete workflow for defining and solving a simple production planning 
         under resource constraints. Step by step guide aligned with :ref:`User 
         Guide <model_generation_from_scratch>`. **[Ideal for newbies]**.
       - :download:`link <tutorials/production_planning/production_planning.zip>`
@@ -39,7 +39,7 @@ Tutorials
       - :download:`link <tutorials/production_planning_decomposition/production_planning_decomposition.zip>`
     * - :doc:`Sequential problems solution <tutorials/production_planning_sequential/production_planning_sequential>`
       - Sequential solution of the original production planning problem, by first 
-        calibrating the model deriving parameters, then solving the production 
+        calibrating the model and deriving parameters, then solving the production 
         planning problem with calibrated parameters.
       - :download:`link <tutorials/production_planning_sequential/production_planning_sequential.zip>`
 

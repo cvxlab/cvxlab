@@ -15,7 +15,7 @@ Overview
   the *SQLite database*, verifying the consistency of the data provided.
 - Loads and validates *symbolic problem(s) expressions* from the model settings, 
   ensuring that all referenced variables and data tables are properly defined.
-- Initializes *CVXPY problem(s) variables* and assigns data to exogenous ones.
+- Initializes *CVXPY problem variables* and assigns data to exogenous ones.
 - Constructs the *CVXPY numerical problem(s)* for each scenario, based on the 
   symbolic expressions and defined variables.
 
@@ -43,7 +43,7 @@ Typical Usage
     )
 
 
-Parameters description
+Parameter descriptions
 ----------------------
 
 .. list-table::
@@ -79,22 +79,22 @@ on a Model instance:
   missing selected keys are collected and reported together. Valid model tables
   that are present but not selected are left untouched.
 - Parses exogenous Data Tables, and fills the *NULL* entries in the related data 
-  tables with value provided by the ``blank_fill`` variable attribute. This 
+  tables with the value provided by the ``blank_fill`` variable attribute. This 
   facilitates the user in filling repetitive data entries in data tables. 
 - Loads and parses *symbolic problem expressions* from model settings, *validating 
   problem structure* against a validation schema and raising explicit errors if 
   any issues are found.
-- Checks if all variables numeric data are present in the SQLite database: in 
-  case *NULL* entries are found, the method logs the table name and the corresponding 
+- Checks whether numeric data for all variables are present in the SQLite database:
+  if *NULL* entries are found, the method logs the table name and the corresponding 
   row IDs, and raises an error.
-- Initializes model variables structures, including all variables information such 
+- Initializes model variable structures, including all variable information such 
   as the *type* (endogenous, exogenous, constants, hybrid), *shape* (rows and 
   columns), *cardinality* (inter- and intra-problem dimensions) and the associated
   *CVXPY variable* object, according to the model settings.
-- Fetches *exogenous variable data* from SQLite database and assigns it to the 
+- Fetches *exogenous variable data* from the SQLite database and assigns it to the 
   corresponding CVXPY variable objects.
 - Constructs the numerical optimization problem(s) for each scenario, generating and 
   assembling the expressions using the symbolic definitions and loaded data.
 - If ``force_overwrite=True``, any existing numerical value in exogenous data tables
-  (or a selection of them, in case ``table_key_list`` is specified) and all variables 
+  (or a selected subset, if ``table_key_list`` is specified) and all variables 
   and problems objects are overwritten without confirmation.

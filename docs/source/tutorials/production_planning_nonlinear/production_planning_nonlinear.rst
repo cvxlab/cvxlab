@@ -4,7 +4,7 @@ Handling non-linearities explicitly
 ===================================
 
 This tutorial extends the :ref:`tutorial-production-planning` by illustrating how 
-to handle a **non-linearity** in problems expressions explicitly. It is designed 
+to handle a **non-linearity** in problem expressions explicitly. It is designed 
 to be read *after* the base tutorial and focuses exclusively on the differences 
 with respect to it: only the modified or new elements are described in detail, 
 while unchanged steps are referenced to the base tutorial.
@@ -17,9 +17,9 @@ is required, see the :ref:`tutorial-production-planning-decomposition` tutorial.
 Use this guide when the non-linearity is supported by a nonlinear-capable solver 
 available to CVXlab and no decomposition is necessary. Refer to CVXPY `Disciplined 
 Non-Linear Programming (DNLP) <https://www.cvxpy.org/tutorial/dnlp/index.html>`__ 
-documentation for understanding capabilities and supported solvers. 
+documentation to understand its capabilities and supported solvers. 
 
-.. _nonlinear-problem-statement:
+.. _production-planning-nonlinear-problem-statement:
 
 .. admonition:: Problem statement
 
@@ -46,12 +46,12 @@ documentation for understanding capabilities and supported solvers.
 
   Positive slopes :math:`c_{s,j} > 0` represent **economies of scale**: the more 
   a product is sold, the higher its unit margin becomes (in the example, product 2 
-  only exhibits this behavior). A linear relationship between profit and production 
+  only exhibits this behavior). A linear relationship between unit profit and production 
   level is assumed, with :math:`c_{0,j}` representing the unit profit at zero 
   production and :math:`c_{s,j}` the increase in unit profit per additional unit 
   produced. Finally, the energy and material endowments remain:
 
-  :math:`E = (250, 300)` kWh,  :math:`M = (60, 90)` kg.
+  :math:`E = (150, 300)` kWh,  :math:`M = (60, 90)` kg.
 
 In the :download:`zip directory <production_planning_nonlinear.zip>`, the same
 materials as in the base tutorial are provided (notebook, concept workbook, and
@@ -103,8 +103,8 @@ parameters. The coordinate ``profit`` is replaced by ``profit_initial`` and
 
 .. rubric:: Defining Data Tables and related Variables
 
-Main changes in data tables definition include: the introduction of a new endogenous 
-``profit`` table and the ``products_data`` domain grows by one attribute row, while 
+The main changes in data table definitions include the introduction of a new endogenous 
+``profit`` table and an additional attribute row in the ``products_data`` domain, while 
 all other tables are unchanged.
 
 .. list-table:: Data Tables of the tutorial model (modified/new entries in bold)
@@ -174,7 +174,7 @@ exogenous variables, :math:`c_0` and :math:`c_s`, replace it in
      - :math:`1,\, p \; [1,2]`
      - :math:`-`
      - :math:`e \times m \; [4]`
-     - Products output (*unit*)
+     - Products output (*units*)
    * - products_data
      - :math:`e`
      - :math:`1,\, p \; [1,2]`
@@ -280,8 +280,8 @@ the updated filter list of the *Attributes* set.
 
 .. rubric:: Modified and new Data Tables and Variables
 
-The full updated ``structure_variables.yml`` is shown below. The two hybrid
-tables and the new variables are annotated with inline comments.
+The full updated ``structure_variables.yml`` is shown below. The new table
+and variables are annotated with inline comments.
 
 .. tabs::
 
@@ -430,7 +430,7 @@ tables and the new variables are annotated with inline comments.
 
 .. rubric:: Modified symbolic problem definition
 
-In the problem formulation, an expression is added representing the dependancy of 
+In the problem formulation, an expression is added representing the dependency of 
 profit on production level, linking :math:`c` to :math:`c_0`, :math:`c_s`, and :math:`x`.
 
 .. tabs::
@@ -454,8 +454,8 @@ profit on production level, linking :math:`c` to :math:`c_0`, :math:`c_s`, and :
           - maximization of total profit
           - energy use less than endowment
           - material use less than endowment
-          - unit profit as a function of product demand
-          - positive products supply
+          - unit profit as a function of production level
+          - non-negative production levels
 
    .. group-tab:: XLSX
 
@@ -479,14 +479,14 @@ profit on production level, linking :math:`c` to :math:`c_0`, :math:`c_s`, and :
             - material use less than endowment
           * -
             - c - c_s @ diag(x) - c_0 == 0
-            - unit profit as a function of product demand
+            - unit profit as a function of production level
           * -
             - x >= 0
-            - positive products supply
+            - non-negative production levels
 
 Notice that:
 
-- Since one unique problem is defined, the problem key could even not be specified.
+- Since only one problem is defined, the problem key need not be specified.
 - The ``diag()`` built-in operator constructs a diagonal matrix from a
   row vector (see :ref:`api_symbolic_operators`).
 
@@ -616,7 +616,7 @@ Solution of numerical problem(s)
 | Related API: :py:meth:`~cvxlab.Model.run_model`
 
 Problem solution is **identical** to the base tutorial, with one exception: since
-the problem is now non-linear, a non-linear capable solver must be specified in the
+the problem is now non-linear, a nonlinear-capable solver must be specified in the
 ``solver`` argument of ``run_model()``. The ``solver_settings`` dictionary must also
 be specified with the ``nlp`` argument set to ``True`` to activate the non-linear
 solver mode.
@@ -630,10 +630,10 @@ solver mode.
 
 Notice that:
 
-- the `nlp` argument must be set to ``True`` in the ``solver_settings`` dictionary to
+- the ``nlp`` argument must be set to ``True`` in the ``solver_settings`` dictionary to
   activate the non-linear solver mode;
-- a non-linear capable solver must be specified in the ``solver`` argument: check 
-  CVXPY-compatible solvers for non-linear problems `here <https://www.cvxpy.org/tutorial/dnlp/index.html>`__ ;
+- a nonlinear-capable solver must be specified in the ``solver`` argument: check 
+  CVXPY-compatible solvers for non-linear problems `here <https://www.cvxpy.org/tutorial/dnlp/index.html>`__;
 
 
 Export endogenous model data

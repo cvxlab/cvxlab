@@ -4,7 +4,7 @@ Model
 =====
 
 The cvxlab.Model class includes all the main package APIs necessary to
-generate, handle and solve the numerical model.
+generate, handle, and solve the numerical model.
 
 .. autoclass:: cvxlab.Model
    :no-members:

@@ -3,7 +3,7 @@
 Defaults
 ========
 
-The cvxlab.defaults module includes various constants and default settings 
+The CVXlab ``defaults`` module includes various constants and default settings 
 used throughout the package. These defaults help standardize configurations,
 data structures, symbolic definitions and numerical settings.
 
@@ -12,13 +12,13 @@ data structures, symbolic definitions and numerical settings.
    :no-undoc-members:
 
 
-Configuration files settings
+Configuration file settings
 -----------------------------
 
 .. autoclass:: cvxlab.defaults.Defaults.ConfigFiles
 
 
-Labels and fields names
+Labels and field names
 -----------------------
 
 .. autoclass:: cvxlab.defaults.Defaults.Labels

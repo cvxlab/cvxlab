@@ -14,7 +14,7 @@ production:
         - maximization of total profit
         - energy use less than endowment
         - material use less than endowment
-        - positive products supply
+        - non-negative production levels
 
 profit:
 
@@ -22,4 +22,4 @@ profit:
         - c - c_s @ diag(x) - c_0 == 0
 
     description:
-        - unit profit as a function of product demand
+        - unit profit as a function of production level

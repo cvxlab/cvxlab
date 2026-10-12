@@ -13,5 +13,5 @@ description:
     - maximization of total profit
     - energy use less than endowment
     - material use less than endowment
-    - unit profit as a function of product demand
-    - positive products supply
+    - unit profit as a function of production level
+    - non-negative production levels

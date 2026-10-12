@@ -4,8 +4,8 @@ Sequential problems solution
 ============================
 
 This tutorial expands the :ref:`tutorial-production-planning` tutorial to show how 
-to build a chain of numerical problems solved in a defined order, to split complex 
-modelling need into multiple sub-tasks. In this case, the model is built to solve 
+to build a chain of numerical problems solved in a defined order, splitting complex 
+modeling needs into multiple sub-tasks. In this case, the model is built to solve 
 a production planning problem starting from total values of production, profit, 
 energy and material uses observed in a defined time frame. The tutorial mirrors 
 the workflow described in :ref:`model_generation_from_scratch`, illustrating how 
@@ -14,11 +14,11 @@ In this case, the first sub-problem is solved to determine profit, energy and
 material use per unit of product starting from total values; while the second 
 sub-problem is formulated exactly as the standard production planning problem.
 
-.. _problem-statement:
+.. _production-planning-sequential-problem-statement:
 
 .. admonition:: Problem statement
 
-  Let us consider a production system, capable to produce two types of goods: 
+  Let us consider a production system, capable of producing two types of goods: 
   :math:`product_1` and :math:`product_2`, measured in :math:`units`. 
 
   Within a defined time frame (say, t=0), the system operates by producing a total 
@@ -40,20 +40,20 @@ sub-problem is formulated exactly as the standard production planning problem.
 
   - The production levels of the products are *independent*.
 
-  - Production of each product generates constants *profit* generated, *energy* and 
-    *material* use per unit of output (i.e., no economies of scale or other non 
-    linearities are considered). 
+  - Production of each product generates a constant *profit* and consumes fixed 
+    amounts of *energy* and *material* per unit of output (i.e., no economies of 
+    scale or other nonlinearities are considered). 
 
   The objective of the model is to determine the **maximum-profit production plan**, 
   i.e. the quantity of each product produced leading to the overall system maximum 
   profit, considering different scenarios for energy (:math:`E`) and material 
   (:math:`M`) endowments.
 
-  :math:`E = (250, 300) kWh`, :math:`M = (60, 90) kg` 
+  :math:`E = (150, 300) kWh`, :math:`M = (60, 90) kg` 
 
   However, in this case, the profit, energy and material use per unit of product 
   *are not known a priori*, and must be determined from the total values observed 
-  in the time frame t=0.
+  at t=0.
 
 In the :download:`zip directory <production_planning_sequential.zip>`, the materials 
 related to this tutorial are available, including:
@@ -77,20 +77,20 @@ Conceptual model definition
 
 Related user guide step: :ref:`conceptual-model-definition`.
 
-With respect to the base tutorial, the problem could be simply defined as a unique 
+With respect to the base tutorial, the problem could be simply defined as a single 
 optimization problem, by adding one additional expression useful to derive unit 
 profit, energy and material use per unit of product from the total values observed 
-in the time frame t=0 (see the last expression in the problem definition below). 
+at t=0 (see the last expression in the problem definition below). 
 
 Specifically, the variable :math:`x_0` (exogenous) represents the total production 
-levels of the products in t=0, while the variable :math:`T_0` (exogenous) represents 
-the total values of profit, energy and material use in t=0. The matrix :math:`a` is 
+levels of the products at t=0, while the variable :math:`T_0` (exogenous) represents 
+the total values of profit, energy and material use at t=0. The matrix :math:`a` is 
 defined as endogenous, calculating coefficients of profit, energy and material use 
 per unit of product. However, formulating the problem this way implies that the 
 variables :math:`c`, :math:`e`, and :math:`m` (profit, energy and material use per 
 unit of product) are also endogenous: this implies the matrix product of endogenous 
-variables :math:`c` and :math:`x_0` would apprear in the problem definition, making 
-the model as nonconvex. 
+variables :math:`c` and :math:`x_0` would appear in the problem definition, making 
+the model non-convex. 
 
 .. math::
   \begin{aligned}
@@ -105,21 +105,20 @@ While this formulation is mathematically correct and solvable in CVXlab (see the
 :ref:`tutorial-production-planning-nonlinear` tutorial), it may not be the best 
 option for the following reasons:
 
-- In case of large and analytically complex problems, the explicit solution of 
-  nonconvex problems may require significant computational resources and may not 
-  fail in finding the global optimum.
-- In case several data pre-processing steps are required, the definition of the 
-  problem may not be straightforward and understandable for users, and therefore 
-  hardly maintainable and reusable.
+- For large and analytically complex problems, the explicit solution of 
+  non-convex problems may require significant computational resources and may fail 
+  to find the global optimum.
+- If several data preprocessing steps are required, the problem may be difficult for 
+  users to understand and therefore difficult to maintain and reuse.
 
-For this reasons, this tutorial shows how to split the problem into two sub-problems 
-solved sequentially, where the output of pre-processing problme/s is used as input 
-for downstream problem/s. Specifically, the following strategy is here adopted:
+For these reasons, this tutorial shows how to split the problem into two sub-problems 
+solved sequentially, where the output of preprocessing problems is used as input 
+for downstream problems. Specifically, the following strategy is adopted:
 
 - The first problem, named ``data_calibration``, is solved to determine the unit 
   profit, energy and material use per unit of product starting from the total values 
   observed in t=0. The output of this problem (unit profit, energy and material use) 
-  is used as input for the second problem (i.e. it is defined as an hybrid variable).
+  is used as input for the second problem (i.e. it is defined as a hybrid variable).
 - The second problem, named ``planning_model``, is formulated exactly as the standard 
   production planning problem, using the unit profit, energy and material use per 
   unit of product determined in the previous step.
@@ -132,7 +131,7 @@ Sets defined for the base tutorial have not changed.
 
 .. rubric:: Defining Data Tables and related Variables
 
-The following tables summarizes the Data Tables and associated variables for the 
+The following table summarizes the Data Tables and associated variables for the 
 energy system model.
 
 .. list-table:: Data Tables of the tutorial model (modified/new entries in bold)
@@ -146,11 +145,11 @@ energy system model.
   * - :math:`total_supply_0(p)` (*new*)
     - Exogenous
     - :math:`p \\ [2]`
-    - Total supply by product, time 0 (in *units*)
+    - Total supply by product at t=0 (in *units*)
   * - :math:`total_quantities_0(p,a)`  (*new*)
     - Exogenous
     - :math:`p \times a \\ [2 \times 3 = 6]`
-    - Total values of profit, energy use, material use, time 0 (*€*, *kWh*, *kg*)
+    - Total values of profit, energy use, and material use at t=0 (*€*, *kWh*, *kg*)
   * - :math:`production(p,e,m)`
     - Endogenous
     - :math:`p \times e \times m \\ [2 \times 2 \times 2 = 8]`
@@ -176,11 +175,11 @@ Notes:
   of product in the new problem ``data_calibration``. 
 - The table :math:`products_{data}(a,p)` is modified and defined as a hybrid table, 
   being exogenous in the ``planning_model`` and endogenous in the ``data_calibration`` 
-  problem. This table collects coefficients related to products attributes (unit 
+  problem. This table collects coefficients related to product attributes (unit 
   profit, energy use, and material use), which are not known a priori and must be 
-  determined from the total values observed in the time frame t=0. 
+  determined from the total values observed at t=0. 
 
-The variables associated to the Data Tables are summarized in the table below.
+The variables associated with the Data Tables are summarized in the table below.
 
 .. list-table:: Variables of the tutorial model (modified/new entries in bold)
   :header-rows: 1
@@ -197,19 +196,19 @@ The variables associated to the Data Tables are summarized in the table below.
     - :math:`1, p - [1,2]`
     - :math:`-`
     - :math:`-`
-    - Products output in t=0 (*unit*)
+    - Products output at t=0 (*units*)
   * - :math:`total_quantities_0(p,a)` (*new*)
     - :math:`T_0`
     - :math:`a, p - [3,2]`
     - :math:`-`
     - :math:`-`
-    - Total values of profit, energy use, material use, time 0 (*€*, *kWh*, *kg*)
+    - Total values of profit, energy use, and material use at t=0 (*€*, *kWh*, *kg*)
   * - :math:`production(p,e,m)`
     - :math:`x`
     - :math:`1, p - [1,2]`
     - :math:`-`
     - :math:`e \times m - [4]`
-    - Products output (*unit*)
+    - Products output (*units*)
   * - :math:`products_{data}(a,p)`  (*new*)
     - :math:`a`
     - :math:`a, p - [3,2]`
@@ -269,7 +268,7 @@ Notice that:
   energy and material use per unit of product, while the second problem is formulated 
   exactly as the standard production planning problem, relying on unit profit, 
   energy and material use per unit of product determined in the previous step.
-- Data Table :math:`products_{data}(a,p)` is defined as a hybrid table, being 
+- The Data Table :math:`products_{data}(a,p)` is defined as a hybrid table, being 
   endogenous in the ``data_calibration`` problem and exogenous in the ``planning_model`` 
   problem. This way, the output of the first problem is used as input for the 
   second problem.
@@ -307,7 +306,7 @@ tables and the new variables are annotated with inline comments.
 
       # NEW: total supply t=0
       total_supply_0:
-        description: total products supply, time 0
+        description: total product supply at t=0
 
         type: exogenous
         coordinates: [Products]
@@ -318,7 +317,7 @@ tables and the new variables are annotated with inline comments.
 
       # NEW: total quantities t=0
       total_quantities_0:
-          description: total values of profit, energy use, material use, time 0
+          description: total values of profit, energy use, and material use at t=0
           type: exogenous
           coordinates: [Products, Attributes]
           variables_info:
@@ -399,7 +398,7 @@ tables and the new variables are annotated with inline comments.
           - Products
           - Attributes
         * - total_supply_0
-          - total products supply, time 0
+          - total product supply at t=0
           - exogenous
           - Products
           - 
@@ -407,7 +406,7 @@ tables and the new variables are annotated with inline comments.
           - dim: cols
           -
         * - total_quantities_0
-          - total values of profit, energy use, material use, time 0
+          - total values of profit, energy use, and material use at t=0
           - exogenous
           - Products, Attributes
           - T_0
@@ -508,7 +507,7 @@ sub-problems. The new ``data_calibration`` is composed by one expression only; t
             - maximization of total profit
             - energy use less than endowment
             - material use less than endowment
-            - positive products supply
+            - non-negative production levels
 
   .. group-tab:: XLSX
 
@@ -541,7 +540,7 @@ sub-problems. The new ``data_calibration`` is composed by one expression only; t
         * - planning_model
           - 
           - x >= 0
-          - positive products supply 
+          - non-negative production levels 
 
 Notice that:
 
@@ -593,7 +592,7 @@ Related user guide step: :ref:`fill-exogenous-data`
 The ``energy_avail`` and ``material_avail`` tabs are **unchanged**. The
 ``products_data`` tab can be left empty, since ``blank_fill`` is set to 1.
 The new ``total_supply_0`` and ``total_quantities_0`` tabs are generated and ready 
-to be filled by the user with data defined by the :ref:`problem statement <problem-statement>`. 
+to be filled by the user with data defined by the :ref:`problem statement <production-planning-sequential-problem-statement>`. 
 
 .. list-table:: ``input_data.xlsx`` file | tab ``total_supply_0``.
   :header-rows: 1
@@ -692,7 +691,7 @@ solved. Since the problems are solved sequentially, the argument ``solution_mode
 must be specified as ``'sequential'``, together with the order of problems solution, 
 defined by the ``sequential_solution_chain`` argument. If the latter argument 
 is not specified, CVXlab will solve the problems in the order defined by the 
-problems key in settings.
+problem keys in the settings.
 
 .. code-block:: python
 
@@ -722,4 +721,4 @@ comparison, or external analysis tools.
 
 After export, the SQLite database contains two endogenous tables: ``production``
 (optimal output levels :math:`x`) and ``products_data`` (coefficients of profit, 
-energy and material use per unit of product, enclosed within the variable :math:`a`). 
+energy and material use per unit of product, represented by the variable :math:`a`). 

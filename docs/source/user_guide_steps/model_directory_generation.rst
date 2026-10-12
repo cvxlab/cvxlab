@@ -7,7 +7,7 @@ This step initializes a new model workspace by creating a dedicated directory
 containing the necessary configuration template files required to create and
 handle a CVXlab model.
 This function is typically executed once at the beginning of the modeling process,
-in the case of :ref:`model generation from scratch <model_generation_from_scratch>`.
+for :ref:`model generation from scratch <model_generation_from_scratch>`.
 
 
 Overview
@@ -43,7 +43,7 @@ template files. See the example below.
     )
 
 
-Parameters description
+Parameter descriptions
 ----------------------
 
 .. list-table::
@@ -83,9 +83,9 @@ When :py:func:`cvxlab.create_model_dir` is called:
 
 - Setup template files are generated in the chosen format:
 
-  - If ``settings_file_type='yml'`` three YAML files are created for sets, 
+  - If ``settings_file_type='yml'``, three YAML files are created for sets, 
     variables, and problem structure.
-  - If ``settings_file_type='xlsx'`` a single Excel file is created with 
+  - If ``settings_file_type='xlsx'``, a single Excel file is created with 
     three sheets for *sets*, *variables*, and *problem*.
 
 - Optionally, template files for user-defined symbolic operators and constants 
@@ -98,18 +98,18 @@ Generated files
 ---------------
 
 - Directory: *my_model* (or specified name) in the chosen parent path.
-- Setup files depends on the selected format (``settings_file_type`` argument):
+- Setup files depend on the selected format (``settings_file_type`` argument):
 
   - **YAML**: ``structure_sets.yml``, ``structure_variables.yml``, ``problem.yml``.
   - **XLSX**: ``model_settings.xlsx`` (with three tabs: ``structure_sets``, 
     ``structure_variables``, ``problem``).
 
-- Optional templates files includes:
+- Optional template files include:
 
   - :ref:`user_defined_operators.py <api_user_defined_operators>`: Template for 
     custom symbolic operators.
   - :ref:`user_defined_constants.py <api_user_defined_constants>`: Template for 
-    custom constants types.
+    custom constant types.
 
 These files provide the basic structure for defining sets, variables, and the 
 symbolic problem, and can be edited as needed before proceeding to model 

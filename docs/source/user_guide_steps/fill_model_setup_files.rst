@@ -17,7 +17,7 @@ formulation into an instance of the *CVXlab Model* class.
 The setup files define the structure of the fundamental CVXlab objects,
 including *sets*, *data tables (with related variables)*, and *mathematical
 problems (with related expressions)*. These structures are defined in the
-:py:attr:`default module <cvxlab.defaults.Defaults.DefaultStructures>` and
+:py:attr:`CVXlab default structures <cvxlab.defaults.Defaults.DefaultStructures>` and
 automatically reflected in the generated template settings files.
 
 Once the model directory has been generated
@@ -107,7 +107,7 @@ keys or values. Names written literally, such as ``description`` or
         - ...
 
 
-.. rubric:: Fields description
+.. rubric:: Field descriptions
 
 ``<set_key_#>``: (required) user-defined key of the set. This placeholder must
 be replaced with the actual set key used in the SQLite data table. Set keys
@@ -313,8 +313,8 @@ case-insensitive.
   once in the sets workbook generated in the following step.
 
 
-Problem and Expressions
------------------------
+Problems and Expressions
+------------------------
 
 Problems are defined in ``problem.yml`` or in the ``problem`` tab of
 ``model_settings.xlsx``. Each problem key can include an objective and a list of

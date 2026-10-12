@@ -11,8 +11,8 @@ conflicts with other projects.
 Create a Conda Environment
 ---------------------------
 
-Creating a dedicated conda environment ensures *CVXlab* and its dependencies don't 
-interfere with other Python projects. This step is optional but highly recommended.
+Creating a dedicated conda environment ensures that *CVXlab* and its dependencies 
+do not interfere with other Python projects. This step is optional but highly recommended.
 
 For **Windows**: Open **Anaconda Prompt** or **Command Prompt** (with conda in PATH); 
 for **macOS / Linux**: Open a terminal. Then run:
@@ -109,7 +109,7 @@ If you plan to submit changes back to the project:
       git remote add upstream https://github.com/cvxlab/cvxlab.git
 
 4. With the ``cvxlab`` conda environment active, install in *editable mode* (with 
-   the ``-e`` flag), so all changes make to the source code are immediately 
+   the ``-e`` flag), so all changes made to the source code are immediately 
    reflected without reinstalling. This is ideal for development and testing.
 
    .. code-block:: bash
@@ -119,7 +119,7 @@ If you plan to submit changes back to the project:
    Extras can be included to install additional dependencies for development, 
    documentation, or solvers:
 
-   - ``[dev]``: Installs development dependencies (pytest, black, flake8, mypy, etc.).
+   - ``[dev]``: Installs development dependencies (pytest and pytest-cov).
    - ``[docs]``: Installs Sphinx and related tools for building documentation.
    - ``[solvers]``: Installs additional solver interfaces (e.g., ``gurobipy`` for GUROBI).
 

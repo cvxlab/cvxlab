@@ -39,7 +39,7 @@ Typical Usage
     model.load_results_to_database(...)
 
 
-Parameters description
+Parameter descriptions
 ----------------------
 
 .. list-table::
@@ -58,7 +58,7 @@ Parameters description
        confirmation.
      - ``False``
    * - ``suppress_warnings``
-     - If ``True``, suppresses warnings during export, for example in case of
+     - If ``True``, suppresses warnings during export, for example, when
        re-exporting unchanged numerical values.
      - ``False``
 
@@ -106,7 +106,7 @@ database into Power BI. Requirements:
   `SQLite ODBC Driver <http://www.ch-werner.de/sqliteodbc/>`_
 
 After installing both tools, the SQLite database can be imported into Power BI
-together with all its tables. In Power BI desktop, from the **Get Data** menu, 
+together with all its tables. In Power BI Desktop, from the **Get Data** menu, 
 select **ODBC**, then choose the SQLite ODBC data source and select the database 
 file (see figures below). 
 

@@ -4,7 +4,7 @@ Model class instance generation
 ===============================
 
 This step creates a Model instance, which is the main object for handling all 
-CVXlab model operations, including data management, problem generation, and solution.
+CVXlab model operations, including data management, problem generation, and solving.
 
 
 Overview
@@ -49,7 +49,7 @@ loading, problem generation, and optimization.
   )
 
 
-Parameters description
+Parameter descriptions
 ----------------------
 
 .. list-table::
@@ -95,21 +95,21 @@ Parameters description
 Class constructor workflow
 --------------------------
 
-Once a Model instance is generated, the actions below are occurring:
+Once a Model instance is generated, the following actions occur:
 
 - The model directory is generated in the path ``main_dir_path/model_dir_name``, 
   and populated with the necessary files. If the directory already exists, its 
-  content is validated. In case ``model_dir_name`` is not provided, *"model"* is 
-  used ad default. In case the parent directory path ``main_dir_path`` is not 
-  provided, the *current working directory* is used as default. Format of the 
-  model settings file/s is determined by the ``model_settings_from`` argument, 
+  contents are validated. If ``model_dir_name`` is not provided, *"model"* is 
+  used as the default. If the parent directory path ``main_dir_path`` is not 
+  provided, the *current working directory* is used as the default. The format of 
+  the model settings file is determined by the ``model_settings_from`` argument, 
   with *xlsx* assumed as default format.
 
-- Eventual user-defined :ref:`Symbolic operators <api_symbolic_operators>` or 
+- Any user-defined :ref:`Symbolic operators <api_symbolic_operators>` or 
   :ref:`Constants <api_constants_types>` are imported and registered.
 
 - The ``Core`` class is initialized within the Model instance, which in turn 
-  initializes inner classes with different responsibilies:
+  initializes inner classes with different responsibilities:
 
   .. list-table::
     :header-rows: 1
@@ -120,19 +120,19 @@ Once a Model instance is generated, the actions below are occurring:
     * - ``Index``
       - *centralized registry* for managing sets, data tables and variables. Once 
         initialized, it fetches and validates data structures from the model settings 
-        file/s, eventually highlighting errors and inconsistencies in the definition 
-        of sets, data tables, and variables. All information about the latter objects 
-        are stored and accessed in this class.
+        files, highlighting errors and inconsistencies in their definitions 
+        of sets, data tables, and variables. All information about these objects 
+        is stored and accessed in this class.
     * - ``Database``
-      - Embeds subclasses and methods for interacting and operating on the *SQLite
+      - Provides classes and methods for interacting with and operating on the *SQLite
         database* and the Excel/CSV input data files.
     * - ``Problem``
-      - Embeds tools for reading symbolic problem defined by the user, and to
-        automatically generate and solve the related `CVXPY 
+      - Provides tools for reading symbolic problems defined by the user and for
+        automatically generating and solving the related `CVXPY 
         <https://www.cvxpy.org/tutorial/intro/index.html>`_ optimization problem based
         on the defined sets, variables and expressions.
 
-- Finally, the two following cases may occur:
+- Finally, the following two cases may occur:
 
   .. list-table::
       :header-rows: 1
@@ -146,15 +146,15 @@ Once a Model instance is generated, the actions below are occurring:
           section). The process ends here, and the model instance is ready to be 
           used for subsequent steps through its own :ref:`Model class APIs <api_model>`.
       * - ``use_existing_data=True``
-        - The fundamental data structures (namely the *sets excel file*, the 
+        - The fundamental data structures (namely the *sets Excel file*, the 
           *input data files* and the model *SQLite database*) are already present 
           in the model directory and filled with data. In this case, the model 
           *coordinates* (i.e. the sets data), the information related to data tables, 
-          variables and problems expressions are all loaded in the ``Index``, the 
-          *numerical problem* is initialized in the ``Problem`` class, and data 
+          variables and problem expressions are all loaded in the ``Index``, the 
+          *numerical problem* is initialized in the ``Problem`` class, and data are 
           fetched from the SQLite database through the ``Database`` class. 
 
-In case of errors or inconsitencies in the definition of model settings of model 
+If errors or inconsistencies occur in the definition of model settings or model 
 data structures, error messages are logged and returned, with different levels of detail
 depending on the value of the ``detailed_validation`` argument, in order to ease 
 the debugging process.
@@ -163,5 +163,4 @@ the debugging process.
 Generated files
 ---------------
 
-Only the *sets.xlsx* file is eventually generated, in case ``use_existing_data`` 
-is set to *False*.
+Only the *sets.xlsx* file is generated when ``use_existing_data`` is set to *False*.

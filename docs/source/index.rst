@@ -4,7 +4,7 @@ CVXlab documentation
 **CVXlab** is an open-source Python laboratory for creating and solving convex 
 optimization models from low-level settings, structured data, and symbolic 
 expressions. It combines *YAML* or *Excel*-based model setup, *SQLite*-backed 
-data management, and *CVXPY*-based numerical solving in one unique and reproducible 
+data management, and *CVXPY*-based numerical solving in a single reproducible 
 workflow. Beyond single-problem modeling, it can orchestrate linked optimization 
 sub-models with managed data exchange in *parallel*, *sequential*, and 
 *integrated* solution modes.

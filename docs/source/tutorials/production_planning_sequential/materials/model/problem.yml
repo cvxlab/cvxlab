@@ -22,4 +22,4 @@ planning_model:
         - maximization of total profit
         - energy use less than endowment
         - material use less than endowment
-        - positive products supply
+        - non-negative production levels

@@ -36,7 +36,7 @@ Python syntax, for example ``["demand", "cost"]`` or
 ``{"problem": "CLARABEL"}``.
 
 Answers are retained for the remainder of the session. Consequently, a setting
-is requested only when it is missing and is first needed.
+is requested only when it is missing and needed for the first time.
 
 Every menu includes *Quit CVXlab*, which closes the interface from any level.
 Nested menus also include *Back*, which returns to the previous menu without

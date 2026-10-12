@@ -9,7 +9,7 @@ to handle a **non-linearity** in problems expressions. It is designed to be read
 to it: only the modified or new elements are described in detail, while unchanged 
 steps are referenced to the base tutorial.
 
-.. _nonlinear-problem-statement:
+.. _production-planning-decomposition-problem-statement:
 
 .. admonition:: Problem statement
 
@@ -36,12 +36,12 @@ steps are referenced to the base tutorial.
 
   Positive slopes :math:`c_{s,j} > 0` represent **economies of scale**: the more 
   a product is sold, the higher its unit margin becomes (in the example, product 2 
-  only exhibits this behavior). A linear relationship between profit and production 
+  only exhibits this behavior). A linear relationship between unit profit and production 
   level is assumed, with :math:`c_{0,j}` representing the unit profit at zero 
   production and :math:`c_{s,j}` the increase in unit profit per additional unit 
   produced. Finally, the energy and material endowments remain:
 
-  :math:`E = (250, 300)` kWh,  :math:`M = (60, 90)` kg.
+  :math:`E = (150, 300)` kWh,  :math:`M = (60, 90)` kg.
 
 In the :download:`zip directory <production_planning_decomposition.zip>`, the same
 materials as in the base tutorial are provided (notebook, concept workbook, and
@@ -169,7 +169,7 @@ different sub-problems. This is how CVXlab resolves the circular dependency
 that would arise from multiplying two endogenous variables: at each iteration
 one variable is held fixed (exogenous) while the other is optimised
 (endogenous), then the roles alternate (see
-:ref:`definig-data-tables-variables`).
+:ref:`defining-data-tables-variables`).
 
 Variable :math:`c` migrates from ``products_data`` (exogenous, constant across
 scenarios) to the new ``profit`` table (endogenous, scenario-dependent). Two new
@@ -209,7 +209,7 @@ exogenous variables, :math:`c_0` and :math:`c_s`, replace it in
      - :math:`1,\, p \; [1,2]`
      - :math:`-`
      - :math:`e \times m \; [4]`
-     - Products output (*unit*)
+     - Products output (*units*)
    * - products_data
      - :math:`e`
      - :math:`1,\, p \; [1,2]`
@@ -253,7 +253,7 @@ since unit profit and production level are multiplied in the objective function,
 the latter becomes non-linear (non-convex).
 
 In CVXlab, this class of problem can be handled by :ref:`problem decomposition 
-<definig-expressions-and-problems>`: once the user splits the problem into two 
+<defining-expressions-and-problems>`: once the user splits the problem into two 
 coupled *convex* sub-problems, CVXlab solves them iteratively with a **block 
 Gauss–Seidel** scheme. Specifically, the two sub-problems are:
 
@@ -497,7 +497,7 @@ Notice that:
 
 - The ``type`` field for ``production`` and ``profit`` is now a **dictionary**
   keyed by sub-problem name. This is the CVXlab syntax for
-  :ref:`hybrid variables <definig-data-tables-variables>`.
+  :ref:`hybrid variables <defining-data-tables-variables>`.
 - The sub-problem keys in the ``type`` dictionary (``production``, ``profit``)
   must exactly match the problem keys used in ``problem.yml``.
 
@@ -530,7 +530,7 @@ sub-problems. The ``production`` expressions are unchanged in content; the new
                  - maximization of total profit
                  - energy use less than endowment
                  - material use less than endowment
-                 - positive products supply
+                 - non-negative production levels
 
          profit:
 
@@ -538,7 +538,7 @@ sub-problems. The ``production`` expressions are unchanged in content; the new
                  - c - c_s @ diag(x) - c_0 == 0
 
              description:
-                 - unit profit as a function of product demand
+                 - unit profit as a function of production level
 
    .. group-tab:: XLSX
 
@@ -567,11 +567,11 @@ sub-problems. The ``production`` expressions are unchanged in content; the new
           * - production
             -
             - x >= 0
-            - positive products supply
+            - non-negative production levels
           * - profit
             -
             - c - c_s @ diag(x) - c_0 == 0
-            - unit profit as a function of product demand
+            - unit profit as a function of production level
 
 Notice that:
 
@@ -721,7 +721,7 @@ During execution, CVXlab logs the convergence progress at each iteration,
 reporting the norm of the change in endogenous values between successive
 iterations. The solver repeats until the norm falls below the convergence
 threshold defined in ``Defaults.NumericalSettings.MODEL_COUPLING_SETTINGS``.
-Output of the convergence log is saved in a dedicated file in the model directory 
+The convergence log output is saved in a dedicated file in the model directory 
 (e.g. ``convergence_high-high.log`` for the ``high``/``high`` scenario).
 The file content for the ``high``/``high`` scenario is shown below.
 
@@ -729,10 +729,10 @@ The file content for the ``high``/``high`` scenario is shown below.
 
     ===============================================================================
     CONVERGENCE MONITORING - Scenario: high-high
-    Numerical changes across iteration assessed based on Norm metric: 'l2'
+    Numerical changes across iterations assessed based on the norm metric: 'l2'
     Relative tolerance on data tables norm: 0.010
     Thresholds in absolute values. '*' indicates value above tolerance.
-    Absolute tolerances are defined per table based on first iteration values.
+    Absolute tolerances are defined per table based on the first iteration values.
     ===============================================================================
 
     Table           Thresholds    Iter_0-1    Iter_1-2    Iter_2-3    Iter_3-4  
@@ -758,9 +758,9 @@ Notice that:
 - Different norm types can be selected; in this tutorial, the default L2 norm is 
   used (Euclidean norm).
 - The log ends with ``Convergence reached!``, confirming that both tables satisfy
-  their tolerance after a single iteration. This is expected: given the linear
-  structure of both sub-problems, the block Gauss–Seidel scheme converges in one
-  step for all scenarios.
+  their tolerance after the reported iterations. This is expected: given the linear
+  structure of both sub-problems, the block Gauss–Seidel scheme converges after only
+  a few iterations for all scenarios.
 
 At convergence, the values of :math:`c` and :math:`x` are mutually consistent:
 :math:`c` satisfies the equality constraint in ``profit`` given the current

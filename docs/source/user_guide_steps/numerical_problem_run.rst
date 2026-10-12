@@ -5,16 +5,16 @@ Solution of numerical problem(s)
 ================================
 
 This step solves the *numerical optimization problem(s)* defined for a *CVXlab 
-model*, specifying solution modes and solver(s) configuration arguments. 
+model*, specifying solution modes and solver configuration arguments.  
 
 
 Overview
 --------
 
 - Checks solver compatibility and problem definitions.
-- Solves all numerical problems, either as *parallel*, *sequential* or *integrated* 
-  numerical problems, with custom solver settings for multiple inter-problem sets 
-  cardinality (i.e. for multiple scenarios).
+- Solves all numerical problems in *parallel*, *sequential*, or *integrated* 
+  modes, with custom solver settings for multiple inter-problem-set combinations
+  (i.e. multiple scenarios).
 - At the end, logs a summary of the solution status for all problems and scenarios.
 
 API: :py:meth:`~cvxlab.Model.run_model`
@@ -44,10 +44,10 @@ Typical Usage
   )
 
 
-Parameters description
+Parameter descriptions
 ----------------------
 
-General arguments and and solver settings are described below. 
+General arguments and solver settings are described below. 
 
 .. list-table::
   :header-rows: 1
@@ -57,7 +57,7 @@ General arguments and and solver settings are described below.
     - Description
   * - ``force_overwrite``
     - If ``True``, overwrites existing problem status and variable numerical
-      values in the ``Problem`` object without prompting for confirmation. Default 
+      values in the ``Problem`` object without prompting for confirmation. Defaults 
       to ``False``.
   * - ``solution_mode``
     - Available solution modes: ``parallel`` (default), ``sequential``, ``integrated``.
@@ -65,8 +65,7 @@ General arguments and and solver settings are described below.
     - optional list of indices specifying which scenarios to solve. Indices must 
       correspond to the values of the :attr:`scenarios` DataFrame (inspect it to 
       identify valid values). If None, all scenarios are solved. If an integer 
-      is provided, it will be treated as a single scenario index. If ``None``, 
-      all scenarios are solved.
+      is provided, it is treated as a single scenario index.
   * - ``solver``
     - Solver to use, for example ``"ECOS"`` or ``"SCS"``. Available solvers can 
       be inspected with the :py:func:`cvxlab.installed_solvers()` function. When 
@@ -76,19 +75,19 @@ General arguments and and solver settings are described below.
   * - ``solver_verbose``
     - If ``True``, enables verbose output from the solver/s. When multiple 
       sub-problems are available, a dictionary keyed by problem key can be used 
-      to define verbosity for each sub-problem. Default to ``False``.
+      to define verbosity for each sub-problem. Defaults to ``False``.
   * - ``solver_settings``
     - Dictionary of additional solver options passed as key-value pairs. When multiple 
       sub-problems are available, a dictionary keyed by problem key can be used 
-      to define solver settings for each sub-problem as sub-dictionaries. Default 
+      to define solver settings for each sub-problem as sub-dictionaries. Defaults 
       to ``None`` (no additional settings).
 
 .. note::
-  In case only specific scenarios are to be solved, the user can run them selectively 
+  If only specific scenarios are to be solved, the user can run them selectively 
   by specifying the ``scenarios_idx`` argument. This would reduce the solution time in 
-  case of large number of scenarios or complex problems.
+  case of a large number of scenarios or complex problems.
 
-The parameters below are only relevant in case of ``solution_mode="sequential"``.
+The parameters below are only relevant if ``solution_mode="sequential"``.
 
 .. list-table::
   :header-rows: 1
@@ -99,10 +98,10 @@ The parameters below are only relevant in case of ``solution_mode="sequential"``
   * - ``sequential_solution_chain``
     - An optional list of problem keys specifying the order in which to solve 
       the problems. Works only when ``solution_mode="sequential"``. If ``None``, 
-      problems are solved in the order as they appears in model settings.
+      problems are solved in the order in which they appear in the model settings.
 
 
-The parameters below are only relevant in case of ``solution_mode="integrated"``.
+The parameters below are only relevant if ``solution_mode="integrated"``.
 
 .. list-table::
   :header-rows: 1
@@ -112,33 +111,33 @@ The parameters below are only relevant in case of ``solution_mode="integrated"``
     - Description
   * - ``convergence_monitoring``
     - Enables convergence monitoring in a separate prompt window during integrated 
-      solving. Default to ``True``.
+      solving. Defaults to ``True``.
   * - ``convergence_norm``
-    - Numeric Norm type used for convergence monitoring. Default to ``"l2"`` 
+    - Numerical norm type used for convergence monitoring. Defaults to ``"l2"`` 
       (Euclidean norm).
   * - ``convergence_tables_to_check``
     - Data tables to check for convergence: ``"all_endogenous"``, ``"hybrid_only"``, 
-      or a list of table keys. Default to ``"all_endogenous"``.
+      or a list of table keys. Defaults to ``"all_endogenous"``.
   * - ``convergence_tables_to_skip``
-    - List of data table keys to skip during convergence checking. Default to 
+    - List of data table keys to skip during convergence checking. Defaults to 
       ``None``.
   * - ``relative_tolerance``
     - Numerical tolerance for verifying maximum relative change between iterations 
       in integrated problems for each data table. If provided, it overrides the
-      default model-coupling setting. Default to ``None``.
+      default model-coupling setting. Defaults to ``None``.
   * - ``maximum_iterations``
     - Maximum number of iterations for integrated solving. If provided, it
-      overrides the default model-coupling setting. Default to ``None``.
+      overrides the default model-coupling setting. Defaults to ``None``.
   * - ``keep_previous_iteration_db``
     - If ``True``, keeps the database from the previous iteration for
-      debugging. Default to ``False``.
+      debugging. Defaults to ``False``.
 
 
 Workflow
 --------
 
 When :py:meth:`~cvxlab.Model.run_model` is called on a Model instance, the passed 
-arguments are validated (e.g. verify that specified solvers are installed, ...). 
+arguments are validated (e.g., to verify that specified solvers are installed). 
 Then, the method attempts to solve the numerical problem(s) according to the specified 
 solution mode and solver settings. After solving, the method logs a summary of 
 the solution status for each problem and scenario.
@@ -169,13 +168,13 @@ coordination.
 In this case, there must be at least two numerical problems defined in the model, 
 and these problems can share hybrid type variables, defined as variables that are 
 endogenous in one problem and exogenous in the other. 
-This method solve the problems sequentially, based on the ``sequential_solution_chain`` 
+This method solves the problems sequentially, based on the ``sequential_solution_chain`` 
 argument as a list of problem keys, which defines the order of solution. Each time 
 a problem is solved, the method updates the hybrid type Data Tables with the 
 endogenous output, then the next problem in the chain is solved using the updated 
-data. Because of this approach, the solution routes is performed one scenario at 
+data. Because of this approach, the solution routine is performed one scenario at 
 a time, and the method iterates over all scenarios.
-This method is useful in case some data provided to a problem needs to be 
+This method is useful when some data provided to a problem needs to be 
 pre-processed by another problem, or when the solution of a problem is used 
 as input for another problem.
 Refer to this :ref:`tutorial <tutorial-production-planning-sequential>` for a 
@@ -184,8 +183,8 @@ practical example.
 .. rubric:: ``solution_mode="integrated"``
 
 In this case, there must be at least two numerical problems defined in the model, 
-and these problems must share at least one hybrid type variable, defined as a variable 
-that is endogenous in one problem and exogenous the other. In this case, the integrated 
+and these problems must share at least one hybrid-type variable, defined as a variable 
+that is endogenous in one problem and exogenous in the other. In this case, the integrated 
 solution mode applies a *block Gauss-Seidel* (alternating optimization) algorithm, 
 working as follows:
 
@@ -195,7 +194,7 @@ working as follows:
 - All problems are solved in parallel within each iteration. After all problems 
   are solved, the endogenous variables are updated and exchanged between sub-problems 
   via the shared SQLite database.
-- After each iteration, the method computes the Norms changes in Data Tables to 
+- After each iteration, the method computes changes in the norms of Data Tables to 
   monitor convergence. Available Norms include: 
   
 .. list-table::
@@ -238,16 +237,16 @@ working as follows:
   
 This approach enables the solution of nonlinear models by decomposing them into 
 smaller, tractable convex sub-problems, with automatic coordination and convergence 
-checking. Specifically, in case of expressions that present multiplication of endogenous 
-variables, which cannot be solved in a single step as they are non-convex, but can 
-be solved by defining different sub-problems where variables are selectively defined 
+checking. Specifically, expressions that involve the multiplication of endogenous 
+variables cannot be solved in a single step because they are non-convex, but they 
+can be solved by defining different sub-problems where variables are selectively defined 
 as endogenous or exogenous in order to avoid multiplication of endogenous variables. 
 Refer to this :ref:`tutorial <tutorial-production-planning-decomposition>` for a 
 practical example of this approach.
 
 .. note::
   For all solution modes, the original database is restored at the end of the process. 
-  Results are contained in Model instace, and they can be inspected with the method 
+  Results are contained in the Model instance, and they can be inspected with the method 
   :py:meth:`~cvxlab.Model.variable`. Once the user is satisfied with the results, 
   they can be exported to the database with :ref:`export-model-results`. If the 
   model instance is deleted, the results are lost unless they have been exported to 

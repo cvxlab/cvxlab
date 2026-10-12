@@ -7,8 +7,8 @@ The CVXlab modeling process must be grounded on a solid conceptualization and
 mathematical definition of the problem to be solved. As its name suggests,
 CVXlab is primarily designed for **convex optimization problems**.
 
-Definition of convex optimization problems and related mathematical concepts
-lies outside the scope of this documentation. Foundational knowledge of
+Definitions of convex optimization problems and related mathematical concepts
+lie outside the scope of this documentation. Foundational knowledge of
 Operations Research can be found in several references. Among others, we
 suggest the textbook:
 `Introduction to Operations Research (F. Hillier and G. Lieberman, McGraw Hill 
@@ -31,17 +31,17 @@ A CVXlab Model is based on the conceptual abstractions below.
      - Used for
    * - :ref:`Sets <defining-sets>`
      - The model domain and indexing space
-     - Defining model Variables based on a coordinates system
-   * - :ref:`Data Tables <definig-data-tables-variables>`
+     - Defining model variables based on a coordinate system
+   * - :ref:`Data Tables <defining-data-tables-variables>`
      - The model data over a domain defined by multiple Sets
      - Storing data in the database, defining Variables
-   * - :ref:`Variables <definig-data-tables-variables>`
+   * - :ref:`Variables <defining-data-tables-variables>`
      - Symbolic references to Data Table values
      - Defining model symbolic Expressions
-   * - :ref:`Expressions <definig-expressions-and-problems>`
+   * - :ref:`Expressions <defining-expressions-and-problems>`
      - Symbolic combinations of Variables and operators
      - Defining numerical Problems
-   * - :ref:`Problems <definig-expressions-and-problems>`
+   * - :ref:`Problems <defining-expressions-and-problems>`
      - Numerical problem(s) of the model
      - Determining endogenous Data Tables values
 
@@ -128,7 +128,7 @@ Depending on each variable, dimension sets can be further classified as:
   :math:`\pi = (s_{P_1},\ldots,s_{P_p}) \in \mathcal{S}_{P}`.
 
 
-.. _definig-data-tables-variables:
+.. _defining-data-tables-variables:
 
 Data Tables and Variables
 -------------------------
@@ -155,11 +155,11 @@ Data tables can be classified as:
 
 .. admonition:: Hybrid Data Tables
   
-  A same variable can be used in multiple numerical problems within the same model.
+  The same variable can be used in multiple numerical problems within the same model.
   Therefore, the variable can be defined as endogenous or exogenous depending 
   on the role played in each problem. This is particularly useful in formulating 
   chained or coupled numerical problems, where the solution of one problem depends 
-  on the solution of another problem (see :ref:`definig-expressions-and-problems`). 
+  on the solution of another problem (see :ref:`defining-expressions-and-problems`). 
   In this case, Data Tables can be classified as **hybrid**, meaning that the 
   variables stemming from them are defined as endogenous for some problems and 
   exogenous for others.
@@ -168,17 +168,17 @@ A **variable** :math:`x` associated with a data table :math:`D` is a symbolic
 reference to values in :math:`D`, defined over the same domain :math:`\Omega`,
 or over a filtered sub-domain :math:`\Omega'`. Multiple variables can reference
 the same data table, defining variables with different allocation of dimension sets 
-(*shapes* or *intra-problem* sets), filterings domains (referring to sub-domains 
-:math:`\Omega' \subseteq \Omega`), and constants types (in case the table stores 
+(*shapes* or *intra-problem* sets), filtering domains (referring to sub-domains 
+:math:`\Omega' \subseteq \Omega`), and constant types (if the table stores 
 constants).
 
 The reason why data tables and variables are defined separately is to allow
-multiple variables to stem from a same data table in different ways, increasing 
+multiple variables to stem from the same data table in different ways, increasing 
 flexibility in problem definition and optimizing data management in the model 
 SQLite database.
 
 
-.. _definig-expressions-and-problems:
+.. _defining-expressions-and-problems:
 
 Expressions and Problems
 ------------------------
@@ -225,7 +225,7 @@ For each
 where :math:`x_j|_{\pi}` denotes the restriction or broadcast of variable
 :math:`x_j` to the intra-problem coordinate :math:`\pi`.
 
-A **problem** is defined by one or more symbolic expressions, as either:
+A **problem** is defined by one or more symbolic expressions, as one of the following:
 
 **1. System of linear equations:**
 
@@ -249,9 +249,6 @@ A **problem** is defined by one or more symbolic expressions, as either:
 where :math:`f_0` is convex, :math:`f_i` are convex, and :math:`h_j` are
 affine.
 
-Multiple problems can be defined in the same CVXlab model, all sharing common
-sets, data tables, and variables.
-
 A CVXlab model can formulate and solve multiple problems that share the same
 sets, data tables, and variables. Problems are all solved over the same
 inter-problem sets
@@ -270,7 +267,7 @@ schemes are supported:
   that they share endogenous variables in expressions, they can be solved
   iteratively with a *block Gauss-Seidel* (alternating optimization) scheme,
   updating shared endogenous variables between problems until convergence. In
-  this case, the variable updated each iteration are stemming from *hybrid* data 
+  this case, the variables updated at each iteration stem from *hybrid* data 
   tables (i.e. endogenous/exogenous depending on the problem).
 
 .. admonition:: Non-linear problem decomposition
@@ -315,18 +312,18 @@ The allocation of dimension sets to shapes and intra-problem sets offers
 significant modeling flexibility. The same problem can be formulated in
 multiple equivalent ways.
 
-In case variables *Dimension sets* are defined by including *Shape sets*, the 
-variable is defined as vector or matrix. This leads to a **matrix-based 
-formulation** of mathematical problem, including one or multiple vectorized 
+If variables *Dimension sets* are defined by including *Shape sets*, the 
+variable is defined as a vector or matrix. This leads to a **matrix-based 
+formulation** of a mathematical problem, including one or multiple vectorized 
 expressions. In this case, vectorized expressions must be dimensionally consistent, 
 and variable shapes must be compatible for matrix operations such as matrix 
 multiplication or transposition. This representation is compact and usually 
-leads to more efficient computations; however, it could be more complex to be 
-formulated and understood.
+leads to more efficient computations; however, it could be more complex to 
+formulate and understand.
 
-In case *Dimension sets* are all defined as *Intra-problem sets*, all variables 
+If *Dimension sets* are all defined as *Intra-problem sets*, all variables 
 are reduced to scalars with shape :math:`(1,1)`. This leads to a **scalar-based 
-formulation** of mathematical problem, where all expressions are written in an 
+formulation** of a mathematical problem, where all expressions are written in an 
 element-wise way. This representation is more explicit and easier to understand, 
 but it can lead to a higher number of expression instances and less efficient 
 computations.
@@ -356,11 +353,11 @@ Trade-offs between the two formulations are summarized in the table below.
     - Easier (scalar operations)
 
 
-It is recommended to rely on a *matrix-based formulations* when the problem has 
+It is recommended to rely on a *matrix-based formulation* when the problem has 
 a natural matrix structure, a compact symbolic expression is preferred, or 
 computational efficiency matters. Conversely, use *scalar formulations* when 
-element-wise constraints are complex and benefit from explicit indexing, debugging 
-and transparency are priorities, or the problem is small-scale.
+element-wise constraints are complex and explicit indexing is beneficial, when 
+debugging and transparency are priorities, or when the problem is small-scale.
 
 CVXlab supports both approaches and any intermediate allocation, allowing users
 to choose the most appropriate abstraction level for their specific modeling
