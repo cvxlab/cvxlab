@@ -55,6 +55,9 @@ class ModelSettings:
         multiple_input_files: bool,
         input_data_files_type: Defaults.LiteralTypes.DataFileType,
         detailed_validation: bool,
+        delete_sets: bool | None = None,
+        delete_database: bool | None = None,
+        delete_input_files: bool | None = None,
     ) -> None:
         """Validate and store model settings.
 
@@ -101,6 +104,9 @@ class ModelSettings:
         self.multiple_input_files = multiple_input_files
         self.input_data_files_type = input_data_files_type
         self.detailed_validation = detailed_validation
+        self.delete_sets = delete_sets
+        self.delete_database = delete_database
+        self.delete_input_files = delete_input_files
 
     def __repr__(self) -> str:
         return (

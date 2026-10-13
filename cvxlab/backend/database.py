@@ -1,8 +1,8 @@
 """Module defining the Database class.
 
-The Database class handles all interactions with the database and file management 
-for a modeling application. It includes functionalities for creating and 
-manipulating database tables, handling data input/output operations, and managing 
+The Database class handles all interactions with the database and file management
+for a modeling application. It includes functionalities for creating and
+manipulating database tables, handling data input/output operations, and managing
 data files for a modeling system.
 The Database class encapsulates methods for creating blank database tables,
 loading data from Excel files, generating data input files, and managing the
@@ -62,7 +62,7 @@ class Database:
         SQL manager, index, paths, and settings. It sets up the necessary attributes
         for managing database operations and file handling.
         In case 'use_existing_data' is False (i.e. when the model instance is created
-        for the first time), a blank sets Excel file is created for defining sets 
+        for the first time), a blank sets Excel file is created for defining sets
         when initializing the Database instance.
 
         Args:
@@ -93,12 +93,12 @@ class Database:
     def _create_blank_sets_xlsx_file(self) -> None:
         """Create a blank Excel file for getting sets information.
 
-        This method first checks if the sets Excel file specified in the settings 
+        This method first checks if the sets Excel file specified in the settings
         exists. In case it does, the method checks the 'use_existing_data' setting
         to determine whether to erase the existing file or use it as is. If it does and
         'use_existing_data' is False, the method erases the existing file. If
         'use_existing_data' is True or the file does not exist, the method creates
-        a new blank Excel file with headers for each set, based on information 
+        a new blank Excel file with headers for each set, based on information
         provided by Index.
         Sets that are defined as copies of other sets (i.e., have a 'copy_from'
         attribute) are not included in the new Excel file.
@@ -106,11 +106,11 @@ class Database:
         sets_file_name = Defaults.ConfigFiles.SETS_FILE
 
         if Path(self.paths.sets_excel_file).exists():
-            if not self.settings.use_existing_data:
+            if not self.settings.use_existing_data and self.settings.delete_sets is not False:
                 erased = self.files.erase_file(
                     dir_path=self.paths.model_dir,
                     file_name=sets_file_name,
-                    force_erase=False,
+                    force_erase=self.settings.delete_sets is True,
                     confirm=True,
                 )
 

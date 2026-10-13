@@ -63,6 +63,9 @@ class Model():
             input_data_files_type: Defaults.LiteralTypes.DataFileType = 'xlsx',
             log_level: Defaults.LiteralTypes.LogLevel = 'info',
             log_format: Defaults.LiteralTypes.LogFormat = 'standard',
+            delete_sets: bool | None = None,
+            delete_database: bool | None = None,
+            delete_input_files: bool | None = None,
             _sqlite_database_path: Path | None = None,
     ):
         """Initialize the Model instance with specified configurations.
@@ -134,6 +137,9 @@ class Model():
                 multiple_input_files=multiple_input_files,
                 input_data_files_type=input_data_files_type,
                 detailed_validation=detailed_validation,
+                delete_sets=delete_sets,
+                delete_database=delete_database,
+                delete_input_files=delete_input_files,
             )
 
             self.paths = ModelPaths(
@@ -365,11 +371,11 @@ class Model():
             message="Generation of blank data structures...",
             level='info',
         ):
-            if sqlite_db_path.exists():
+            if sqlite_db_path.exists() and self.settings.delete_database is not False:
                 erased_db = self.files.erase_file(
                     dir_path=self.paths.model_dir,
                     file_name=sqlite_db_name,
-                    force_erase=False,
+                    force_erase=self.settings.delete_database is True,
                     confirm=True,
                 )
 
@@ -388,10 +394,10 @@ class Model():
                 self.logger.info(
                     f"Relying on existing SQLite database '{sqlite_db_name}' ")
 
-            if input_files_dir_path.exists():
+            if input_files_dir_path.exists() and self.settings.delete_input_files is not False:
                 erased_input_dir = self.files.erase_dir(
                     dir_path=input_files_dir_path,
-                    force_erase=False,
+                    force_erase=self.settings.delete_input_files is True,
                 )
 
                 if erased_input_dir:
