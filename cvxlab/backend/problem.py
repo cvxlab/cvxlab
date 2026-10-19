@@ -14,8 +14,8 @@ data related to the optimization models.
 import warnings
 
 from typing import Any, Dict, List, Optional, Tuple
-from cvxlab.backend import uncertainty
 from scipy.sparse import csr_matrix
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -30,6 +30,7 @@ from cvxlab.support.file_manager import FileManager
 from cvxlab.support.dotdict import DotDict
 from cvxlab.backend.index import Index, Variable
 from cvxlab.backend.model_settings import ModelSettings, ModelPaths
+from cvxlab.backend import uncertainty
 
 
 class Problem:
@@ -1945,6 +1946,35 @@ class Problem:
 
         return numerical_expressions
 
+    def _generate_iis_report(
+        self,
+        model_path: Path,
+        report_path: Path,
+    ) -> None:
+        """Compute and save the IIS of an infeasible Gurobi model."""
+        import gurobipy as gp
+        from gurobipy import GRB
+
+        with gp.read(str(model_path)) as model:
+            model.Params.OutputFlag = 0
+            model.optimize()
+
+            if model.Status == GRB.INF_OR_UNBD:
+                model.Params.DualReductions = 0
+                model.reset()
+                model.optimize()
+
+            if model.Status != GRB.INFEASIBLE:
+                self.logger.warning(
+                    f"IIS not generated: Gurobi status {model.Status}."
+                )
+                return
+
+            model.computeIIS()
+            model.write(str(report_path))
+
+        self.logger.info(f"IIS report saved to: {report_path}")
+
     def solve_problem_dataframe(
             self,
             problem_dataframe: pd.DataFrame,
@@ -2022,7 +2052,35 @@ class Problem:
             if solver_settings.get('verbose'):
                 self.logger.solver_banner(f" SOLVER OUTPUT | {msg}")
 
-            cvxpy_problem.solve(**solver_settings)
+            settings = solver_settings.copy()
+            report = settings.pop("report", False)
+
+            if report and settings.get("solver") == "GUROBI" \
+                    and not self.is_uncertainty_analysis:
+                model_path = (
+                    self.paths.model_dir / f"gurobi_scenario_{scenario}.lp"
+                )
+                settings["save_file"] = str(model_path)
+
+            cvxpy_problem.solve(**settings)
+
+            if (
+                report
+                and settings.get("solver") == "GUROBI"
+                and not self.is_uncertainty_analysis
+                and cvxpy_problem.status in (
+                    cp.INFEASIBLE,
+                    cp.INFEASIBLE_INACCURATE,
+                )
+            ):
+                report_path = (
+                    self.paths.model_dir / f"iis_scenario_{scenario}.ilp"
+                )
+
+                self._generate_iis_report(
+                    model_path=model_path,
+                    report_path=report_path,
+                )
 
             if solver_settings.get('verbose'):
                 self.logger.solver_banner(" END SOLVER OUTPUT")
