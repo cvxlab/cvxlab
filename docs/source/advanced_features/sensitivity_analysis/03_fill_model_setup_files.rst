@@ -95,8 +95,9 @@ keys or values. Names written literally, such as ``description`` or
        Defaults to ``False``.
 
    * - ``uncertainty_measure``
-     - Optional boolean flag defined at variable level. If ``True``, the variable
-       is selected as a model output for GSA. Only scalar variables, with
+     - Optional boolean flag defined at variable level. If ``True``, the
+       variable is selected as a model output of interest for GSA, for which
+       sensitivity indices are computed. Only scalar variables, with
        dimension ``(1, 1)``, can be selected as uncertainty measures.
        Defaults to ``False``.
 

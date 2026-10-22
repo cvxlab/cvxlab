@@ -42,7 +42,10 @@ Tutorials
         calibrating the model deriving parameters, then solving the production 
         planning problem with calibrated parameters.
       - :download:`link <tutorials/production_planning_sequential/production_planning_sequential.zip>`
-
+    * - :doc:`Production planning - GSA <tutorials/production_planning_gsa/production_planning_gsa>`
+      - Extension of the deterministic production planning tutorial
+        to perform Global Sensitivity Analysis and factor fixing.
+      - :download:`link <tutorials/production_planning_gsa/production_planning_gsa.zip>`
 
 .. toctree::
    :maxdepth: 1
@@ -53,7 +56,7 @@ Tutorials
    tutorials/production_planning_nonlinear/production_planning_nonlinear
    tutorials/production_planning_decomposition/production_planning_decomposition
    tutorials/production_planning_sequential/production_planning_sequential
-
+   tutorials/production_planning_gsa/production_planning_gsa
 
 .. _models_gallery:
 

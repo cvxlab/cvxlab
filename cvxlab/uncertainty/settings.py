@@ -85,6 +85,12 @@ class UncertaintySettings:
                 "'gsa_method' must be a string."
             )
 
+        if gsa_method is None:
+            self.logger.warning(
+                "Uncertainty analysis | No GSA method configured. "
+                "Sampling and model runs will be completed without computing  global sensitivity analysis idexes."
+            )
+
         sampling_method = sampling_method.lower()
         gsa_method = gsa_method.lower()
 
@@ -103,14 +109,10 @@ class UncertaintySettings:
 
         if gsa_kwargs is None:
             gsa_kwargs = {}
-            self.logger.warning(
-                "Uncertainty analysis | No GSA method configured. "
-                "Sampling and model runs will be completed without computing  global sensitivity analysis idexes."
-            )
+
         elif not isinstance(gsa_kwargs, dict):
-            raise TypeError(
-                "'gsa_kwargs' must be a dictionary or None."
-            )
+            raise TypeError("'gsa_kwargs' must be a dictionary or None.")
+
         else:
             gsa_kwargs = gsa_kwargs.copy()
 

@@ -55,8 +55,13 @@ options specific to uncertainty model evaluations, described below:
        the existing uncertainty samples and temporarily saved model outputs.
      - ``False``
    * - ``n_parallel``
-     - Number of uncertainty model evaluations to execute concurrently.
-     - ``None``
+     - Number of uncertainty model evaluations executed concurrently
+       using local parallel processing. Each evaluation runs in a separate
+       process on the machine executing the code. The value should be
+       selected according to the available CPU cores and RAM, considering
+       the computational and memory requirements of each model evaluation.
+       If ``n_parallel=1`` model evaluations are executed sequentially.
+     - `1`
 
 For the remaining model-solution parameters, refer to
 :ref:`Run numerical problem(s) <numerical-problem-run>`.
