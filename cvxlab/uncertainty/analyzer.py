@@ -309,6 +309,7 @@ class UncertaintyAnalyzer:
             groups: bool,
             measure: str,
             scenario: str | None,
+            sampling_problem: dict,
     ) -> pd.DataFrame:
         """Convert a SALib analysis result into a long-format dataframe."""
 
@@ -318,6 +319,9 @@ class UncertaintyAnalyzer:
         result_dict = dict(result)
         result_names = result_dict.get(
             self.uncertainty_defaults.SALIB_RESULTS_NAME_COL)
+
+        if result_names is None:
+            result_names = sampling_problem["names"]
 
         result_names = list(result_names)
 
@@ -546,6 +550,7 @@ class UncertaintyAnalyzer:
                 groups=groups,
                 measure=target["measure"],
                 scenario=target["scenario"],
+                sampling_problem=sampling_problem,
             )
 
             records.append(result_df)

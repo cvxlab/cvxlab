@@ -219,6 +219,9 @@ introduced to enable GSA:
         variables_info:
           P:
             uncertainty_measure: True
+            Attributes:
+                dim: rows
+                filters: {type: profit}
 
   .. group-tab:: XLSX
 
@@ -235,12 +238,16 @@ introduced to enable GSA:
           - uncertainty_enabled
           - variables_info
           - uncertainty_measure
+          - Products
+          - Attributes
         * - energy_avail
           - availability scenarios for energy
           - exogenous
           - Scenarios_energy
           - True
           - E
+          -
+          -
           -
         * - material_avail
           - availability scenarios for material
@@ -249,13 +256,17 @@ introduced to enable GSA:
           - True
           - M
           -
+          -
+          -
         * - total_profit
           - total production profit
           - endogenous
-          - Scenarios_energy, Scenarios_material
-          - endogenous
+          - Scenarios_energy, Scenarios_material, Attributes
+          -
           - P
           - True
+          -
+          - dim: rows, filters: {type: profit}
 
 All other Data Tables and Variables retain their original definitions,
 as described in the :ref:`tutorial-production-planning`.
@@ -376,7 +387,7 @@ uncertain and define their sampling bounds.
 
 In this example, all entries of ``energy_avail`` and ``material_avail``
 are marked with ``is_uncertain=True``, and their uncertainty ranges
-are defined through ``lower_bound`` and ``upper_bound``.
+are defined through the columns ``lower_bound`` and ``upper_bound``.
 
 .. list-table:: ``input_data.xlsx`` file | tab ``energy_avail``.
    :header-rows: 1
@@ -424,9 +435,7 @@ are defined through ``lower_bound`` and ``upper_bound``.
      - 80
      - 100
 
-The ``values`` column contains the reference values, while
-``lower_bound`` and ``upper_bound`` define the ranges used for
-uncertainty sampling.
+
 
 The ``products_data`` table remains unchanged from the
 :ref:`tutorial-production-planning`.
@@ -437,51 +446,51 @@ Uncertainty settings
 
 Related user guide step: :ref:`uncertainty-settings`.
 
-The objective of this analysis is **factor fixing**, i.e., identifying
-uncertain inputs that have a negligible influence on total profit
-(:math:`P`) and can potentially be fixed at representative values.
+The objective of this analysis is **factor prioritization**, i.e.,
+identifying the uncertain inputs that contribute most to the variance
+of total profit (:math:`P`).
 
-For this purpose, the **Morris method** is selected. Morris is a
-screening method based on elementary effects, particularly suited
-to identifying non-influential factors with a relatively limited
-number of model evaluations.
+For this purpose, the **Sobol method** is selected. This
+variance-based GSA method quantifies the contribution of individual
+inputs and their interactions to output variance, allowing uncertain
+parameters to be ranked according to their importance.
 
 The sampling and GSA settings are configured as follows:
 
 .. code-block:: python
 
-   model.uncertainty_settings(
-       sampling_method="morris",
-       gsa_method="morris",
-       file_format="xlsx",
-       sampling_kwargs={
-           "N": 100,
-           "num_levels": 4,
-           "optimal_trajectories": 10,
-           "seed": 123,
-       },
-   )
+  model.uncertainty_settings(
+      sampling_method="sobol",
+      gsa_method="sobol",
+      file_format="xlsx",
+      sampling_kwargs={
+          "N": 120,
+          "seed": 123,
+      }
+  )
 
 In this example:
 
-- ``N=100`` generates 100 candidate Morris trajectories.
-- ``num_levels=4`` defines the number of levels used to discretize
-  each uncertain input range.
-- ``optimal_trajectories=10`` selects 10 trajectories from the
-  candidate set to improve their coverage of the input space.
+- ``N=120`` (*) specifies the Sobol base sample size.
 - ``seed=123`` ensures reproducibility of the sampling procedure.
 
-The Morris analysis computes two main sensitivity indices:
+The Sobol analysis computes two main sensitivity indices:
 
-- :math:`\mu^*`: Mean absolute elementary effect, measuring the
-  overall influence of each uncertain input on total profit.
-- :math:`\sigma`: Standard deviation of elementary effects, indicating
-  variations in input effects that may arise from nonlinearities
-  and interactions.
+- :math:`S_1`: First-order sensitivity index, representing the fraction
+  of output variance attributable to an uncertain input individually.
+- :math:`S_T`: Total-order sensitivity index, representing the overall
+  contribution of an uncertain input, including its interactions
+  with other inputs.
 
-Uncertain inputs associated with low :math:`\mu^*` values are
-considered candidates for factor fixing.
+For factor prioritization, inputs are ranked according to their
+first-order indices (:math:`S_1`), identifying those that contribute
+most to output variance.
 
+.. note::
+
+   (*) A small sample size is used to reduce computational time
+   for this tutorial. In practice, ``N`` should be progressively
+   increased until the sensitivity indices converge.
 
 Initialization and run of numerical problem(s)
 ----------------------------------------------
@@ -491,19 +500,80 @@ Related user guide step: :ref:`numerical-problem-init-run-gsa`.
 The uncertainty analysis is executed through ``model.run_uncertainty()``,
 which automatically handles the initialization of numerical problems,
 generation of uncertainty samples, repeated model evaluations, and
-computation of the Morris sensitivity indices.
+computation of the Sobol sensitivity indices.
 
 .. code-block:: python
 
    model.run_uncertainty(
-       n_parallel=4,
+       n_parallel=8,
    )
 
-In this example, ``n_parallel=4`` enables the concurrent execution
-of up to four model evaluations on the local machine.
+In this example, ``n_parallel=8`` enables the concurrent execution
+of eight model evaluations on the local machine.
 
 Once the analysis is completed, CVXlab exports the uncertainty samples,
 the corresponding uncertainty measures, and the GSA results according
 to the export options previously defined in the uncertainty settings.
 By default, ``save_samples``, ``save_measures``, and ``save_gsa`` are
 set to ``True``, and ``file_format`` is set to ``xlsx``.
+The generated files are stored in the ``results`` folder within the
+model directory.
+
+
+.. rubric:: Inspecting the exported results
+
+The table reports the first-order (:math:`S_1`) and total-order
+(:math:`S_T`) Sobol indices for total profit across the four
+resource availability scenarios.
+
+.. list-table:: Sobol sensitivity indices for total profit
+   :header-rows: 1
+   :align: center
+   :widths: 20 20 15 15 15 15
+
+   * - Energy scenario
+     - Material scenario
+     - :math:`S_1` Energy
+     - :math:`S_1` Material
+     - :math:`S_T` Energy
+     - :math:`S_T` Material
+   * - ``low``
+     - ``low``
+     - 0.921
+     - 0.011
+     - 0.951
+     - 0.034
+   * - ``low``
+     - ``high``
+     - 0.962
+     - 0.000
+     - 0.965
+     - 0.000
+   * - ``high``
+     - ``low``
+     - 0.000
+     - 0.983
+     - 0.000
+     - 0.987
+   * - ``high``
+     - ``high``
+     - 0.435
+     - 0.465
+     - 0.523
+     - 0.539
+
+
+
+
+The results show that sensitivity depends on the resource availability
+scenario. Energy availability explains over 92% of profit variance when
+energy is low, while material availability explains about 98% in the
+``high | low`` scenario.
+
+In the ``high | high`` scenario, both inputs have similar first-order
+indices (:math:`S_1 = 0.435` and :math:`0.465`). Their higher total-order
+indices (:math:`S_T = 0.523` and :math:`0.539`) suggest that the two
+resources also interact in determining optimal profit.
+
+Overall, the most influential input changes depending on which resource
+limits production.
