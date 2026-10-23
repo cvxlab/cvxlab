@@ -476,12 +476,13 @@ In this example:
 
 The Sobol analysis computes two main sensitivity indices:
 
-- :math:`S_1`: First-order sensitivity index, representing the fraction
-  of output variance attributable to an uncertain input individually.
-- :math:`S_T`: Total-order sensitivity index, representing the overall
-  contribution of an uncertain input, including its interactions
-  with other inputs.
-
+- :math:`S_1`: First-order sensitivity index, measuring how much of the
+  output variance is explained by changes in one uncertain input alone,
+  without considering interactions with other inputs.
+- :math:`S_T`: Total-order sensitivity index, measuring how much an
+  uncertain input contributes to the output variance, both through
+  its individual effect and its interactions with other inputs.
+  
 For factor prioritization, inputs are ranked according to their
 first-order indices (:math:`S_1`), identifying those that contribute
 most to output variance.
@@ -524,7 +525,8 @@ model directory.
 
 The table reports the first-order (:math:`S_1`) and total-order
 (:math:`S_T`) Sobol indices for total profit across the four
-resource availability scenarios.
+resource availability scenarios,  as reported in the
+``GSA_results.xlsx`` file.
 
 .. list-table:: Sobol sensitivity indices for total profit
    :header-rows: 1
@@ -562,18 +564,23 @@ resource availability scenarios.
      - 0.523
      - 0.539
 
+The results show that the importance of energy and material availability changes across the four scenarios.
 
+- **``low | low``**: Energy availability explains most of the variation in total profit (92.1%),
+ while material availability has a much smaller effect (1.1%). Therefore energy is the main factor 
+ limiting production.
 
+- **``low | high``**: Energy availability explains most of the variation in total profit (96.2%).
+Therefore energy is again the main factor limiting production.
 
-The results show that sensitivity depends on the resource availability
-scenario. Energy availability explains over 92% of profit variance when
-energy is low, while material availability explains about 98% in the
-``high | low`` scenario.
+- **``high | low``**: The opposite happens. Material availability explains 98.3% of profit variance,
+while energy availability has no influence. In this case, having more energy does not increase profit
+as production is limited by material.
 
-In the ``high | high`` scenario, both inputs have similar first-order
-indices (:math:`S_1 = 0.435` and :math:`0.465`). Their higher total-order
-indices (:math:`S_T = 0.523` and :math:`0.539`) suggest that the two
-resources also interact in determining optimal profit.
+- **``high | high``**: Both resources become important, explaining 43.5% and 46.5% of profit variance,
+ respectively. The higher total-order indices (52.3% and 53.9%) also suggest some interaction between 
+ the two resources, meaning that the effect of changing one depends partly on how much of the other is available.
 
-Overall, the most influential input changes depending on which resource
-limits production.
+Overall, the analysis shows that there is no single ranking of the two uncertain inputs that applies 
+to every scenario. Their importance depends on the availability of both resources and on which one limits
+ production.
