@@ -5,6 +5,7 @@ import queue
 import shutil
 
 from cvxlab.backend.run_settings import RunSettings
+from cvxlab.defaults import Defaults
 
 
 class UncertaintyParallelRunner:
@@ -47,11 +48,17 @@ class UncertaintyParallelRunner:
         self.model = model
         self.n_parallel = n_parallel
 
-        self.workers_dir = (
-            self.model.paths.model_dir
-            / "parallel_workers"
+        self.uncertainty_defaults = Defaults.UncertaintySettings
+
+        workers_root = (
+            Path(self.uncertainty_defaults.PARALLEL_WORKERS_PATH)
+            if self.uncertainty_defaults.PARALLEL_WORKERS_PATH is not None
+            else self.model.paths.model_dir
         )
 
+        self.workers_dir = (
+            workers_root / self.uncertainty_defaults.PARALLEL_WORKERS_DIR
+        )
         self.worker_dirs: list[Path] = []
 
     def _create_worker_dirs(
@@ -222,7 +229,7 @@ class UncertaintyParallelRunner:
             by all parallel workers.
         """
         return {
-            "model_dir_name": self.model.settings.model_name,
+            "model_dir_name": self.model.paths.model_dir.name,
             "main_dir_path": str(self.model.paths.model_dir.parent),
             "uncertainty": True,
             "use_existing_data": True,

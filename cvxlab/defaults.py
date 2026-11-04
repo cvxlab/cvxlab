@@ -805,6 +805,11 @@ class Defaults:
             GSA_RESULTS: GSA_FILE_NAME,
         }
 
+        PARALLEL_WORKERS_DIR = "workers"
+
+        PARALLEL_WORKERS_PATH = None
+        TEMP_MEASURES_DIR = None
+
     _SUBGROUPS = [
         LiteralTypes,
         ConfigFiles,

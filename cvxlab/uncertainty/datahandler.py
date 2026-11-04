@@ -1,10 +1,9 @@
 """Utilities for uncertainty metadata and sampled exogenous data."""
 
 from __future__ import annotations
-
-from fileinput import filename
 from typing import Any
 
+from pathlib import Path
 import pandas as pd
 
 from cvxlab.backend.index import Index
@@ -634,8 +633,9 @@ class UncertaintyData:
         )
 
         results_dir = (
-            self.paths.model_dir
-            / self.uncertainty_defaults.RESULTS_DIR
+            Path(self.uncertainty_defaults.TEMP_MEASURES_DIR)
+            if self.uncertainty_defaults.TEMP_MEASURES_DIR is not None
+            else self.paths.model_dir / self.uncertainty_defaults.RESULTS_DIR
         )
 
         try:
@@ -692,11 +692,20 @@ class UncertaintyData:
                 f"{sorted(self.uncertainty_defaults.RESULT_FILE_NAMES)}."
             ) from error
 
-        output_path = (
-            self.paths.model_dir
-            / self.uncertainty_defaults.RESULTS_DIR
-            / f"{file_name}.{file_format}"
-        )
+        if (
+            result_type == self.uncertainty_defaults.TEMP_MEASURES
+            and self.uncertainty_defaults.TEMP_MEASURES_DIR is not None
+        ):
+            output_dir = Path(
+                self.uncertainty_defaults.TEMP_MEASURES_DIR
+            )
+        else:
+            output_dir = (
+                self.paths.model_dir
+                / self.uncertainty_defaults.RESULTS_DIR
+            )
+
+        output_path = output_dir / f"{file_name}.{file_format}"
 
         return self.files.save_dataframe(
             dataframe=dataframe,
@@ -705,15 +714,18 @@ class UncertaintyData:
             sheet_name=file_name
         )
 
-    def delete_temp_measures_file(
-        self,
-    ) -> None:
+    def delete_temp_measures_file(self) -> None:
         """Delete the temporary uncertainty measures file."""
-        
+
+        temp_dir = (
+            Path(self.uncertainty_defaults.TEMP_MEASURES_DIR)
+            if self.uncertainty_defaults.TEMP_MEASURES_DIR is not None
+            else self.paths.model_dir / self.uncertainty_defaults.RESULTS_DIR
+        )
+
         temp_file_path = (
-            self.paths.model_dir
-            / self.uncertainty_defaults.RESULTS_DIR
+            temp_dir
             / f"{self.uncertainty_defaults.MEASURES_TEMP_FILE_NAME}.{self.uncertainty_defaults.MEASURES_TEMP_FILE_FORMAT}"
         )
-        print(temp_file_path)
-        temp_file_path.unlink()
+
+        temp_file_path.unlink(missing_ok=True)
