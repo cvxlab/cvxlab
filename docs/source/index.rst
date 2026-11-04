@@ -1,13 +1,14 @@
-CVXlab documentation
-====================
+Python laboratory for algebraic modelling
+=========================================
 
-**CVXlab** is an open-source Python laboratory for creating and solving convex 
-optimization models from low-level settings, structured data, and symbolic 
-expressions. It combines *YAML* or *Excel*-based model setup, *SQLite*-backed 
-data management, and *CVXPY*-based numerical solving in a single reproducible 
-workflow. Beyond single-problem modeling, it can orchestrate linked optimization 
-sub-models with managed data exchange in *parallel*, *sequential*, and 
-*integrated* solution modes.
+**CVXlab** is an open-source Python laboratory for building and solving algebraic
+models in a reproducible workflow:
+
+- **Define models** using symbolic expressions and *YAML* or *Excel* settings.
+- **Manage data** in *SQLite*, keeping model structure separate from numerical data.
+- **Solve models** through a *CVXPY*-based numerical engine.
+- **Connect models** with managed data exchange in *parallel*, *sequential*,
+  and *integrated* solution modes.
 
 **Version:** |version|
 **Date:** |today|
@@ -59,33 +60,31 @@ Start here
 
   * - Section
     - What you will find
-  * - :doc:`installation`
-    - How to install CVXlab and verify that the environment is ready.
-  * - :doc:`quick_start`
-    - Build, solve, and inspect a small multi-scenario model in a few minutes.
+  * - :doc:`get_started`
+    - :doc:`Install CVXlab <installation>`, then :doc:`build and solve your first model <quick_start>`.
   * - :doc:`user_guide`
     - The full modeling workflow, from conceptual model definition to results export.
-  * - :doc:`resources`
-    - Tutorials, models gallery, related publications and how to cite CVXlab.
   * - :doc:`api_reference`
     - Technical reference for ``cvxlab.Model``, utilities, operators, constants, and defaults.
+  * - :doc:`resources`
+    - Tutorials, models gallery, related publications and how to cite CVXlab.
+  * - :doc:`project`
+    - Release history and guidelines for contributing to CVXlab.
 
 
 .. toctree::
   :maxdepth: 1
   :hidden:
 
-  Installation <installation>
-  Quick Start <quick_start>
+  Get Started <get_started>
   User Guide <user_guide>
-  Resources <resources>
   API Reference <api_reference>
-  Changelog <changelog>
-  Contributing <contributing>
+  Resources <resources>
+  Project <project>
 
 
 .. note::
   CVXlab is developed by `Matteo V. Rocco <https://www.energia.polimi.it/en/people/rocco-matteo-vincenzo-2/>`_,
   Associate Professor at *SESAM group*, `Department of Energy, Politecnico di Milano
   <https://www.energia.polimi.it/en/>`_. The project is released under the
-  `Apache License 2.0 <http://www.apache.org/licenses/>`_.
+  `Apache License 2.0 <http://www.apache.org/licenses/>`_. 

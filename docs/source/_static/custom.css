@@ -1,3 +1,8 @@
+/* Emphasize top-level navigation titles. */
+.navbar-nav > .nav-item > .nav-link {
+  font-weight: 500;
+}
+
 /* Make sphinx-tabs match the active PyData theme palette. */
 .sphinx-tabs-tablist {
   border-bottom: 1px solid var(--pst-color-border, #444);

@@ -80,8 +80,8 @@ html_theme_options = {
     "navigation_with_keys": True,
     "show_toc_level": 2,
     "navbar_center": ["navbar-nav"],
-    "navbar_align": "left",
-    "header_links_before_dropdown": 7,
+    "navbar_align": "content",
+    "header_links_before_dropdown": 5,
 }
 html_static_path = ['_static']
 html_css_files = ['custom.css']

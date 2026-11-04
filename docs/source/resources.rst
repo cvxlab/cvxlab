@@ -3,19 +3,24 @@
 Resources
 =========
 
-This section collects tutorials and example models to help you get started with
-**CVXlab**. Each tutorial walks you through the steps described in the
-:ref:`User Guide <user_guide>` for a specific use-case.
+This section collects tutorials and example models for learning and applying
+**CVXlab**. Core tutorials introduce the modeling workflow described in the
+:ref:`User Guide <user_guide>`, while applied tutorials explore domain-specific
+workflows with supporting tools and data.
 
 Tutorial directories (with supplementary modeling materials such as Jupyter
 Notebooks, Excel concept files, input-data files and SQLite databases) can be
-downloaded from the table below, so that you can run them locally on your machine.
+downloaded where linked in the tables below, so that you can run them locally
+on your machine.
 
 
 .. _tutorials:
 
-Tutorials
----------
+Core tutorials
+--------------
+
+Learn CVXlab's modeling workflow and capabilities through a series of
+production-planning examples.
 
 .. list-table::
     :header-rows: 1
@@ -44,15 +49,22 @@ Tutorials
       - :download:`link <tutorials/production_planning_sequential/production_planning_sequential.zip>`
 
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: Tutorials index
+Applied tutorials
+-----------------
 
-   tutorials/production_planning/production_planning
-   tutorials/production_planning_nonlinear/production_planning_nonlinear
-   tutorials/production_planning_decomposition/production_planning_decomposition
-   tutorials/production_planning_sequential/production_planning_sequential
+Apply CVXlab to domain-specific problems using external data and supporting tools.
+
+.. list-table::
+    :header-rows: 1
+    :widths: 30 60 10
+
+    * - Tutorial
+      - Description
+      - Material
+    * - :doc:`Input-output impact assessment <tutorials/input_output_analysis_mario/input_output_analysis_mario>`
+      - Download and pre-process input-output data with MARIO, then build and
+        solve an algebraic model in CVXlab to perform nation-wide impact assessments.
+      - ...
 
 
 .. _models_gallery:
@@ -93,34 +105,20 @@ optimization problems.
   `Article link <https://www.scopus.com/pages/publications/105039704468?origin=resultslist>`__
 
 
-.. _citing:
 
-How to cite CVXlab
-------------------
+.. toctree::
+  :maxdepth: 1
+  :hidden:
+  :caption: Core tutorials
 
-If you use CVXlab in your academic work, please cite the software using the
-following references.
+  tutorials/production_planning/production_planning
+  tutorials/production_planning_nonlinear/production_planning_nonlinear
+  tutorials/production_planning_decomposition/production_planning_decomposition
+  tutorials/production_planning_sequential/production_planning_sequential
 
-**APA**
+.. toctree::
+  :maxdepth: 1
+  :hidden:
+  :caption: Applied tutorials
 
-.. code-block:: text
-
-    Rocco, M. V. (2026). CVXlab (Version 1.1.0) [Software]. Zenodo.
-    https://doi.org/10.5281/zenodo.20644006
-
-**BibTeX**
-
-.. code-block:: bibtex
-
-    @software{rocco_cvxlab_2026,
-      author    = {Rocco, Matteo V.},
-      title     = {{CVXlab}},
-      version   = {1.1.0},
-      year      = {2026},
-      publisher = {Zenodo},
-      doi       = {10.5281/zenodo.20644006},
-      url       = {https://doi.org/10.5281/zenodo.20644006}
-    }
-
-The Zenodo record for CVXlab is available at
-`https://doi.org/10.5281/zenodo.20644006 <https://doi.org/10.5281/zenodo.20644006>`_.
+  tutorials/input_output_analysis_mario/input_output_analysis_mario
