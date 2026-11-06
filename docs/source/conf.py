@@ -35,17 +35,14 @@ extensions = [
     "sphinx.ext.mathjax",  # Add this for math rendering
     "sphinxcontrib.mermaid",  # For mermaid diagrams
     'sphinx_tabs.tabs',  # For tabbed content
+    'sphinx_design',  # Homepage cards and responsive grids
     'myst_nb',  # For Jupyter Notebook support
-    # 'myst_parser',  # For Markdown files (.md)
 ]
 
 source_suffix = {
     '.rst': 'restructuredtext',
     '.md': 'markdown',
 }
-
-templates_path = ['_templates']
-exclude_patterns = []
 
 # Do not execute notebooks during doc build
 nb_execution_mode = "off"
@@ -81,7 +78,7 @@ html_theme_options = {
     "show_toc_level": 2,
     "navbar_center": ["navbar-nav"],
     "navbar_align": "content",
-    "header_links_before_dropdown": 5,
+    "header_links_before_dropdown": 6,
 }
 html_static_path = ['_static']
 html_css_files = ['custom.css']

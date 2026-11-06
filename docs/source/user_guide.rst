@@ -23,6 +23,20 @@ production planning problem <tutorial-production-planning>`
 tutorial.
 
 
+The diagram below summarizes the workflow from model specification and data
+management to solving, results analysis, and coordination of linked models.
+
+.. image:: _static/CVXlab_nutshell_light.svg
+   :alt: CVXlab modeling workflow from specification and data to solving and linked models
+   :align: center
+   :class: only-light
+
+.. image:: _static/CVXlab_nutshell_dark.svg
+   :alt: CVXlab modeling workflow from specification and data to solving and linked models
+   :align: center
+   :class: only-dark
+
+
 Guided interface
 ----------------
 

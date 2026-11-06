@@ -42,6 +42,7 @@ docs = [
     "sphinx-autodoc-typehints",
     "sphinxcontrib-mermaid",
     "sphinx-tabs",
+    "sphinx-design",
     "myst-nb>=1.0.0",
 ]
 solvers = [

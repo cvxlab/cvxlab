@@ -1,14 +1,103 @@
+/* Homepage: centered introduction followed by section cards. */
+/* Cover the whole viewport on the homepage, including the outer margins. */
+body:has(.cvxlab-home) {
+  isolation: isolate;
+}
+
+/* Keep opacity on the background layer, leaving text and cards opaque. */
+body:has(.cvxlab-home)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url("background.png") center / cover no-repeat;
+  filter: grayscale(0.2) contrast(1.25);
+  opacity: 0.3;
+}
+
+[data-theme="dark"] body:has(.cvxlab-home)::before {
+  filter: grayscale(1) invert(1);
+  opacity: 0.16;
+}
+
+.cvxlab-home > h1 {
+  margin: 1.5rem 0;
+  text-align: center;
+  font-size: 2rem;
+  white-space: normal;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.cvxlab-accent {
+  color: #000;
+  background-color: #c3ecf5; /* Pale cyan derived from the logo. */
+  padding: 0.02em 0.14em;
+  border-radius: 0.12em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.cvxlab-home-intro {
+  margin: 0 0 1.5rem;
+  text-align: center;
+}
+
+.cvxlab-intro-divider {
+  width: 4rem;
+  margin: 1.5rem auto;
+  border: 0;
+  border-top: 2px solid var(--pst-color-primary);
+  opacity: 0.4;
+}
+
+.cvxlab-home-intro ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+.cvxlab-home-intro li {
+  margin-bottom: 0.6rem;
+}
+
+.cvxlab-home-meta {
+  margin-bottom: 2rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--pst-color-text-muted);
+}
+
+.cvxlab-section-cards .sd-card {
+  border-radius: 0.75rem;
+  box-shadow: none !important;
+}
+
+.cvxlab-section-cards .sd-card-title {
+  color: var(--pst-color-primary);
+}
+
+.cvxlab-section-cards .sd-card-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cvxlab-section-cards .sd-card-title a:hover {
+  text-decoration: underline;
+}
+
+.cvxlab-section-cards .sd-card:hover,
+.cvxlab-section-cards .sd-card:focus-within {
+  border-color: var(--pst-color-primary);
+}
+
 /* Emphasize top-level navigation titles. */
 .navbar-nav > .nav-item > .nav-link {
   font-weight: 500;
 }
 
 /* Make sphinx-tabs match the active PyData theme palette. */
-.sphinx-tabs-tablist {
-  border-bottom: 1px solid var(--pst-color-border, #444);
-  gap: 0.35rem;
-}
-
 .sphinx-tabs-tab {
   background: var(--pst-color-surface, #f5f5f5) !important;
   color: var(--pst-color-text-base, inherit) !important;
@@ -33,10 +122,6 @@
   background: var(--pst-color-background, #fff) !important;
   border: 1px solid var(--pst-color-border, #c9c9c9) !important;
   border-radius: 0 0.4rem 0.4rem 0.4rem;
-}
-
-[data-theme="dark"] .sphinx-tabs-tablist {
-  border-bottom-color: var(--pst-color-border, #4a4a4a);
 }
 
 [data-theme="dark"] .sphinx-tabs-tab {

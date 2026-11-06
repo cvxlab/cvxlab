@@ -9,4 +9,5 @@ improvements, and contribute to the project.
 
    Changelog <changelog>
    Contributing <contributing>
-   Citing <citing>
+
+For academic use, see :ref:`how to cite CVXlab <citing>`.
