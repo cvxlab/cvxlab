@@ -229,7 +229,8 @@ For a model whose settings and data structures already exist, select *Model
 session* / *Open existing Model environment*. The action constructs
 :py:class:`cvxlab.Model` with ``use_existing_data=True``. Exogenous data can
 then be updated, followed by the refresh, run, and results-export actions when
-required. See :ref:`model_generation_from_existing` for the corresponding
+required. See :ref:`starting with an existing model <model_generation_from_existing>`
+for the corresponding
 programmatic workflow.
 
 .. note::

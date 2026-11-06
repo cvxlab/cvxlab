@@ -19,6 +19,23 @@ Overview
 API (class constructor): :py:class:`cvxlab.Model`
 
 
+.. _reusing-model-data:
+
+Reusing existing settings and data
+------------------------------------------------------------
+
+Set ``use_existing_data=True`` to reopen a prepared model directory. It must
+contain the setup files, a populated ``sets.xlsx``, the model SQLite database,
+and the input data files. The constructor loads the coordinates, validates the
+model structure, and initializes numerical problems using data from SQLite.
+
+This route does not require generating blank data structures again. If you
+edit the input data files, follow :ref:`fill-exogenous-data` and
+:ref:`numerical-problem-init` to import those changes before solving. The
+:ref:`workflow overview <model_generation_from_scratch>` shows where these
+activities fit in the complete sequence.
+
+
 Typical Usage
 -------------
 

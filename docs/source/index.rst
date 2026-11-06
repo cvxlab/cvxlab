@@ -3,10 +3,14 @@
 .. role:: accent
    :class: cvxlab-accent
 
+.. |br| raw:: html
+
+   <br>
+
 .. rst-class:: cvxlab-home
 
-Python :accent:`laboratory` for algebraic :accent:`modelling`
-=========================================================================
+Algebraic modelling |br| :accent:`laboratory` in Python
+=======================================================
 
 .. container:: cvxlab-home-intro
 
@@ -68,7 +72,10 @@ Python :accent:`laboratory` for algebraic :accent:`modelling`
       Learn through tutorials, explore published models, and find
       related research.
 
-   .. grid-item-card:: :doc:`Project <project>`
+   .. grid-item-card:: Project
+      :link: project
+      :link-type: doc
+      :link-alt: Explore the project
       :columns: 12
 
       Explore release changes in the :doc:`changelog <changelog>`, or help improve

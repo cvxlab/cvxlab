@@ -9,6 +9,11 @@ Tables* are provided by the user in the *blank input data file(s)* generated
 in the :ref:`previous step <data-structures-init>` and stored in the
 ``<model_dir_name>/input_data`` directory by default.
 
+For an existing model, update the values in the existing input files as needed.
+Then follow :ref:`numerical-problem-init` to refresh the SQLite database and
+numerical problems before solving again; editing a file alone does not update
+the data already loaded in the Model instance.
+
 Reading the generated input tables
 ----------------------------------
 

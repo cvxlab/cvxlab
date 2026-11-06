@@ -22,6 +22,16 @@ Overview
 API: :py:meth:`~cvxlab.Model.refresh_database_and_initialize_problem`
 
 
+Refreshing an existing model
+------------------------------------------------------------
+
+When a Model instance is opened with ``use_existing_data=True``, numerical
+problems are initialized from the existing SQLite data. Call
+:py:meth:`~cvxlab.Model.refresh_database_and_initialize_problem` if you have
+changed the input data files and need those changes imported before the next
+solve. If the stored data are unchanged, continue to :ref:`numerical-problem-run`.
+
+
 Typical Usage
 -------------
 
