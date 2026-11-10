@@ -64,7 +64,7 @@ Apply CVXlab to domain-specific problems using external data and supporting tool
     * - :doc:`Input-output impact assessment <tutorials/input_output_analysis_mario/input_output_analysis_mario>`
       - Download and pre-process input-output data with MARIO, then build and
         solve an algebraic model in CVXlab to perform nation-wide impact assessments.
-      - ...
+      - :download:`link <tutorials/input_output_analysis_mario/ioa_mario.zip>`
 
 
 .. _models_gallery:

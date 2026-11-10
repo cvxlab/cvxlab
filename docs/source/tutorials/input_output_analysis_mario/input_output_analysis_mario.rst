@@ -1,0 +1,1001 @@
+.. _tutorial-ioa-mario:
+
+Economy-wide impact assessment
+==============================
+
+This tutorial relies on **CVXlab** and the
+`MARIO <https://www.marioproject.com/en/latest/index.html>`_ Python package
+to assess economy-wide impacts using Leontief's Input-Output Analysis. 
+
+- **Prepare data with MARIO:** download and pre-process an input-output dataset,
+  then export the inputs required by CVXlab.
+- **Build and solve with CVXlab:** express the input-output relationships as an
+  algebraic model and assess the effects of changes in production structure
+  and final demand.
+
+Knowledge of Input-Output Analysis is required to follow this tutorial. The MARIO 
+documentation provides an introductory overview of the theory and its applications.
+
+Before starting, set up a Conda environment with both CVXlab and MARIO packages 
+installed. See :doc:`CVXlab installation <installation>` and
+`MARIO getting started <https://www.marioproject.com/en/latest/get_started/index.html>`_
+for setup instructions.
+
+
+.. _ioa_mario_problem_statement:
+
+.. admonition:: Problem statement
+
+  How would changes in Italy's electricity supply affect **value added**,
+  **imports**, and **CO2 emissions** across the economy?
+
+  Use an input-output model to compare a reference scenario with a hypothetical
+  electricity-supply scenario incorporating two interventions:
+
+  - **Domestic electricity supply:** meet all intermediate and final demand
+    for electricity through domestic production, with no electricity imports.
+  - **A larger renewable share:** increase the contribution of renewable
+    generation to the electricity mix, taking Italy's National Energy and
+    Climate Plan (NECP) for 2030 as the policy reference.
+
+    The following shares of electricity supplied are illustrative placeholders,
+    to be replaced with the scenario assumptions. They are not observed data
+    or NECP targets.
+
+    .. math::
+
+      \begin{array}{lrr}
+      \text{Production of eletricity by...} & \text{Reference (2024)} & \text{High RES} \\
+      \hline
+      \text{Coal}               &  9.7\% &  0.0\% \\
+      \text{Gas}                & 15.8\% &  0.0\% \\
+      \text{Nuclear}            & 23.4\% & 15.0\% \\
+      \text{Hydro}              & 13.3\% &  9.0\% \\
+      \text{Wind}               & 17.5\% & 38.0\% \\
+      \text{Petroleum}          &  1.6\% &  0.0\% \\
+      \text{Biomass and Waste}  &  6.4\% &  5.0\% \\
+      \text{Solar photovoltaic} & 11.0\% & 31.0\% \\
+      \text{Tide, Wave, Ocean}  &  0.0\% &  0.5\% \\
+      \text{Geothermal}         &  0.2\% &  1.5\% \\
+      \text{Others}             &  1.1\% &  0.0\% \\
+      \end{array}
+
+  Calculate the prospective changes in *value added*, *imports*, and *CO2 
+  emissions* in High RES scenario with respect to the Reference scenario. 
+  Eliminating electricity imports does not imply eliminating imports of fuels 
+  or other goods used by domestic producers.
+
+  Assume that all changes are occurring onvernight (i.e. comparative statics analysis).
+
+  This is a teaching exercise exploring the economy-wide implications of
+  assumed structural changes. It does not assess the technical feasibility
+  of the electricity mix or provide a forecast of Italy's energy transition.
+
+The ground data required to define the problem is defined as a national Supply 
+and Use Table (SUT) with the following structure:
+
+.. math::
+
+  \begin{array}{l|cccc}
+  & \begin{array}{c}\text{Products}\\\text{(domestic)}\end{array} 
+    & \text{Technologies} 
+    & \begin{array}{c}\text{Final}\\\text{Demand}\end{array} 
+    & \text{Total} \\
+  \hline
+  \text{Products (domestic)} & - & \mathbf{U}_0 & \mathbf{Y}_0 & \mathbf{Q}_0 \\
+  \text{Technologies} & \mathbf{V}_0 & - & - & \mathbf{X}_0 \\
+  \text{Products (imports)} & - & \mathbf{M}_{u,0} & \mathbf{M}_{y,0} & - \\
+  \text{Value added} & - & \mathbf{F}_{u,0} & \mathbf{F}_{y,0} & - \\
+  \text{Environmental flows} & - & \mathbf{R}_{u,0} & \mathbf{R}_{y,0} & - \\
+  \end{array}
+
+The subscript :math:`0` denotes the reference accounting period. Each symbol 
+represents a block of entries defined as follows:
+
+- Make table (:math:`\mathbf{V}_0`): products supplied by each domestic technology.
+- Use table (:math:`\mathbf{U}_0`): products used by each technology.
+- Final demand table (:math:`\mathbf{Y}_0`): products final demand.
+- Intermediate and final imports (:math:`\mathbf{M}_{u,0}` and :math:`\mathbf{M}_{y,0}`): 
+  products imported for intermediate and final use.
+- Value added table (:math:`\mathbf{F}_{u,0}` and :math:`\mathbf{F}_{y,0}`): value 
+  added by each technology.
+- Environmental flows table (:math:`\mathbf{R}_{u,0}` and :math:`\mathbf{R}_{y,0}`): 
+  environmental impacts associated with each technology and final demand category.
+- Total products demand (:math:`\mathbf{Q}_0`): total products demand, including domestic
+  and imported products.
+- Total technology activity (:math:`\mathbf{X}_0`): total domestic products output.
+
+Assuming that the SUT above is available, the model can be defined as **two sequential 
+numerical problems** described below.
+
+.. rubric:: Data processing
+
+Coefficients tables are defined from the SUT, and ancillary variables are defined 
+to allow user to define the structural changes within the system.
+
+.. rubric:: Impact analysis
+
+The Leontief quantity (primal) model is defined based on 
+the processed data and results are returned in terms of a new SUT reflecting the 
+applied structural changes.
+
+
+
+
+In the :download:`zip directory <ioa_mario.zip>`, the materials related 
+to this tutorial are available, including:
+
+- ``notebook.ipynb`` file: Jupyter Notebook with the complete workflow of the 
+  tutorial, including code and comments.
+- ``concept.xlsx`` file: Excel workbook with the conceptual model definition, 
+  solving the model with the built-in solver. Useful for understanding how the 
+  model works and the expected results. The concept model is a simplified version 
+  of the model developed in this tutorial.
+- ``model`` directory: model directory generated by CVXlab, containing: model settings 
+  (available in both xlsx and YAML formats), sets file ``sets.xlsx``, SQLite file 
+  ``database.db``.
+    
+The user can follow the step-by-step guide below, generating and 
+filling the required files autonomously, or can run the provided Jupyter Notebook 
+and rely on the materials provided.
+
+Conceptual model definition
+---------------------------
+
+Related user guide step: :ref:`conceptual-model-definition`.
+
+In this step, the model is formulated at a conceptual level, defining the Sets, 
+Data Tables, Variables, and Problems (with related symbolic expressions). 
+Notably, there is not one single way to define the model, and the same problem 
+can be formulated in multiple equivalent ways. 
+
+.. rubric:: Defining Sets
+
+Sets defined for the model are summarized in the table below. 
+
+.. list-table:: Sets of the tutorial model
+  :header-rows: 1
+  :widths: 20 10 40 10 20 
+
+  * - Set name
+    - Symbol
+    - Coordinates
+    - Cardinality
+    - Set type
+  * - Products
+    - :math:`p`
+    - :math:`product_1`, :math:`product_2`
+    - 2
+    - Dimension set
+  * - Attributes
+    - :math:`a`
+    - :math:`energy`, :math:`material`, :math:`profit`
+    - 3
+    - Dimension set
+  * - Scenarios_energy
+    - :math:`e`
+    - :math:`low`, :math:`high`
+    - 2
+    - Inter-problem set
+  * - Scenarios_material
+    - :math:`m`
+    - :math:`low`, :math:`high`
+    - 2
+    - Inter-problem set
+
+Notice that:
+
+- Inter-problem sets (:math:`e`, :math:`m`) define multiple problem instances. 
+  This implies that one optimization problem is generated and solved for each 
+  combination of energy and material availability (in this case, :math:`2 \times 2 = 4` 
+  problem instances will be generated).
+- Dimension sets (:math:`p`, :math:`a`) are used to define the scope 
+  of Data Tables and the shapes of related variables.
+- Coordinates of each set can be associated with filters to define sub-domains. For 
+  example, different entries of the *Attributes* set :math:`a` will be used to 
+  define different variables. In this simplified case, a separate filter is used 
+  to identify each item of the set; however, in more complex models filters can 
+  be used to define overlapping sub-domains (a filter key may be associated with 
+  multiple coordinates).
+
+.. rubric:: Defining Data Tables and related Variables
+
+The following table summarizes the Data Tables and associated variables for the 
+energy system model. 
+
+.. list-table:: Data Tables of the tutorial model
+  :header-rows: 1
+  :widths: 20 15 25 40 
+
+  * - Name(sets domain)
+    - Type
+    - Domain [cardinality]
+    - Description
+  * - :math:`production(p,e,m)`
+    - Endogenous
+    - :math:`p \times e \times m \\ [2 \times 2 \times 2 = 8]`
+    - Total products output by energy and material availability (in *units*)
+  * - :math:`products_{data}(a,p)`
+    - Exogenous
+    - :math:`a \times p \\ [3 \times 2 = 6]`
+    - Collects product attributes. Multiple variables will be defined based 
+      on this table, each related to a specific attribute.
+  * - :math:`energy_{avail}(e)`
+    - Exogenous
+    - :math:`e [2]`
+    - Energy availability scenarios (in *kWh*)
+  * - :math:`material_{avail}(m)`
+    - Exogenous
+    - :math:`m [2]`
+    - Material availability scenarios (in *kg*)
+
+Notes:
+
+- An endogenous Data Table has a domain defined including all inter-problem sets, 
+  while exogenous Data Tables can be defined over specific inter-problem and 
+  dimension sets.
+- For each Data Table, the cardinality (i.e., row count) is reported, calculated 
+  as the product of the row counts of all sets in the domain. For example, the 
+  :math:`products_{data}` Data Table includes 6 entries, representing the products 
+  attributes (3 entries: :math:`profit`, :math:`energy`, :math:`material`) 
+  related to each product (2 entries: :math:`product_1`, :math:`product_2`).
+
+The variables associated with the Data Tables are summarized in the table below.
+
+.. list-table:: Variables of the tutorial model
+  :header-rows: 1
+  :widths: 10 10 15 15 20 30 
+
+  * - Source Data Table
+    - Variable symbol
+    - Shape [rows,cols]
+    - Intra-problem sets
+    - Inter-problem sets
+    - Description
+  * - :math:`production(p,e,m)`
+    - :math:`x`
+    - :math:`1, p - [1,2]`
+    - :math:`-`
+    - :math:`e \times m - [4]`
+    - Products output (*units*)
+  * - :math:`products_{data}(a,p)`
+    - :math:`c`
+    - :math:`1, p - [1,2]`
+    - :math:`-`
+    - :math:`-`
+    - Specific profit per product (*€/unit*)
+  * - :math:`products_{data}(a,p)`
+    - :math:`e`
+    - :math:`1, p - [1,2]`
+    - :math:`-`
+    - :math:`-`
+    - Specific energy use per product (*kWh/unit*)
+  * - :math:`products_{data}(a,p)`
+    - :math:`m`
+    - :math:`1, p - [1,2]`
+    - :math:`-`
+    - :math:`-`
+    - Specific material use per product (*kg/unit*)
+  * - :math:`energy_{avail}(e)`
+    - :math:`E`
+    - :math:`1, 1`
+    - :math:`-`
+    - :math:`e - [2]`
+    - Energy endowment (*kWh*)
+  * - :math:`material_{avail}(m)`
+    - :math:`M`
+    - :math:`1, 1`
+    - :math:`-`
+    - :math:`m - [2]`
+    - Material endowment (*kg*)
+
+Regarding variables above:
+
+- Each variable stems from a related Data Table, inheriting its properties: among 
+  others, the domain (defined by sets) and the data type (exogenous, endogenous, 
+  constant).
+- *Constants* can be defined with different built-in or user-defined types (see 
+  :ref:`api_constants_types`). In the example above, only endogenous and exogenous 
+  variables are defined, while no constants are needed.
+- Notably, multiple variables can be associated with the same Data Table, each defined 
+  on a specific subset of the data table domain. In the example above, three variables 
+  :math:`c`, :math:`e`, and :math:`m` are associated with the same :math:`products_{data}` 
+  Data Table, each defined on a specific subset of the data table domain (these 
+  subsets are identified by filters on the *Attributes* set). 
+- Each variable is characterized by a specific allocation of sets into dimensions 
+  sets. This allocation defines the shape of the variable (rows, columns)  
+  and the number of times the variable of that shape is repeated across the 
+  intra-problem sets domain (if any).
+- The cardinality of the inter-problem sets defines the number of times a variable 
+  is generated, corresponding to the number of problem instances. For example, the 
+  endogenous variable :math:`x` is defined as a row vector of 2 columns (defined 
+  by the *products* set items), it is not indexed over any intra-problem coordinate, 
+  and it is indexed over 4 inter-problem coordinates (defined by the Cartesian 
+  product of the *energy availability* and *material availability* sets).
+  Depending on the purpose of the variable in the numerical problem, it could be 
+  alternatively defined as a scalar variable, indexing the Products set as an 
+  inter-problem set instead of a shape set: in such case, a scalar variable is 
+  defined for each product, and the expressions where the variable is involved are 
+  each broadcast over the product dimension. 
+
+.. rubric:: Defining Problem and related Expressions
+
+For the current energy system model, a symbolic problem can be defined as a system 
+of linear inequalities reported below. The objective is to maximize the profit 
+generated by the production plan, while respecting the energy and material constraints.
+A guard is added to ensure that the production levels are non-negative (the latter 
+is not strictly required in this case, but it is a common practice in production 
+planning models).
+
+.. math::
+  \begin{aligned}
+  \max \quad & (c \cdot x') \\
+  \text{s.t.}\quad & e \cdot x' - E \leq 0 \\
+  & m \cdot x' - M \leq 0 \\
+  & x \geq 0
+  \end{aligned}
+
+Notice that:
+
+- The problem is defined a number of times equal to the cardinality of the inter-problem 
+  set. Specifically, one problem instance is defined and solved for each energy and 
+  material availability scenario. In this case, 4 problem instances are generated, 
+  corresponding to the Cartesian product of the *energy availability* and *material 
+  availability* sets.
+- For each symbolic expression, a number of numerical expressions is generated, equal 
+  to the Cartesian product of all intra-problem sets of the related variables. 
+  In this case, each symbolic expression is generated only once, since no variable 
+  is indexed over intra-problem sets. In more complex models, the same symbolic expression
+  can be generated multiple times, each time with different variable instances depending
+  on the intra-problem sets domain.
+- In this problem, the dot operator :math:`\cdot` represents matrix multiplication, 
+  and the prime notation :math:`x'` represents transposition (see :ref:`api_symbolic_operators` 
+  for a comprehensive description of built-in symbolic operators).
+- A note on dimensional formulations: the allocation of dimension sets to shapes 
+  and intra-problem sets offers significant modeling flexibility. The same problem 
+  can be formulated in multiple equivalent ways.
+
+
+Generation of model directory
+-----------------------------
+
+| Related user guide step: :ref:`generation-of-model-directory`
+| Related API: :py:func:`cvxlab.create_model_dir`
+
+This step consists of creating the model directory scaffold that will later host 
+the setup files, sets file, input data, database, and model results.
+
+.. tabs::
+
+  .. group-tab:: YAML
+
+    .. code-block:: python
+
+        import cvxlab
+
+        cvxlab.create_model_dir(
+            settings_file_type='yml',
+        )
+
+  .. group-tab:: XLSX
+
+    .. code-block:: python
+
+        import cvxlab
+
+        cvxlab.create_model_dir(
+            settings_file_type='xlsx',
+        )
+
+Notice that:
+
+- If arguments ``model_dir_name`` and ``main_dir_path`` are not specified, the 
+  model directory is created with default name *model* in the *current working 
+  directory*.
+- The argument ``settings_file_type`` defines the format of the setup files. Both
+  YAML and Excel formats are supported. The tutorial materials include setup files 
+  in both formats, so the tutorial can be followed regardless of the choice made 
+  at this stage.
+- At this stage, only the model directory and the setup file templates are 
+  generated. The sets file, input data file(s), and SQLite database are created 
+  in later steps.
+
+  - For ``settings_file_type='yml'``: three YAML files are generated in the 
+    *model* directory, named ``structure_sets.yml``, ``structure_variables.yml``, 
+    and ``problem.yml``.
+  - For ``settings_file_type='xlsx'``: a single Excel workbook named 
+    ``model_settings.xlsx`` is generated in the *model* directory, with three tabs 
+    named ``structure_sets``, ``structure_variables``, and ``problem``.
+
+
+Fill model setup file(s)
+------------------------
+
+Related user guide step: :ref:`fill-model-setup-files`
+
+In this step, the conceptual model defined above is translated into CVXlab setup 
+files. The same information can be written either in YAML format, using separate 
+files, or in Excel format, using the ``model_settings.xlsx`` workbook.
+
+For clarity, the examples below include only the fields required for this tutorial. 
+Optional fields such as ``value``, ``blank_fill``, ``nonneg``, ``copy_from``, 
+and ``aggregations`` are omitted because they are not needed in this model. This 
+does not cause validation errors during setup parsing.
+
+.. rubric:: Defining model sets
+
+This part defines the Sets used by the model. At this stage, only the Sets 
+structure is defined; the actual set coordinates are entered later in ``sets.xlsx``.
+
+.. tabs::
+
+  .. group-tab:: YAML
+
+    File: ``structure_sets.yml``
+
+    .. code-block:: yaml
+
+      Products:
+        description: products | dimension set
+
+      Attributes:
+        description: attributes of the products | dimension set
+        filters:
+          type: [profit, energy, material]
+
+      Scenarios_energy:
+        description: energy availability scenarios | inter-problem set
+        split_problem: True
+
+      Scenarios_material:
+        description: material availability scenarios | inter-problem set
+        split_problem: True
+
+  .. group-tab:: XLSX
+
+    File: ``model_settings.xlsx`` | tab ``structure_sets``
+    
+    .. list-table::
+      :header-rows: 1
+      :align: center
+
+      * - set_key
+        - description
+        - split_problem
+        - filters
+      * - Products
+        - products | dimension set
+        - 
+        - 
+      * - Attributes
+        - attributes of the products | dimension set
+        - 
+        - type: [profit, energy, material]
+      * - Scenarios_energy
+        - energy availability scenarios | inter-problem set
+        - True
+        -
+      * - Scenarios_material
+        - material availability scenarios | inter-problem set
+        - True
+        - 
+
+.. rubric:: Defining model Data Tables and Variables
+
+This part defines the Data Tables and the Variables generated from them.
+
+.. tabs::
+
+  .. group-tab:: YAML
+
+    File: ``structure_variables.yml``
+
+    .. code-block:: yaml
+
+      production:
+        description: products supply
+        type: endogenous
+        coordinates: [Products, Scenarios_energy, Scenarios_material]
+        variables_info:
+          x:
+            Products: 
+              dim: cols
+      
+      products_data:
+        description: attributes of products | profits, energy use, material use
+        type: exogenous
+        coordinates: [Products, Attributes]
+        variables_info:
+          c:
+            Products:
+              dim: cols
+            Attributes:
+              dim: rows
+              filters: {type: profit}
+          e:
+            Products:
+              dim: cols
+            Attributes:
+              dim: rows
+              filters: {type: energy}
+          m:
+            Products:
+              dim: cols
+            Attributes:
+              dim: rows
+              filters: {type: material}
+
+      energy_avail:
+        description: availability scenarios for energy
+        type: exogenous
+        coordinates: [Scenarios_energy]
+        variables_info:
+          E:
+            
+      material_avail:
+        description: availability scenarios for material
+        type: exogenous
+        coordinates: [Scenarios_material]
+        variables_info:
+          M:
+
+  .. group-tab:: XLSX
+
+    File: ``model_settings.xlsx`` | tab ``structure_variables``
+
+    .. list-table::
+        :header-rows: 1
+        :align: center
+
+        * - table_key
+          - description
+          - type
+          - coordinates
+          - variables_info
+          - Products
+          - Attributes
+        * - production
+          - products supply
+          - endogenous
+          - Products, Scenarios_energy, Scenarios_material
+          - x
+          - dim: cols
+          - 
+        * - products_data
+          - attributes of products | profits
+          - exogenous
+          - Products, Attributes
+          - c
+          - dim: cols
+          - dim: rows, filters: {type: profit}
+        * - products_data
+          - attributes of products | energy use
+          - exogenous
+          - Products, Attributes
+          - e
+          - dim: cols
+          - dim: rows, filters: {type: energy}
+        * - products_data
+          - attributes of products | material use
+          - exogenous
+          - Products, Attributes
+          - m
+          - dim: cols
+          - dim: rows, filters: {type: material}
+        * - energy_avail
+          - availability scenarios for energy
+          - exogenous
+          - Scenarios_energy
+          - E
+          - 
+          - 
+        * - material_avail
+          - availability scenarios for material
+          - exogenous
+          - Scenarios_material
+          - M
+          - 
+          - 
+
+.. rubric:: Defining model symbolic problem
+
+This part defines the objective function and the symbolic constraint expressions.
+
+.. tabs::
+
+  .. group-tab:: YAML
+
+    File: ``problem.yml``
+
+    .. code-block:: yaml
+
+      objective: Maximize(c @ tran(x))
+      expressions:
+        - e @ tran(x) - E <= 0
+        - m @ tran(x) - M <= 0
+        - x >= 0
+      description:
+        - maximization of total profit
+        - energy use less than endowment
+        - material use less than endowment
+        - non-negative production levels
+
+  .. group-tab:: XLSX
+
+    File: ``model_settings.xlsx`` | tab ``problem``
+
+    .. list-table::
+        :header-rows: 1
+        :align: center
+
+        * - objective
+          - expressions
+          - description
+        * - Maximize(c @ tran(x))
+          - 
+          - maximization of total profit
+        * - 
+          - e @ tran(x) - E <= 0
+          - energy use less than endowment
+        * - 
+          - m @ tran(x) - M <= 0
+          - material use less than endowment
+        * - 
+          - x >= 0
+          - non-negative production levels 
+
+
+Model class instance generation
+-------------------------------
+
+| Related user guide step: :ref:`generate-model-class-instance`
+| Related class constructor: :py:class:`cvxlab.Model`
+
+In this step, a ``Model`` instance is created. This is the main CVXlab object for 
+handling subsequent operations, including data initialization, numerical problem 
+generation, and solution.
+
+.. code-block:: python
+
+  import cvxlab
+
+  model = cvxlab.Model(
+      log_level='debug',
+      model_settings_from='yml', # or 'xlsx'
+      use_existing_data=False,
+      multiple_input_files=False,
+      input_data_files_type="xlsx", # or "csv"
+      detailed_validation=True,
+  )
+
+The behavior of the constructor depends primarily on the argument
+``use_existing_data``:
+
+- If ``use_existing_data=False``, the constructor parses the setup files and 
+  validates the model directory and setup files, loads the model structure, and 
+  generates a blank ``sets.xlsx`` file ready to be filled with model coordinates 
+  in the next step. This is the mode used when building a model from scratch.
+- If ``use_existing_data=True``, in addition to the setup files parsing, the 
+  constructor also checks that the required model data already exist 
+  (``sets.xlsx``, the SQLite database, and the input-data directory), loads model 
+  coordinates, and initializes the numerical problem(s). In this case, the user 
+  can directly move to :ref:`numerical-problem-run`.
+
+In this tutorial, the ``use_existing_data`` argument must be set to ``False``, 
+because the model is being assembled step by step from empty templates. At the 
+end of this step, the main output is a blank ``sets.xlsx`` file in the model 
+directory, ready to be filled with set coordinates. The SQLite database and the 
+input data file(s) are not generated yet; they are created in the next 
+initialization step.
+
+Notes:
+
+- If arguments ``model_dir_name`` and ``main_dir_path`` are not specified, the 
+  constructor looks for a model directory named *model* in the *current working 
+  directory*.
+- Log level and log format can be defined with the related arguments. The tutorial 
+  materials use log level *debug*, so the reader can inspect the internal 
+  operations performed by CVXlab during subsequent steps.
+- The argument ``model_settings_from`` defines the format of the setup files. Both
+  YAML and Excel formats are supported, and must be coherently specified according 
+  to the setup file(s). 
+- The argument ``multiple_input_files`` defines whether input data are collected 
+  in a single file or multiple files when those files are generated later. If 
+  ``False``, exogenous data are written to one Excel workbook with separate tabs. 
+  If ``True``, one file is generated per data table. In that case, 
+  ``input_data_files_type`` can also be set to ``"csv"``. In this tutorial, a 
+  single Excel input file is used.
+- The argument ``detailed_validation`` is useful while defining a model from 
+  scratch, because it provides more explicit feedback when the setup files contain 
+  incomplete or inconsistent definitions of Sets, Data Tables, Variables, or 
+  Problems.
+
+
+Fill sets data (model coordinates)
+----------------------------------
+
+Related user guide step: :ref:`fill-sets-data`
+
+In this step, the user manually fills the model coordinates in the Excel file 
+``sets.xlsx``, which is placed in the model root by default. The workbook 
+structure is automatically generated from the Sets definition provided in the 
+setup file(s).
+
+In this example, the workbook contains four tabs, one for each set defined in the 
+model. Each tab is named ``_set_<SET_NAME>``, where ``<SET_NAME>`` is the 
+uppercase set key. These tab names are generated automatically by CVXlab and 
+should not be changed.
+
+Within each tab, the user fills only the coordinate values and, when present, the 
+filter columns generated by CVXlab. Column headers are generated automatically 
+and should not be edited.
+
+In the ``_set_PRODUCTS`` tab, the user fills the coordinates of the *Products* set,
+i.e., the two products of the model: :math:`product_1` and :math:`product_2`. No 
+other columns are needed, since neither filters nor aggregations are defined for this set.
+
+.. list-table:: ``sets.xlsx`` file | tab ``_set_PRODUCTS``.
+   :header-rows: 1
+
+   * - Products_Name
+   * - product_1
+   * - product_2
+
+In the ``_set_ATTRIBUTES`` tab, the user fills the coordinates of the *Attributes* 
+set, i.e., the three attributes of the model: :math:`profit`, :math:`energy`, and 
+:math:`material`. In this case, a ``type`` filter has been defined in the setup 
+file(s), so the user also fills the second column with the filter value associated 
+with each coordinate. In this simplified example, each filter value is associated 
+with exactly one coordinate. In more complex models, the same filter value can be 
+associated with multiple coordinates to define overlapping sub-domains.
+
+.. list-table:: ``sets.xlsx`` file | tab ``_set_ATTRIBUTES``.
+   :header-rows: 1
+
+   * - Attributes_Name
+     - Attributes_type
+   * - profit
+     - profit
+   * - energy
+     - energy
+   * - material
+     - material
+
+In the ``_set_SCENARIOS_ENERGY`` and ``_set_SCENARIOS_MATERIAL`` tabs, the user 
+fills the coordinates of the *Scenarios_energy* and *Scenarios_material* sets, 
+i.e., the energy and material availability scenarios of the model. Considering 
+these sets are defined here as inter-problem sets and no filters or 
+aggregations are used for them, only the coordinates column is filled by the user.
+
+.. list-table:: ``sets.xlsx`` file | tab ``_set_SCENARIOS_ENERGY``.
+   :header-rows: 1
+
+   * - Scenarios_energy_Name
+   * - low
+   * - high
+
+.. list-table:: ``sets.xlsx`` file | tab ``_set_SCENARIOS_MATERIAL``.
+   :header-rows: 1
+
+   * - Scenarios_material_Name
+   * - low
+   * - high
+
+
+Initialization of data structures
+---------------------------------
+
+| Related user guide step: :ref:`data-structures-init`
+| Related API: :py:meth:`~cvxlab.Model.initialize_model_environment`
+
+In this step, the model environment is initialized from the filled ``sets.xlsx`` 
+file. CVXlab loads the set coordinates into the model, then generates the blank 
+SQLite database and the blank exogenous input data file(s).
+
+.. code-block:: python
+
+  model.initialize_model_environment()
+
+The code block generates a blank SQLite database (named ``database.db`` by default) 
+and the exogenous input data file(s) (in the ``<model_dir_name>/input_data`` directory 
+by default) according to the structure defined in the setup file(s). The SQLite 
+sets tables are filled with the coordinates defined in the sets file, while input 
+data file(s) are generated as blank files, ready to be filled by the user with the numerical 
+values of the exogenous data in the next step. 
+
+
+Fill exogenous model data
+-------------------------
+
+Related user guide step: :ref:`fill-exogenous-data`
+
+In this step, the user fills the numerical values of the exogenous data in the 
+input data file(s) generated in the previous step. In this tutorial, a single 
+Excel workbook named ``input_data.xlsx`` is generated, with one tab for each 
+exogenous Data Table.
+
+The user fills the exogenous data values in the ``values`` column, while the other 
+columns (including the ``id`` and coordinate columns) are not edited, since they are
+automatically generated by CVXlab based on the sets coordinates and the Data Table 
+domain defined in the setup file(s).
+
+In this tutorial, the user fills three tabs as shown below, using the 
+numerical data defined by the :ref:`problem statement <production-planning-problem-statement>`. 
+
+.. list-table:: ``input_data.xlsx`` file | tab ``products_data``.
+   :header-rows: 1
+
+   * - id
+     - Products_Name
+     - Attributes_Name
+     - values
+   * - 1
+     - product_1
+     - profit
+     - 1.0
+   * - 2
+     - product_1
+     - energy
+     - 1.7
+   * - 3
+     - product_1
+     - material
+     - 0.5
+   * - 4
+     - product_2
+     - profit
+     - 2.2
+   * - 5
+     - product_2
+     - energy
+     - 3.5
+   * - 6
+     - product_2
+     - material
+     - 1.2
+
+.. list-table:: ``input_data.xlsx`` file | tab ``energy_avail``.
+   :header-rows: 1
+
+   * - id
+     - Scenarios_energy_Name
+     - values
+   * - 1
+     - low
+     - 150
+   * - 2
+     - high
+     - 300
+
+.. list-table:: ``input_data.xlsx`` file | tab ``material_avail``.
+   :header-rows: 1
+
+   * - id
+     - Scenarios_material_Name
+     - values
+   * - 1
+     - low
+     - 60
+   * - 2
+     - high
+     - 90
+
+
+Initialization of numerical problem(s)
+--------------------------------------
+
+| Related user guide step: :ref:`numerical-problem-init`
+| Related API: :py:meth:`~cvxlab.Model.refresh_database_and_initialize_problem`
+
+In this step, the numerical problem(s) are initialized. CVXlab imports the 
+exogenous data from the input data file(s) into the SQLite database, validates 
+the symbolic problem definition, creates the CVXPY variables, and generates the 
+corresponding CVXPY Problem instances.
+
+.. code-block:: python
+
+  model.refresh_database_and_initialize_problem()
+
+In this tutorial, four problem instances are generated, corresponding to the 
+Cartesian product of the *energy availability* and *material availability* sets 
+(:math:`2 \times 2 = 4`). After this step, the numerical problems are ready to be 
+solved.
+
+
+Solution of numerical problem(s)
+--------------------------------
+
+| Related user guide step: :ref:`numerical-problem-run`
+| Related API: :py:meth:`~cvxlab.Model.run_model`
+
+In this step, the CVXPY numerical problem(s) stored in the ``Model`` instance are 
+solved. Although :py:meth:`~cvxlab.Model.run_model` supports several configuration 
+arguments, the default behavior is sufficient for this tutorial, so the user can 
+simply run the code block below.
+
+.. code-block:: python
+
+  model.run_model()
+
+During the solution process, CVXlab logs the main operations performed, including 
+the selected solution mode, solver information, the status of each problem 
+instance, and the execution time of the main steps. In this tutorial, all four 
+problem instances are solved successfully and return the *optimal* status.
+
+The log output can be useful to verify that the workflow completed successfully. 
+For the tutorial narrative, however, the key result of this step is simply that 
+the model has been solved and the endogenous values are now available in memory.
+
+
+Export endogenous model data
+----------------------------
+
+| Related user guide step: :ref:`export-model-results`
+| Related API: :py:meth:`~cvxlab.Model.load_results_to_database`
+
+In this step, the endogenous results computed by CVXlab are exported from the 
+in-memory CVXPY variables to the SQLite database.
+
+.. code-block:: python
+
+  model.load_results_to_database()
+
+After this step, the endogenous data tables in ``database.db`` contain the solved 
+values for all scenarios. This makes the model results available for inspection, 
+comparison, or external analysis tools.
+
+.. rubric:: Inspecting the exported results
+
+It is useful to inspect the exported endogenous table directly, to verify that 
+the model solved as expected and to interpret the production plan. 
+In this tutorial, the exported endogenous results are stored in the table 
+``production``.
+
+.. list-table:: Results from ``database.db`` | ``production`` table.
+   :header-rows: 1
+   :widths: 20 20 20 20 20
+
+   * - Energy scenario
+     - Material scenario
+     - Product 1 output
+     - Product 2 output
+     - Active constraint(s)
+   * - ``low``
+     - ``low``
+     - 0.000
+     - 42.857
+     - energy
+   * - ``low``
+     - ``high``
+     - 0.000
+     - 42.857
+     - energy
+   * - ``high``
+     - ``low``
+     - 120.000
+     - 0.000
+     - material
+   * - ``high``
+     - ``high``
+     - 155.172
+     - 10.345
+     - energy and material
+
+The results are economically consistent with the input coefficients. When energy 
+is scarce (the two ``low`` energy scenarios), the model allocates all production 
+to ``product_2``, which yields the highest profit per unit of energy 
+:math:`(2.2 / 3.5 > 1.0 / 1.7)`. In these cases, the material limit is not binding, 
+so increasing material availability alone does not change the optimal solution.
+
+When energy availability is high but material availability is low 
+(``high``/``low``), the limiting factor switches from energy to material. The 
+model then allocates all production to ``product_1``, which yields the highest 
+profit per unit of material :math:`(1.0 / 0.5 > 2.2 / 1.2)`.
+
+In the ``high``/``high`` scenario, both resources are sufficiently available to 
+support a mixed production plan. The solution combines ``product_1`` and 
+``product_2`` and fully exploits both the energy and material endowments, yielding 
+the highest profit among the four scenarios. This is a useful final check of the 
+tutorial workflow: the exported SQLite results are not only present, but also 
+consistent with the underlying optimization logic.
+
