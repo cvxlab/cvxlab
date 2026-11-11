@@ -1,0 +1,44 @@
+data_processing:
+
+    expressions: 
+        - u == U_0 @ minv(diag(X_0)) + delta_u
+        - d == V_0 @ minv(diag(Q_0)) + delta_d
+        - m_u == M_u_0 @ minv(diag(X_0)) + delta_m_u
+        - f == F_u_0 @ minv(diag(X_0))
+        - r == R_u_0 @ minv(diag(X_0))
+
+    description: 
+        - total demand by product
+        - total activity by technology
+        - use coefficients table
+        - market share coefficients table
+        - imports coefficients table
+        - factors coefficients table
+        - environmental flows coefficients table
+
+
+impact_analysis:
+
+    expressions: 
+        - Q == u @ X + Y @ i_y
+        - X == d @ Q
+        - Y == Y_0 + delta_Y
+        - U == u @ diag(X)
+        - V == d @ diag(Q)
+        - M_u == m_u @ diag(X)
+        - M_y == M_y_0 + delta_M_y
+        - F_u == f @ diag(X)
+        - F_y == F_y_0
+        - R_u == r @ diag(X)
+        - R_y == R_y_0
+
+    description: 
+        - products total demand-supply balance
+        - industry technology assumption
+        - total use table
+        - make table
+        - imports table (intermediate)
+        - factors use table (intermediate)
+        - factors use table (final)
+        - environmental flows table (intermediate)
+        - environmental flows table (final)

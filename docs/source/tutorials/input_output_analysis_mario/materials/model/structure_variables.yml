@@ -1,0 +1,338 @@
+# reference data of the SUT
+
+make_0:
+    description: make table, reference
+    type: exogenous
+    coordinates: [products, accounts]
+    variables_info: 
+        V_0: 
+            accounts:
+                dim: rows
+                filters: {category: intermediate}
+            products:
+                dim: cols
+
+use_0:
+    description: use and final demand table, reference
+    type: exogenous
+    coordinates: [products, accounts]
+    variables_info: 
+        U_0: 
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        Y_0:
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: final}
+
+imports_0:
+    description: imports table, reference
+    type: exogenous
+    coordinates: [products, accounts]
+    variables_info: 
+        M_u_0: 
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        M_y_0: 
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: final}
+
+extensions_0:
+    description: value added and environmental flows table, reference
+    type: exogenous
+    coordinates: [extensions, accounts]
+    variables_info: 
+        F_u_0: 
+            extensions:
+                dim: rows
+                filters: {category: value_added}
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        F_y_0: 
+            extensions:
+                dim: rows
+                filters: {category: value_added}
+            accounts:
+                dim: cols
+                filters: {category: final}
+        R_u_0: 
+            extensions:
+                dim: rows
+                filters: {category: environmental_flows}
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        R_y_0: 
+            extensions:
+                dim: rows
+                filters: {category: environmental_flows}
+            accounts:
+                dim: cols
+                filters: {category: final}
+
+total_demand_0:
+    description: total demand by products vector, reference
+    type: exogenous
+    coordinates: [products]
+    variables_info: 
+        Q_0: 
+            products:
+                dim: rows
+
+total_activity_0:
+    description: total activity by technology vector, reference
+    type: exogenous
+    coordinates: [accounts]
+    variables_info: 
+        X_0: 
+            accounts:
+                dim: rows
+                filters: {category: intermediate}
+
+
+# Coefficients calculation
+
+delta_make:
+    description: changes in make table
+    type: exogenous
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        delta_d: 
+            blank_fill: 0
+            accounts:
+                dim: rows
+                filters: {category: intermediate}
+            products:
+                dim: cols
+
+delta_use:
+    description: use coefficients and final demand table changes
+    type: exogenous
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        delta_u: 
+            blank_fill: 0
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        delta_Y:
+            blank_fill: 0
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: final}
+
+delta_imports:
+    description: imports coefficients and final imports demand changes
+    type: exogenous
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        delta_m_u: 
+            blank_fill: 0
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        delta_M_y: 
+            blank_fill: 0
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: final}
+
+# CONSTANTS
+
+sum_vector_y:
+    description: constants useful to perform various operations
+    type: constant
+    coordinates: [accounts]
+    variables_info: 
+        i_y: 
+            value: sum_vector
+            accounts:
+                dim: rows
+                filters: {category: final}
+
+
+# Data processing variables
+
+market_shares:
+    description: market shares table
+    type: {data_processing: endogenous, impact_analysis: exogenous}
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        d: 
+            blank_fill: 0
+            accounts:
+                dim: rows
+                filters: {category: intermediate}
+            products:
+                dim: cols
+
+use_coefficients:
+    description: use and final demand coefficients table
+    type: {data_processing: endogenous, impact_analysis: exogenous}
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        u: 
+            blank_fill: 0
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+
+imports_coefficients:
+    description: imports coefficients table
+    type: {data_processing: endogenous, impact_analysis: exogenous}
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        m_u: 
+            blank_fill: 0
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+
+extensions_coefficients:
+    description: value added and environmental coefficients table
+    type: {data_processing: endogenous, impact_analysis: exogenous}
+    coordinates: [extensions, accounts, scenarios]
+    variables_info: 
+        f: 
+            blank_fill: 0
+            extensions:
+                dim: rows
+                filters: {category: value_added}
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        r: 
+            blank_fill: 0
+            extensions:
+                dim: rows
+                filters: {category: environmental_flows}
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+
+# Results of the impact assessment 
+
+total_demand:
+    description: total demand by products vector
+    type: endogenous
+    coordinates: [products, scenarios]
+    variables_info: 
+        Q: 
+            products:
+                dim: rows
+
+total_activity:
+    description: total activity by technology vector
+    type: endogenous
+    coordinates: [accounts, scenarios]
+    variables_info: 
+        X: 
+            accounts:
+                dim: rows
+                filters: {category: intermediate}
+
+make:
+    description: make table
+    type: endogenous
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        V: 
+            accounts:
+                dim: rows
+                filters: {category: intermediate}
+            products:
+                dim: cols
+
+use:
+    description: use and final demand table
+    type: endogenous
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        U: 
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        Y:
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: final}
+
+imports:
+    description: imports table
+    type: endogenous
+    coordinates: [products, accounts, scenarios]
+    variables_info: 
+        M_u: 
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        M_y: 
+            products:
+                dim: rows
+            accounts:
+                dim: cols
+                filters: {category: final}
+
+extensions:
+    description: value added and environmental flows table
+    type: endogenous
+    coordinates: [extensions, accounts, scenarios]
+    variables_info: 
+        F_u: 
+            extensions:
+                dim: rows
+                filters: {category: value_added}
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        F_y: 
+            extensions:
+                dim: rows
+                filters: {category: value_added}
+            accounts:
+                dim: cols
+                filters: {category: final}
+        R_u: 
+            extensions:
+                dim: rows
+                filters: {category: environmental_flows}
+            accounts:
+                dim: cols
+                filters: {category: intermediate}
+        R_y: 
+            extensions:
+                dim: rows
+                filters: {category: environmental_flows}
+            accounts:
+                dim: cols
+                filters: {category: final}

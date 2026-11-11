@@ -1,0 +1,21 @@
+products:
+    description: products included in the SUT domain. 
+    filters:
+        type: [power]
+    aggregations: [medium, high]
+
+accounts:
+    description: include technologies and demand categories.
+    filters:
+        category: [intermediate, final]
+        type: [power]
+    aggregations: [medium, high]
+
+extensions:
+    description: includes factors of production and environmental flows
+    filters:
+        category: [value_added, environmental_flows]
+
+scenarios:
+    description: definition of simulated scenarios.
+    split_problem: true
