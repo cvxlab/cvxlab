@@ -9,7 +9,7 @@
 
 .. rst-class:: cvxlab-home
 
-Algebraic modelling |br| :accent:`laboratory` in Python
+Algebraic modelling :accent:`laboratory` |br| in Python
 =======================================================
 
 .. container:: cvxlab-home-intro
@@ -61,7 +61,7 @@ Algebraic modelling |br| :accent:`laboratory` in Python
       :link-type: doc
       :link-alt: Browse the API reference
 
-      Look up ``cvxlab.Model``, utility functions, symbolic operators,
+      Look up ``cvxlab.Model`` constructor, utility functions, symbolic operators,
       constants, and defaults.
 
    .. grid-item-card:: Resources
@@ -69,8 +69,8 @@ Algebraic modelling |br| :accent:`laboratory` in Python
       :link-type: doc
       :link-alt: Explore tutorials and resources
 
-      Learn through tutorials, explore published models, and find
-      related research.
+      Learn through :ref:`tutorials <tutorials>`, explore published models, 
+      and find related research.
 
    .. grid-item-card:: Project
       :link: project

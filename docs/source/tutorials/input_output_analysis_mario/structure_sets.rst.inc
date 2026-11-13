@@ -10,20 +10,20 @@
    * - products
      - products included in the SUT domain.
      - 
-     - {type: [power]}
+     - type: [power]
      - [medium, high]
    * - accounts
      - include technologies and demand categories.
      - 
-     - {category: [intermediate, final], type: [power]}
-     - [medium, high]
+     - category: [intermediate, final], type: [power]
+     - medium, high
    * - extensions
      - includes factors of production and environmental flows
      - 
-     - {category: [value_added, environmental_flows]}
+     - category: [value_added, environmental_flows]
      - 
    * - scenarios
      - definition of simulated scenarios.
-     - TRUE
+     - True
      - 
      - 

@@ -3,15 +3,20 @@
 Economy-wide impact assessment
 ==============================
 
-This tutorial relies on **CVXlab** and the
-`MARIO <https://www.marioproject.com/en/latest/index.html>`_ Python package
-to assess economy-wide impacts using Leontief's Input-Output Analysis. 
+This tutorial is designed as a **twin tutorial** with the
+`MARIO <https://www.marioproject.com/en/latest/index.html>`_ Python package.
+The two parts address the same economy-wide impact assessment using Leontief's
+Input-Output Analysis, covering complementary stages of the workflow:
 
-- **Prepare data with MARIO:** download and pre-process an input-output dataset,
-  then export the inputs required by CVXlab.
-- **Build and solve with CVXlab:** express the input-output relationships as an
-  algebraic model and assess the effects of changes in production structure
-  and final demand.
+- **The MARIO tutorial**, hosted in the MARIO documentation, explains how to
+  obtain the source Supply and Use Table (SUT), process the dataset, and prepare
+  the data to be supplied as inputs to the CVXlab model.
+- **The CVXlab tutorial (this page)** explains how to organize the prepared data
+  into model data structures, define and generate the mathematical model, solve
+  it for the selected scenarios, and export and interpret the results.
+
+Follow the MARIO part to prepare the reference dataset, then use this page to
+build and solve the model. The prepared SUT is the link between the two parts.
 
 Knowledge of Input-Output Analysis is required to follow this tutorial. The MARIO 
 documentation provides an introductory overview of the theory and its applications.
@@ -20,6 +25,61 @@ Before starting, set up a Conda environment with both CVXlab and MARIO packages
 installed. See :doc:`CVXlab installation </installation>` and
 `MARIO getting started <https://www.marioproject.com/en/latest/get_started/index.html>`_
 for setup instructions.
+
+
+.. _ioa_mario_problem_statement:
+
+.. admonition:: Problem statement
+
+  How would changes in Italy's electricity supply affect **value added**,
+  **imports**, and **GHG emissions** across the economy?
+
+  Use an input-output model to compare the **Reference** system with two hypothetical
+  electricity-supply scenarios:
+
+  - **High_RES** change the domestic electricity generation mix to the High RES
+    shares below.
+  - **High_RES_domestic** apply the same High RES generation mix
+    and replace all electricity imports with domestic generation. Intermediate
+    and final demand for imported electricity are redirected to domestic
+    electricity, so electricity imports are zero.
+
+  The two scenarios have the same domestic generation mix and differ only in
+  their electricity import assumptions. The shares below are illustrative
+  assumptions for this teaching exercise, not observed data or policy targets.
+
+  .. math::
+
+    \begin{array}{lrr}
+    \text{Electricity generation by...}
+      & \text{Reference (y2022)}
+      & \text{High RES} \\
+    \hline
+    \text{Coal}               &  9.7\% & - \\
+    \text{Gas}                & 15.8\% & - \\
+    \text{Nuclear}            & 23.4\% & 15.0\% \\
+    \text{Hydro}              & 13.3\% &  9.0\% \\
+    \text{Wind}               & 17.5\% & 38.0\% \\
+    \text{Petroleum}          &  1.6\% & - \\
+    \text{Biomass and Waste}  &  6.4\% &  5.0\% \\
+    \text{Solar photovoltaic} & 11.0\% & 31.0\% \\
+    \text{Tide, Wave, Ocean}  & -       &  0.5\% \\
+    \text{Geothermal}         &  0.2\% &  1.5\% \\
+    \text{Others}             &  1.1\% & - \\
+    \end{array}
+
+  Calculate the changes in *value added*, *imports*, and *GHG emissions* for each
+  scenario relative to Reference. Then compare the two High RES scenarios to
+  isolate the additional effect of replacing electricity imports with domestic
+  generation.
+
+  In High RES + domestic substitution, only electricity imports are eliminated.
+  Imports of fuels and other goods used by domestic producers remain possible.
+  Assume that all changes occur overnight (comparative statics analysis).
+
+  This is a teaching exercise exploring the economy-wide implications of
+  assumed structural changes. It does not assess the technical feasibility
+  of the electricity mix or provide a forecast of Italy's energy transition.
 
 
 .. rubric:: Tutorial materials
@@ -42,60 +102,6 @@ filling the required files autonomously, or can run the provided Jupyter Noteboo
 and rely on the materials provided.
 
 
-.. _ioa_mario_problem_statement:
-
-.. admonition:: Problem statement
-
-  How would changes in Italy's electricity supply affect **value added**,
-  **imports**, and **CO2 emissions** across the economy?
-
-  Use an input-output model to compare the **Reference** system with two hypothetical
-  electricity-supply scenarios:
-
-  - **High_RES** change the domestic electricity generation mix to the High RES
-    shares below.
-  - **High_RES_domestic** apply the same High RES generation mix
-    and replace all electricity imports with domestic generation. Intermediate
-    and final demand for imported electricity are redirected to domestic
-    electricity, so electricity imports are zero.
-
-  The two scenarios have the same domestic generation mix and differ only in
-  their electricity import assumptions. The shares below are illustrative
-  assumptions for this teaching exercise, not observed data or policy targets.
-
-  .. math::
-
-    \begin{array}{lrr}
-    \text{Electricity generation by...}
-      & \text{Reference (2024)}
-      & \text{High RES} \\
-    \hline
-    \text{Coal}               &  9.7\% & - \\
-    \text{Gas}                & 15.8\% & - \\
-    \text{Nuclear}            & 23.4\% & 15.0\% \\
-    \text{Hydro}              & 13.3\% &  9.0\% \\
-    \text{Wind}               & 17.5\% & 38.0\% \\
-    \text{Petroleum}          &  1.6\% & - \\
-    \text{Biomass and Waste}  &  6.4\% &  5.0\% \\
-    \text{Solar photovoltaic} & 11.0\% & 31.0\% \\
-    \text{Tide, Wave, Ocean}  & -       &  0.5\% \\
-    \text{Geothermal}         &  0.2\% &  1.5\% \\
-    \text{Others}             &  1.1\% & - \\
-    \end{array}
-
-  Calculate the changes in *value added*, *imports*, and *CO2 emissions* for each
-  scenario relative to Reference. Then compare the two High RES scenarios to
-  isolate the additional effect of replacing electricity imports with domestic
-  generation.
-
-  In High RES + domestic substitution, only electricity imports are eliminated.
-  Imports of fuels and other goods used by domestic producers remain possible.
-  Assume that all changes occur overnight (comparative statics analysis).
-
-  This is a teaching exercise exploring the economy-wide implications of
-  assumed structural changes. It does not assess the technical feasibility
-  of the electricity mix or provide a forecast of Italy's energy transition.
-
 .. _ioa_mario_modelling_approach:
 
 Modelling approach
@@ -109,16 +115,16 @@ the scenario. The workflow is:
 2. Derive the coefficients needed to describe the reference system.
 3. Apply the electricity-supply scenario assumptions.
 4. Solve the quantity model and reconstruct the scenario SUT.
-5. Compare value added, imports, and CO2 emissions with the reference system.
-
-The numerical preparation of the reference SUT with MARIO is described in
-:ref:`ioa_mario_prepare_sut`, after the mathematical formulation.
+5. Compare value added, imports, and GHG emissions with the reference system.
 
 
 .. rubric:: Reference system
 
-The starting point is a national Supply and Use Table (SUT) with the following
-structure:
+The starting point is Italy's national Supply and Use Table (SUT), extracted
+from the monetary version of the **EXIOBASE multi-regional input-output (MRIO)**
+database for the reference year 2022. All monetary transactions are expressed in
+million euros (M€), while greenhouse-gas (GHG) emissions are expressed in
+kilotonnes (kton). The SUT has the following structure:
 
 .. math::
 
@@ -263,37 +269,18 @@ flows associated with final demand retain their reference values.
 The impact of the analyzed structural changes is assessed by comparing the
 reference SUT with the reconstructed scenario SUT.
 
-.. _ioa_mario_prepare_sut:
-
-Prepare the reference SUT with MARIO
-------------------------------------
-
-This step prepares the reference data described in :ref:`ioa_mario_modelling_approach` 
-for being subsequently used in the CVXlab model. The output of this phase is the 
-reference SUT together with the classifications needed to define the CVXlab model 
-coordinates.
-
-.. TODO: 
-  - parse database
-  - aggregate electricity by each technology to one unique product
-  - generate total flows tables as in the reference SUT above
-
-The prepared classifications are used to define the CVXlab model coordinates when 
-filling ``sets.xlsx``. The numerical SUT entries are transferred into the CVXlab 
-input files in :ref:`ioa_mario_fill_exogenous_data`.
-
-
 Conceptual model definition
 ---------------------------
 
 Related user guide step: :ref:`conceptual-model-definition`.
 
 In this step, the mathematical formulation introduced in :ref:`ioa_mario_modelling_approach` 
-is represented as CVXlab Sets, Data Tables, Variables, and Problems. The prepared 
-SUT provides the reference data and the classifications used for the model coordinates.
+is represented as CVXlab Sets, Data Tables, Variables, and Problems abstractions. 
+The prepared SUT provides the reference data and the classifications used for the 
+model coordinates.
 
 The definitions below connect the mathematical quantities to their CVXlab
-representation and specify the dependency between data processing and impact
+abstractions and specify the dependency between data processing and impact
 analysis.
 
 
@@ -313,15 +300,15 @@ SUT, while scenarios identify the cases to be simulated.
     - Set type
   * - products
     - :math:`p`
-    - :math:`|p|`
+    - 189
     - Dimension set
   * - accounts
     - :math:`a`
-    - :math:`|a|`
+    - 172
     - Dimension set
   * - extensions
     - :math:`e`
-    - :math:`|e|`
+    - 13
     - Dimension set
   * - scenarios
     - :math:`s`
@@ -332,10 +319,12 @@ Notice that:
 
 - The complete coordinates and filter assignments are provided in ``sets.xlsx``
   in the tutorial model materials. The cardinalities of the sets refer to the 
-  classifications retained from the Italian SUT.
+  classifications retained from the Italian SUT: 189 products, 163 production
+  technologies, 9 final-demand categories, 12 value-added categories, and one
+  aggregated greenhouse-gas emissions category.
 - ``accounts`` combines production technologies and final-demand categories in
-  one accounting domain. Its ``category`` filter distinguishes ``intermediate``
-  from ``final`` accounts. Intermediate accounts represent technologies as both
+  one accounting domain of 172 coordinates. Its ``category`` filter distinguishes
+  163 ``intermediate`` accounts from 9 ``final`` accounts. Intermediate accounts represent technologies as both
   suppliers and users of products; final accounts represent final-demand
   categories. These subsets select the appropriate rows or columns of the model
   variables, allowing intermediate and final flows to share a Data Table.
@@ -344,7 +333,8 @@ Notice that:
   selections identify the products and technologies affected by the
   electricity-supply shocks.
 - ``extensions`` groups value added and environmental flows. Its ``category``
-  filter distinguishes ``value_added`` from ``environmental_flows``. This allows
+  filter distinguishes 12 ``value_added`` coordinates from one
+  ``environmental_flows`` coordinate, for a total of 13 extensions. This allows
   the two kinds of extensions to share a Data Table while defining separate
   variables for their flows and coefficients.
 - ``scenarios`` is the only Set with ``split_problem: true``. It generates three
@@ -374,7 +364,8 @@ Notice that:
   marked endogenous contain the output, activity, and accounting flows used in
   impact analysis.
 - Domain cardinalities count all combinations of the source table coordinates.
-  For example, ``use`` has :math:`3|p||a|` rows. Filters select the relevant
+  For example, ``use`` has :math:`189 \times 172 \times 3 = 97\,524` rows,
+  including all three scenarios. Filters select the relevant
   subsets for individual variables without changing the source table domain.
 - ``sum_vector_y`` is a constant Data Table. Its variable ``i_y`` uses the built-in
   ``value: sum_vector`` definition and selects only final-demand accounts.
@@ -382,9 +373,11 @@ Notice that:
 Variable shapes refer to the following filtered subsets:
 
 - :math:`a_i` and :math:`a_f`: ``accounts`` selected with
-  ``category: intermediate`` and ``category: final``, respectively.
+  ``category: intermediate`` and ``category: final``, with
+  :math:`|a_i|=163` and :math:`|a_f|=9`, respectively.
 - :math:`e_v` and :math:`e_r`: ``extensions`` selected with
-  ``category: value_added`` and ``category: environmental_flows``, respectively.
+  ``category: value_added`` and ``category: environmental_flows``, with
+  :math:`|e_v|=12` and :math:`|e_r|=1`, respectively.
 
 The variable names below are the exact keys used in the setup file and symbolic
 expressions. Shapes are reported as numbers of rows times numbers of columns.
@@ -483,36 +476,26 @@ Notice that:
 - ``i_y`` is the constant column vector of ones on final-demand accounts, so
   ``Y @ i_y`` sums domestic final demand across its categories.
 
+The following implementation steps assume that the reference SUT has been
+prepared following the companion MARIO tutorial. Its classifications define the
+model coordinates, while its numerical entries populate the reference Data Tables.
+
 Generation of model directory
 -----------------------------
 
 | Related user guide step: :ref:`generation-of-model-directory`
 | Related API: :py:func:`cvxlab.create_model_dir`
 
-This step consists of creating the model directory scaffold that will later host 
-the setup files, sets file, input data, database, and model results.
+This step consists of creating the model directory scaffold with blank settings 
+file(s) that will later host, sets file, input data and database.
 
-.. tabs::
+.. code-block:: python
 
-  .. group-tab:: YAML
+    import cvxlab
 
-    .. code-block:: python
-
-        import cvxlab
-
-        cvxlab.create_model_dir(
-            settings_file_type='yml',
-        )
-
-  .. group-tab:: XLSX
-
-    .. code-block:: python
-
-        import cvxlab
-
-        cvxlab.create_model_dir(
-            settings_file_type='xlsx',
-        )
+    cvxlab.create_model_dir(
+        settings_file_type='yml', # use 'xlsx' for model_settings.xlsx
+    )
 
 Notice that:
 
@@ -657,10 +640,14 @@ Fill sets data (model coordinates)
 
 Related user guide step: :ref:`fill-sets-data`
 
-Fill the generated ``model/sets.xlsx`` using the classifications prepared with
-MARIO. The complete coordinate assignments are provided in the tutorial model
-materials: :download:`sets.xlsx <materials/model/sets.xlsx>`. Use coordinates
-consistent with the SUT being analyzed, including its level of disaggregation.
+Fill the generated ``model/sets.xlsx`` using the classifications of the dataset
+prepared in the companion MARIO tutorial. Products, technologies, final-demand
+categories, and extensions must match the prepared reference SUT, including its
+level of disaggregation. These classifications define the coordinates used to
+align the numerical inputs in the subsequent data-filling step.
+
+The complete coordinate and filter assignments are provided in the tutorial model
+materials: :download:`sets.xlsx <materials/model/sets.xlsx>`.
 
 The workbook has four worksheets. Keep the generated worksheet names and column
 headers unchanged, and fill the coordinate, filter, and aggregation columns as
@@ -721,9 +708,14 @@ Fill exogenous model data
 
 Related user guide step: :ref:`fill-exogenous-data`
 
-Transfer the reference SUT prepared in :ref:`ioa_mario_prepare_sut` and the
-scenario shocks into ``model/input_data/input_data.xlsx``. Fill the ``values``
-column by matching the generated coordinate columns to the source data. Keep the
+Use the reference SUT obtained by following the companion MARIO tutorial to
+populate the reference Data Tables in ``model/input_data/input_data.xlsx``.
+The table below maps the prepared SUT blocks to the CVXlab input worksheets and
+identifies the additional scenario shocks defined in
+:ref:`ioa_mario_modelling_approach`.
+
+Fill the ``values`` column by matching the generated coordinate columns to the
+prepared data, using the same classifications entered in ``sets.xlsx``. Keep the
 ``id`` and coordinate columns unchanged; their ordering need not match the row
 or column ordering of the original matrices.
 
@@ -776,10 +768,10 @@ are exogenous in ``impact_analysis``. Their values are calculated by
 additional reference-data inputs to fill manually. The constant ``i_y`` is
 generated from its ``sum_vector`` definition.
 
-The supplied :download:`input_data.xlsx <materials/model/input_data/input_data.xlsx>`
-provides the model's numerical inputs. Its coordinate domain must match the
-``sets.xlsx`` used to generate the working workbook. Save the filled input
-workbook before initializing the numerical problems.
+The supplied ``model/input_data/input_data.xlsx`` file provides the model's numerical 
+inputs. Its coordinate domain must match the ``sets.xlsx`` used to generate the 
+working workbook. Save the filled input workbook before initializing the numerical 
+problems.
 
 
 Initialization of numerical problem(s)
@@ -843,24 +835,26 @@ Export the solved endogenous values to the model database:
 The coefficient and impact-analysis tables in ``model/database.db`` now provide
 the solved scenario values for inspection and comparison.
 
-.. list-table:: 
-   :header-rows: 1
-   :widths: 34 66
-
-   * - Tables
-     - Content
-   * - market_shares, use_coefficients, imports_coefficients,
-       extensions_coefficients
-     - Coefficients calculated by data_processing for each scenario.
-   * - total_demand, total_activity
-     - Product output and technology activity determined by the Leontief model.
-   * - make, use, imports, extensions
-     - Reconstructed scenario SUT flows, including intermediate and final accounts.
-
 
 .. _ioa_mario_compare_results:
 
 Compare and interpret the results
 ---------------------------------
 
-ddddd
+There are several ways to inspect and visualize the results stored in
+``model/database.db``. For convenience, this tutorial uses Power BI: the linked
+``report.pbix`` file is provided in the tutorial materials and supports interactive
+exploration of the reference data and scenario results.
+
+Power BI is optional. The same information can be accessed directly through
+SQLite queries or a database browser, or loaded into Python using ``sqlite3``
+and ``pandas``. Figures can then be created with libraries such as Matplotlib
+or Plotly, according to the user's preferred analysis workflow.
+
+Use the report to explore the effects of the electricity-supply changes and
+compare ``High_RES`` and ``High_RES_domestic`` with ``Reference``. Comparing the
+two High RES scenarios highlights the additional effect of replacing electricity
+imports with domestic generation.
+
+.. TODO: Insert selected figures from the Power BI report and comment on the
+   main findings illustrated by each figure.
